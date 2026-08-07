@@ -26,11 +26,22 @@ SELL_MULTIPLIERS = {2.0, 4.0}
 MAX_READ_ATTEMPTS = 3
 SOURCE_SYNC_WAIT_SECONDS = 6
 BOUNDARY_EXTRA_SECONDS = 8
-BOUNDARY_TIMER_THRESHOLD = 20
+BOUNDARY_TIMER_THRESHOLD = 30
+
+# GAG2 Timer-Sync:
+# The page can show the previous cycle briefly after a countdown rolls over.
+# For frequent 5-minute shop timers, don't trust the first 30 seconds after reset.
+GAG2_FREQUENT_CYCLE_SECONDS = 300
+GAG2_POST_RESET_SAFE_AGE_SECONDS = 30
+GAG2_AFTER_ZERO_GRACE_SECONDS = 25
+GAG2_TIMER_SYNC_MAX_PASSES = 4
+GAG2_TIMER_SYNC_MAX_TOTAL_WAIT = 95
+GAG2_TIMER_TARGET_SHOPS = ("seed", "gear")
+
 MIN_STOCK_ITEMS = 3
 MIN_SELL_ITEMS = 1
 HEALTH_ALERT_COOLDOWN_HOURS = 1
-ALERT_LOGIC_VERSION = "6.2-alert-safe-v1"
+ALERT_LOGIC_VERSION = "6.3-gag-timer-sync-v1"
 
 # Exact GAG2 targets
 EXACT_STOCK_TARGETS = {
@@ -159,30 +170,150 @@ def extract_countdowns(text):
     return values
 
 
+def _timer_seconds(mm, ss):
+    return int(mm) * 60 + int(ss)
+
+
+def extract_shop_timers(text):
+    """
+    Extract timers next to the GAG2 Stock shop headings.
+    Expected rendered forms include things like:
+      Seed Shop ... 04:42
+      Gear Shop ... 01:19
+      Crate / Crates ... 12:08
+
+    We deliberately use the timer shown by GAG2 itself instead of local clock time.
+    """
+    text = text or ""
+    result = {}
+
+    shop_patterns = {
+        "seed": r"Seed\s+Shop",
+        "gear": r"Gear\s+Shop",
+        "crate": r"(?:Crate|Crates|Props?)",
+    }
+
+    # First: line-oriented parsing. This is the safest if heading + timer are together.
+    lines = [norm(x) for x in text.splitlines() if norm(x)]
+    for i, line in enumerate(lines):
+        for shop, pat in shop_patterns.items():
+            if shop in result or not re.search(pat, line, re.I):
+                continue
+
+            window = " ".join(lines[i:i + 4])
+            m = re.search(r"(?<!\d)(\d{1,2}):([0-5]\d)(?!\d)", window)
+            if m:
+                result[shop] = _timer_seconds(m.group(1), m.group(2))
+
+    # Fallback: search a limited text window after each heading.
+    for shop, pat in shop_patterns.items():
+        if shop in result:
+            continue
+        m = re.search(
+            rf"{pat}.{{0,180}}?(?<!\d)(\d{{1,2}}):([0-5]\d)(?!\d)",
+            text,
+            re.I | re.S,
+        )
+        if m:
+            # crate pattern has a non-capturing internal group, timer stays 1/2.
+            result[shop] = _timer_seconds(m.group(1), m.group(2))
+
+    return result
+
+
 def stock_snapshot(driver):
     text = driver.find_element("tag name", "body").text
     stock = parse_stock(text)
     timers = extract_countdowns(text)
+    shop_timers = extract_shop_timers(text)
     return {
         "stock": stock,
         "text": text,
         "fingerprint": stable_hash(stock),
+        "timers": timers,
+        "shop_timers": shop_timers,
         "min_timer_seconds": min(timers) if timers else None,
     }
 
 
+def timer_guard_for_snapshot(snapshot):
+    """
+    Decide how long to wait before trusting this GAG2 snapshot.
+
+    Two dangerous windows:
+    1) Timer is close to 00:00 -> wait through rollover + GAG2 grace.
+    2) A frequent 5-minute timer has JUST reset high (e.g. 04:55) ->
+       wait until at least ~30 seconds of the new cycle have elapsed.
+
+    Returns (wait_seconds, reason, timers_used).
+    """
+    shop_timers = snapshot.get("shop_timers") or {}
+
+    watched = {
+        shop: int(shop_timers[shop])
+        for shop in GAG2_TIMER_TARGET_SHOPS
+        if shop in shop_timers
+    }
+
+    # Fallback only if shop-labelled timers could not be parsed.
+    timer_source = "shop"
+    if not watched:
+        timer_source = "generic"
+        generic = [
+            int(v) for v in snapshot.get("timers", [])
+            if 0 <= int(v) <= GAG2_FREQUENT_CYCLE_SECONDS
+        ]
+        watched = {f"timer{i+1}": v for i, v in enumerate(generic[:4])}
+
+    waits = []
+
+    for label, remaining in watched.items():
+        # About to hit zero: cross the boundary and give the GAG2 frontend
+        # enough time to replace old cards with the new cycle.
+        if 0 <= remaining <= BOUNDARY_TIMER_THRESHOLD:
+            waits.append(
+                (
+                    remaining + GAG2_AFTER_ZERO_GRACE_SECONDS,
+                    f"{label} ใกล้ 00:00 ({remaining}s)",
+                )
+            )
+            continue
+
+        # Just after a 5-minute timer reset:
+        # 04:59 means only ~1s into new cycle, 04:40 means ~20s in.
+        if (
+            GAG2_FREQUENT_CYCLE_SECONDS - GAG2_POST_RESET_SAFE_AGE_SECONDS
+            < remaining
+            <= GAG2_FREQUENT_CYCLE_SECONDS
+        ):
+            elapsed = GAG2_FREQUENT_CYCLE_SECONDS - remaining
+            wait = GAG2_POST_RESET_SAFE_AGE_SECONDS - elapsed
+            if wait > 0:
+                waits.append(
+                    (
+                        wait,
+                        f"{label} เพิ่งรีรอบ ({remaining}s เหลือ)",
+                    )
+                )
+
+    if not waits:
+        return 0, "timer-safe", watched, timer_source
+
+    wait, reason = max(waits, key=lambda x: x[0])
+    return max(1, int(wait)), reason, watched, timer_source
+
+
 def read_source_synced_stock(driver):
     """
-    Read GAG2 stock more than once so a client-side delay after restock
-    is less likely to make us accept the previous cycle.
+    v6.3 GAG2 Timer-Sync.
 
-    Strategy:
-      1) Load and settle.
-      2) Snapshot A.
-      3) If a timer is near 0, wait past boundary + grace period.
-         Otherwise wait a short confirmation interval.
-      4) Refresh and snapshot B.
-      5) If A != B, wait/refresh once more and use C.
+    The GitHub clock no longer decides when Stock is safe.
+    The bot opens GAG2, reads the site's own countdown(s), waits through a
+    rollover / post-rollover stale window when necessary, refreshes, and then
+    confirms the rendered Stock again.
+
+    This protects against the user's observed behavior where GAG2 may show the
+    previous Stock for ~10-20 seconds after the shop timer reaches zero.
     """
     rendered_text(
         driver,
@@ -190,48 +321,92 @@ def read_source_synced_stock(driver):
         ["Seed Shop", "Gear Shop", "Crate", "stock"],
     )
 
-    a = stock_snapshot(driver)
+    samples = [stock_snapshot(driver)]
+    total_wait = 0
+    guard_log = []
+    rollover_seen = False
 
-    near_boundary = (
-        a["min_timer_seconds"] is not None
-        and a["min_timer_seconds"] <= BOUNDARY_TIMER_THRESHOLD
-    )
+    for pass_no in range(1, GAG2_TIMER_SYNC_MAX_PASSES + 1):
+        current = samples[-1]
+        wait_s, reason, timers_used, timer_source = timer_guard_for_snapshot(current)
 
-    if near_boundary:
-        wait_s = min(
-            BOUNDARY_TIMER_THRESHOLD + BOUNDARY_EXTRA_SECONDS,
-            max(BOUNDARY_EXTRA_SECONDS, a["min_timer_seconds"] + BOUNDARY_EXTRA_SECONDS),
-        )
-    else:
-        wait_s = SOURCE_SYNC_WAIT_SECONDS
+        if wait_s > 0:
+            remaining_budget = GAG2_TIMER_SYNC_MAX_TOTAL_WAIT - total_wait
+            if remaining_budget <= 0:
+                break
 
-    time.sleep(wait_s)
-    driver.refresh()
-    time.sleep(3)
-    b = stock_snapshot(driver)
+            wait_s = min(wait_s, remaining_budget)
+            guard_log.append(
+                {
+                    "pass": pass_no,
+                    "wait_seconds": wait_s,
+                    "reason": reason,
+                    "timers": timers_used,
+                    "source": timer_source,
+                }
+            )
 
-    changed = a["fingerprint"] != b["fingerprint"]
+            before = current.get("shop_timers") or {}
+            time.sleep(wait_s)
+            total_wait += wait_s
 
-    if changed:
-        # The page changed while we were sampling. Confirm the new cycle once more.
-        time.sleep(SOURCE_SYNC_WAIT_SECONDS)
-        driver.refresh()
-        time.sleep(3)
-        c = stock_snapshot(driver)
-        chosen = c
-        samples = [a, b, c]
-    else:
-        chosen = b
-        samples = [a, b]
+            driver.refresh()
+            time.sleep(3)
+            nxt = stock_snapshot(driver)
+            after = nxt.get("shop_timers") or {}
+
+            # If a timer was low and is now much higher, GAG2 crossed a real rollover.
+            for shop in set(before) & set(after):
+                if before[shop] <= BOUNDARY_TIMER_THRESHOLD and after[shop] > before[shop] + 30:
+                    rollover_seen = True
+
+            samples.append(nxt)
+            continue
+
+        # Once the timer says we're outside a dangerous boundary window,
+        # do one short confirmation read. This also catches a late React refresh.
+        if len(samples) == 1:
+            time.sleep(SOURCE_SYNC_WAIT_SECONDS)
+            total_wait += SOURCE_SYNC_WAIT_SECONDS
+            driver.refresh()
+            time.sleep(3)
+            samples.append(stock_snapshot(driver))
+            continue
+
+        break
+
+    chosen = samples[-1]
+    final_wait, final_reason, final_timers, final_source = timer_guard_for_snapshot(chosen)
+
+    timer_available = bool(chosen.get("shop_timers") or chosen.get("timers"))
+    timer_safe = final_wait == 0
+
+    # If we exhausted our wait budget while GAG2 still says it is inside an unsafe
+    # rollover window, fail closed: don't overwrite baseline and don't alert stale data.
+    if not timer_safe and total_wait >= GAG2_TIMER_SYNC_MAX_TOTAL_WAIT:
+        timer_safe = False
+
+    fingerprints = [x["fingerprint"] for x in samples]
+    changed = len(set(fingerprints)) > 1
 
     return {
         "stock": chosen["stock"],
         "samples": len(samples),
         "changed_during_sync": changed,
+        "rollover_seen": rollover_seen,
+        "timer_available": timer_available,
+        "timer_safe": timer_safe,
+        "timer_source": final_source,
+        "shop_timers": chosen.get("shop_timers") or {},
+        "timers_used": final_timers,
+        "total_timer_wait_seconds": total_wait,
+        "guard_log": guard_log,
         "min_timer_seconds": chosen["min_timer_seconds"],
         "sample_counts": [len(x["stock"]) for x in samples],
-        "sample_fingerprints": [x["fingerprint"] for x in samples],
+        "sample_fingerprints": fingerprints,
+        "final_guard_reason": final_reason,
     }
+
 
 
 def _sell_contexts_for_target(driver, target_name):
@@ -911,7 +1086,11 @@ def collect_live_data():
 
             sell, sell_diag = read_sell_targets(driver)
 
-            stock_ok = len(stock) >= MIN_STOCK_ITEMS
+            stock_ok = (
+                len(stock) >= MIN_STOCK_ITEMS
+                and stock_sync.get("timer_available")
+                and stock_sync.get("timer_safe")
+            )
 
             # We watch exactly two sell fruits. Requiring both proves the Sell reader
             # can see the two values that matter to this bot.
@@ -928,6 +1107,12 @@ def collect_live_data():
                     "stock_changed_during_sync": stock_sync["changed_during_sync"],
                     "stock_sample_counts": stock_sync["sample_counts"],
                     "stock_min_timer_seconds": stock_sync["min_timer_seconds"],
+                    "timer_available": stock_sync.get("timer_available"),
+                    "timer_safe": stock_sync.get("timer_safe"),
+                    "timer_source": stock_sync.get("timer_source"),
+                    "shop_timers": stock_sync.get("shop_timers"),
+                    "timer_wait_seconds": stock_sync.get("total_timer_wait_seconds"),
+                    "timer_guard_log": stock_sync.get("guard_log"),
                     "sell_targets": sell_diag,
                 }
             )
@@ -991,7 +1176,7 @@ def send_discord(content):
     r = requests.post(
         WEBHOOK,
         json={"content": content[:1950]},
-        headers={"User-Agent": "GAG2-Reliability-Discord-Bot/6.2"},
+        headers={"User-Agent": "GAG2-Reliability-Discord-Bot/6.3"},
         timeout=30,
     )
 
@@ -1038,16 +1223,32 @@ def find_sell_value(sell, target_key):
     return max(items, key=lambda x: float(x.get("multi", 0))).get("multi")
 
 
-def format_health_message(stock, sell, snapshot, attempts, recovered=False, self_test=None):
+def format_health_message(stock, sell, snapshot, attempts, recovered=False, self_test=None, source_sync=None):
     lines = [
         "✅ **GAG2 Bot Health Check**",
-        "🛡️ Reliability v6.2 Alert-Safe + Source-Sync",
+        "🛡️ Reliability v6.3 GAG2 Timer-Sync",
         f"• Stock parser: **OK** ({len(stock)} รายการ)",
         f"• Sell parser: **OK** ({len(sell)} รายการ)",
         f"• อ่านสำเร็จในครั้งที่: **{attempts}/{MAX_READ_ATTEMPTS}**",
-        "• Source-Sync: **ON** (อ่าน Stock ยืนยันซ้ำก่อนรับรอบ)",
+        "• Source-Sync: **ON**",
+        "• GAG2 Timer-Sync: **ON** (อิง Countdown จากหน้า GAG2)",
         "• Sell reader: **Target DOM Probe**",
     ]
+
+    if source_sync:
+        shops = source_sync.get("shop_timers") or {}
+        if shops:
+            pretty = []
+            for shop in ("seed", "gear", "crate"):
+                if shop in shops:
+                    value = int(shops[shop])
+                    pretty.append(f"{shop} {value//60:02d}:{value%60:02d}")
+            if pretty:
+                lines.append("• GAG timers: **" + " · ".join(pretty) + "**")
+
+        lines.append(
+            f"• Timer wait รอบนี้: **{int(source_sync.get('total_timer_wait_seconds', 0))}s**"
+        )
 
     if self_test and self_test.get("ok"):
         lines.append(
@@ -1169,7 +1370,7 @@ def handle_read_failure(old_state, result):
     )
 
     new_state["health"] = health
-    new_state.setdefault("version", "6.2")
+    new_state.setdefault("version", "6.3")
     save_state(new_state)
 
 
@@ -1204,7 +1405,7 @@ def main():
     recovered = old_health_status == "error"
 
     new_state = {
-        "version": "6.2",
+        "version": "6.3",
         "alert_logic_version": ALERT_LOGIC_VERSION,
         "updated_at": iso_now(),
         "shop_fingerprints": current_shop_fp,
@@ -1217,6 +1418,7 @@ def main():
             "sell_count": len(sell),
             "attempts_used": attempts,
             "alert_rule_self_test": self_test,
+            "timer_sync": result.get("source_sync"),
             "last_diagnostics": result.get("diagnostics", []),
             "last_error_alert_at": old_state.get("health", {}).get("last_error_alert_at"),
         },
@@ -1227,7 +1429,7 @@ def main():
 
     print(f"Parsed stock: {len(stock)} | sell: {len(sell)}")
     print(f"Read attempts used: {attempts}")
-    print(f"Has v6.2 baseline: {has_baseline}")
+    print(f"Has v6.3 baseline: {has_baseline}")
     print(f"Alert rules self-test: PASS ({self_test['passed_classes']}/{self_test['total_classes']})")
     print(f"Current wanted conditions: {len(current_events)}")
     print(f"Alert logic migration required: {logic_migration}")
@@ -1242,6 +1444,7 @@ def main():
                 attempts,
                 recovered=recovered,
                 self_test=self_test,
+                source_sync=result.get("source_sync"),
             )
         )
 
@@ -1252,7 +1455,7 @@ def main():
             print("Manual run: no current wanted event; health check only")
 
         save_state(new_state)
-        print("Manual Health Check + current alerts sent; v6.2 state saved")
+        print("Manual Health Check + current alerts sent; v6.3 state saved")
         return
 
     # On first run or migration, alert currently-active targets instead of
