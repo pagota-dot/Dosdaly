@@ -1,15 +1,15 @@
-name: GAG2 Reliability Discord Bot v6.2
+name: GAG2 Reliability Discord Bot v6.3
 
 on:
   workflow_dispatch:
   schedule:
-    - cron: '2-59/5 * * * *'
+    - cron: '*/5 * * * *'
 
 permissions:
   contents: write
 
 concurrency:
-  group: gag2-reliability-source-sync-bot
+  group: gag2-reliability-gag-timer-sync
   cancel-in-progress: false
 
 jobs:
@@ -33,7 +33,7 @@ jobs:
       - name: Install dependencies
         run: pip install --disable-pip-version-check -r requirements.txt
 
-      - name: Reliability check GAG2 and notify Discord
+      - name: GAG2 Timer-Sync check and Discord alert
         run: python bot.py
 
       - name: Save reliability state
@@ -47,5 +47,5 @@ jobs:
           git config user.name "gag2-stock-bot"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add state.json
-          git commit -m "chore: update reliability state [skip ci]"
+          git commit -m "chore: update timer-sync state [skip ci]"
           git push
