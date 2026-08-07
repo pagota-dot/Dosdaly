@@ -30,6 +30,7 @@ BOUNDARY_TIMER_THRESHOLD = 20
 MIN_STOCK_ITEMS = 3
 MIN_SELL_ITEMS = 1
 HEALTH_ALERT_COOLDOWN_HOURS = 1
+ALERT_LOGIC_VERSION = "6.2-alert-safe-v1"
 
 # Exact GAG2 targets
 EXACT_STOCK_TARGETS = {
@@ -648,6 +649,134 @@ def stock_group_for_target(target_key, current_state):
     return "unknown"
 
 
+
+def current_active_events(current_snapshot):
+    """
+    Return every target that is RIGHT NOW inside the user's alert rules.
+    Used by Manual Run, first-run/bootstrap, and version migrations so a
+    currently-active wanted item can never be silently swallowed as baseline.
+    """
+    events = []
+
+    for target_key, cur in current_snapshot.get("stock", {}).items():
+        if not cur.get("present"):
+            continue
+        meta = EXACT_STOCK_TARGETS[target_key]
+        events.append(
+            {
+                "kind": "stock",
+                "target_key": target_key,
+                "label": meta["label"],
+                "emoji": meta["emoji"],
+                "items": cur.get("items", []),
+                "reason": "ตอนนี้อยู่ใน Stock",
+            }
+        )
+
+    # target_snapshot already excludes Rare Magic Mail.
+    for identity, cur in sorted(current_snapshot.get("magic_mail", {}).items()):
+        if not cur.get("present"):
+            continue
+        events.append(
+            {
+                "kind": "stock",
+                "target_key": identity,
+                "label": cur.get("name", "Magic Mail"),
+                "emoji": "✨",
+                "items": [
+                    {
+                        "name": cur.get("name", "Magic Mail"),
+                        "qty": cur.get("qty", 0),
+                        "rarity": cur.get("rarity", ""),
+                        "type": cur.get("type", "gear"),
+                    }
+                ],
+                "reason": "Magic Mail ที่ต้องการอยู่ใน Stock",
+            }
+        )
+
+    for target_key, cur in current_snapshot.get("sell", {}).items():
+        if not cur.get("present"):
+            continue
+        multi = cur.get("multi")
+        if multi not in SELL_MULTIPLIERS:
+            continue
+        meta = SELL_TARGETS[target_key]
+        events.append(
+            {
+                "kind": "sell",
+                "target_key": target_key,
+                "label": meta["label"],
+                "emoji": meta["emoji"],
+                "multi": float(multi),
+                "reason": f"ตอนนี้ Sell ×{float(multi):.0f} เข้าเงื่อนไข",
+            }
+        )
+
+    return events
+
+
+def alert_rule_self_test():
+    """
+    Regression test for ALL seven alert classes:
+      4 exact Stock targets
+      Magic Mail except Rare
+      2 Sell targets at x2/x4
+    """
+    stock = [
+        {"name": "Atlantic Giant Pumpkin", "qty": 1, "rarity": "SUPER", "type": "seed"},
+        {"name": "Super Syrup Watering Can", "qty": 2, "rarity": "SUPER", "type": "gear"},
+        {"name": "Super Syrup Sprinkler", "qty": 3, "rarity": "SUPER", "type": "gear"},
+        {"name": "Amber Cranberry", "qty": 4, "rarity": "LEGENDARY", "type": "seed"},
+        {"name": "Legendary Magic Mail", "qty": 1, "rarity": "LEGENDARY", "type": "gear"},
+        {"name": "Rare Magic Mail", "qty": 99, "rarity": "RARE", "type": "gear"},
+    ]
+    sell = [
+        {"name": "Maple Mushroom", "multi": 2.0},
+        {"name": "Atlantic Giant Pumpkin", "multi": 4.0},
+    ]
+
+    snapshot = target_snapshot(stock, sell)
+    events = current_active_events(snapshot)
+
+    stock_keys = {
+        e["target_key"] for e in events
+        if e["kind"] == "stock" and e["target_key"] in EXACT_STOCK_TARGETS
+    }
+    sell_keys = {e["target_key"] for e in events if e["kind"] == "sell"}
+    magic_events = [
+        e for e in events
+        if e["kind"] == "stock" and "magic mail" in key(e.get("label"))
+    ]
+
+    errors = []
+    if stock_keys != set(EXACT_STOCK_TARGETS):
+        errors.append(f"exact-stock mismatch: {sorted(stock_keys)}")
+    if sell_keys != set(SELL_TARGETS):
+        errors.append(f"sell mismatch: {sorted(sell_keys)}")
+    if len(magic_events) != 1 or "legendary magic mail" not in key(magic_events[0]["label"]):
+        errors.append("Magic Mail allow/exclude rule failed")
+    if any("rare magic mail" in key(e.get("label")) for e in events):
+        errors.append("Rare Magic Mail incorrectly alerted")
+
+    silent_snapshot = target_snapshot(
+        [],
+        [
+            {"name": "Maple Mushroom", "multi": 1.0},
+            {"name": "Atlantic Giant Pumpkin", "multi": 3.0},
+        ],
+    )
+    if any(e["kind"] == "sell" for e in current_active_events(silent_snapshot)):
+        errors.append("non-target sell multiplier incorrectly alerted")
+
+    return {
+        "ok": not errors,
+        "passed_classes": 7 if not errors else 0,
+        "total_classes": 7,
+        "errors": errors,
+    }
+
+
 def compare_target_events(old_state, current_snapshot, old_shop_fp, current_shop_fp):
     """
     Returns ONLY newly relevant alert events.
@@ -862,7 +991,7 @@ def send_discord(content):
     r = requests.post(
         WEBHOOK,
         json={"content": content[:1950]},
-        headers={"User-Agent": "GAG2-Reliability-Discord-Bot/6.1"},
+        headers={"User-Agent": "GAG2-Reliability-Discord-Bot/6.2"},
         timeout=30,
     )
 
@@ -909,16 +1038,23 @@ def find_sell_value(sell, target_key):
     return max(items, key=lambda x: float(x.get("multi", 0))).get("multi")
 
 
-def format_health_message(stock, sell, snapshot, attempts, recovered=False):
+def format_health_message(stock, sell, snapshot, attempts, recovered=False, self_test=None):
     lines = [
         "✅ **GAG2 Bot Health Check**",
-        "🛡️ Reliability v6.1 Source-Sync",
+        "🛡️ Reliability v6.2 Alert-Safe + Source-Sync",
         f"• Stock parser: **OK** ({len(stock)} รายการ)",
         f"• Sell parser: **OK** ({len(sell)} รายการ)",
         f"• อ่านสำเร็จในครั้งที่: **{attempts}/{MAX_READ_ATTEMPTS}**",
         "• Source-Sync: **ON** (อ่าน Stock ยืนยันซ้ำก่อนรับรอบ)",
         "• Sell reader: **Target DOM Probe**",
     ]
+
+    if self_test and self_test.get("ok"):
+        lines.append(
+            f"• Alert rules self-test: **PASS ({self_test.get('passed_classes', 0)}/{self_test.get('total_classes', 7)})**"
+        )
+    elif self_test:
+        lines.append("• Alert rules self-test: **FAIL**")
 
     if recovered:
         lines.append("• สถานะ: 🟢 **กลับมาทำงานปกติแล้ว**")
@@ -1033,13 +1169,19 @@ def handle_read_failure(old_state, result):
     )
 
     new_state["health"] = health
-    new_state.setdefault("version", "6.1")
+    new_state.setdefault("version", "6.2")
     save_state(new_state)
 
 
 def main():
     if not WEBHOOK:
         raise RuntimeError("Missing GitHub Actions secret: DISCORD_WEBHOOK")
+
+    self_test = alert_rule_self_test()
+    if not self_test["ok"]:
+        raise RuntimeError(
+            "Alert rule self-test failed: " + "; ".join(self_test.get("errors", []))
+        )
 
     old_state = load_state()
     result = collect_live_data()
@@ -1055,13 +1197,15 @@ def main():
 
     current_shop_fp = shop_fingerprints(stock, sell)
     current_snapshot = target_snapshot(stock, sell)
+    current_events = current_active_events(current_snapshot)
 
     old_shop_fp = old_state.get("shop_fingerprints", {})
     old_health_status = old_state.get("health", {}).get("status")
     recovered = old_health_status == "error"
 
     new_state = {
-        "version": "6.1",
+        "version": "6.2",
+        "alert_logic_version": ALERT_LOGIC_VERSION,
         "updated_at": iso_now(),
         "shop_fingerprints": current_shop_fp,
         "targets": current_snapshot,
@@ -1072,18 +1216,23 @@ def main():
             "stock_count": len(stock),
             "sell_count": len(sell),
             "attempts_used": attempts,
+            "alert_rule_self_test": self_test,
             "last_diagnostics": result.get("diagnostics", []),
             "last_error_alert_at": old_state.get("health", {}).get("last_error_alert_at"),
         },
     }
 
     has_baseline = bool(old_state.get("targets")) and bool(old_shop_fp)
+    logic_migration = old_state.get("alert_logic_version") != ALERT_LOGIC_VERSION
 
     print(f"Parsed stock: {len(stock)} | sell: {len(sell)}")
     print(f"Read attempts used: {attempts}")
-    print(f"Has v6.1 baseline: {has_baseline}")
+    print(f"Has v6.2 baseline: {has_baseline}")
+    print(f"Alert rules self-test: PASS ({self_test['passed_classes']}/{self_test['total_classes']})")
+    print(f"Current wanted conditions: {len(current_events)}")
+    print(f"Alert logic migration required: {logic_migration}")
 
-    # Manual Run = explicit proof that the bot can currently read GAG2.
+    # Manual Run is now a health check AND a real target-alert test.
     if EVENT_NAME == "workflow_dispatch":
         send_discord(
             format_health_message(
@@ -1092,16 +1241,30 @@ def main():
                 current_snapshot,
                 attempts,
                 recovered=recovered,
+                self_test=self_test,
             )
         )
+
+        if current_events:
+            send_discord(format_event_message(current_events, attempts))
+            print(f"Manual run sent {len(current_events)} current wanted event(s)")
+        else:
+            print("Manual run: no current wanted event; health check only")
+
         save_state(new_state)
-        print("Manual Health Check sent and v6.1 baseline saved")
+        print("Manual Health Check + current alerts sent; v6.2 state saved")
         return
 
-    # First scheduled v6 run establishes a clean baseline without spam.
-    if not has_baseline:
+    # On first run or migration, alert currently-active targets instead of
+    # silently swallowing them into baseline.
+    if logic_migration or not has_baseline:
+        if current_events:
+            send_discord(format_event_message(current_events, attempts))
+            print(f"Bootstrap/migration sent {len(current_events)} current wanted event(s)")
+        else:
+            print("Bootstrap/migration: no current wanted event; silent")
+
         save_state(new_state)
-        print("v6.1 initial baseline saved; no alert")
         return
 
     events = compare_target_events(
@@ -1111,7 +1274,6 @@ def main():
         current_shop_fp,
     )
 
-    # If the bot just recovered from an outage, tell the user once.
     if recovered:
         send_discord(
             "🟢 **GAG2 Bot recovered**\n"
@@ -1125,8 +1287,6 @@ def main():
     else:
         print("No new wanted event; silent")
 
-    # Always save current target presence/absence after a valid read.
-    # This is what lets a target disappear and later trigger again when it returns.
     save_state(new_state)
 
 
