@@ -7,8 +7,8 @@
       "passed_classes": 7,
       "total_classes": 7
     },
-    "attempts_used": 1,
-    "last_checked_at": "2026-08-08T02:47:30.738809+00:00",
+    "attempts_used": 3,
+    "last_checked_at": "2026-08-08T02:50:39.836296+00:00",
     "last_diagnostics": [
       {
         "attempt": 1,
@@ -24,56 +24,138 @@
             "multiplier": 1.0
           }
         },
-        "shop_timers": {
-          "crate": 157,
-          "gear": 157,
-          "seed": 157
-        },
+        "shop_timers": {},
         "stock_changed_during_sync": false,
         "stock_count": 21,
-        "stock_min_timer_seconds": 157,
-        "stock_ok": true,
+        "stock_min_timer_seconds": null,
+        "stock_ok": false,
         "stock_sample_counts": [
           21,
           21
         ],
         "stock_sync_samples": 2,
-        "timer_available": true,
+        "timer_available": false,
         "timer_guard_log": [],
         "timer_safe": true,
-        "timer_source": "shop",
+        "timer_source": "generic",
         "timer_wait_seconds": 6
+      },
+      {
+        "attempt": 2,
+        "sell_count": 2,
+        "sell_ok": true,
+        "sell_targets": {
+          "atlantic giant pumpkin": {
+            "contexts_found": 3,
+            "multiplier": 1.18
+          },
+          "maple mushroom": {
+            "contexts_found": 3,
+            "multiplier": 1.0
+          }
+        },
+        "shop_timers": {},
+        "stock_changed_during_sync": false,
+        "stock_count": 21,
+        "stock_min_timer_seconds": null,
+        "stock_ok": false,
+        "stock_sample_counts": [
+          21,
+          21
+        ],
+        "stock_sync_samples": 2,
+        "timer_available": false,
+        "timer_guard_log": [],
+        "timer_safe": true,
+        "timer_source": "generic",
+        "timer_wait_seconds": 6
+      },
+      {
+        "attempt": 3,
+        "sell_count": 2,
+        "sell_ok": true,
+        "sell_targets": {
+          "atlantic giant pumpkin": {
+            "contexts_found": 3,
+            "multiplier": 0.97
+          },
+          "maple mushroom": {
+            "contexts_found": 3,
+            "multiplier": 0.95
+          }
+        },
+        "shop_timers": {
+          "crate": 268,
+          "gear": 268,
+          "seed": 268
+        },
+        "stock_changed_during_sync": false,
+        "stock_count": 19,
+        "stock_min_timer_seconds": 268,
+        "stock_ok": true,
+        "stock_sample_counts": [
+          19,
+          19
+        ],
+        "stock_sync_samples": 2,
+        "timer_available": true,
+        "timer_guard_log": [
+          {
+            "pass": 1,
+            "reason": "seed เพิ่งรีรอบ (292s เหลือ)",
+            "source": "shop",
+            "timers": {
+              "gear": 292,
+              "seed": 292
+            },
+            "wait_seconds": 22
+          }
+        ],
+        "timer_safe": true,
+        "timer_source": "shop",
+        "timer_wait_seconds": 22
       }
     ],
     "last_error_alert_at": "2026-08-08T02:30:13.472783+00:00",
-    "last_success_at": "2026-08-08T02:47:30.738811+00:00",
+    "last_success_at": "2026-08-08T02:50:39.836300+00:00",
     "sell_count": 2,
     "status": "ok",
-    "stock_count": 21,
+    "stock_count": 19,
     "timer_sync": {
       "changed_during_sync": false,
       "final_guard_reason": "timer-safe",
-      "guard_log": [],
-      "min_timer_seconds": 157,
+      "guard_log": [
+        {
+          "pass": 1,
+          "reason": "seed เพิ่งรีรอบ (292s เหลือ)",
+          "source": "shop",
+          "timers": {
+            "gear": 292,
+            "seed": 292
+          },
+          "wait_seconds": 22
+        }
+      ],
+      "min_timer_seconds": 268,
       "rollover_seen": false,
       "sample_counts": [
-        21,
-        21
+        19,
+        19
       ],
       "sample_fingerprints": [
-        "f93b1c6c08e6b2c65ed3bd7dc1ac4b28f12e7fc59f894d6c9665854d0b624d06",
-        "f93b1c6c08e6b2c65ed3bd7dc1ac4b28f12e7fc59f894d6c9665854d0b624d06"
+        "89d2f957cbf0ccacf9db012e5c1b13955739b2234f5ceeec4cf0488eff59e863",
+        "89d2f957cbf0ccacf9db012e5c1b13955739b2234f5ceeec4cf0488eff59e863"
       ],
       "samples": 2,
       "shop_timers": {
-        "crate": 157,
-        "gear": 157,
-        "seed": 157
+        "crate": 268,
+        "gear": 268,
+        "seed": 268
       },
       "stock": [
         {
           "name": "Bench Crate",
-          "qty": 2,
+          "qty": 3,
           "rarity": "UNCOMMON",
           "type": "crate"
         },
@@ -84,27 +166,33 @@
           "type": "crate"
         },
         {
+          "name": "Cobblestone Crate",
+          "qty": 2,
+          "rarity": "RARE",
+          "type": "crate"
+        },
+        {
           "name": "Ladder Crate",
           "qty": 1,
           "rarity": "COMMON",
           "type": "crate"
         },
         {
-          "name": "Owner Door Crate",
+          "name": "Light Crate",
           "qty": 2,
-          "rarity": "LEGENDARY",
+          "rarity": "UNCOMMON",
           "type": "crate"
         },
         {
-          "name": "Common Watering Can",
-          "qty": 3,
+          "name": "Common Sprinkler",
+          "qty": 2,
           "rarity": "COMMON",
           "type": "gear"
         },
         {
-          "name": "Jump Mushroom",
-          "qty": 2,
-          "rarity": "RARE",
+          "name": "Common Watering Can",
+          "qty": 4,
+          "rarity": "COMMON",
           "type": "gear"
         },
         {
@@ -115,8 +203,14 @@
         },
         {
           "name": "Syrup Watering Can",
-          "qty": 5,
+          "qty": 2,
           "rarity": "COMMON",
+          "type": "gear"
+        },
+        {
+          "name": "Trowel",
+          "qty": 3,
+          "rarity": "RARE",
           "type": "gear"
         },
         {
@@ -144,20 +238,8 @@
           "type": "seed"
         },
         {
-          "name": "Maple Cactus",
-          "qty": 2,
-          "rarity": "RARE",
-          "type": "seed"
-        },
-        {
           "name": "Maple Corn",
           "qty": 1,
-          "rarity": "RARE",
-          "type": "seed"
-        },
-        {
-          "name": "Maple Pineapple",
-          "qty": 3,
           "rarity": "RARE",
           "type": "seed"
         },
@@ -169,25 +251,13 @@
         },
         {
           "name": "Maple Tulip",
-          "qty": 4,
+          "qty": 3,
           "rarity": "UNCOMMON",
           "type": "seed"
         },
         {
-          "name": "Mushroom",
-          "qty": 3,
-          "rarity": "EPIC",
-          "type": "seed"
-        },
-        {
-          "name": "Pineapple",
-          "qty": 1,
-          "rarity": "RARE",
-          "type": "seed"
-        },
-        {
           "name": "Tomato",
-          "qty": 3,
+          "qty": 2,
           "rarity": "UNCOMMON",
           "type": "seed"
         },
@@ -202,17 +272,17 @@
       "timer_safe": true,
       "timer_source": "shop",
       "timers_used": {
-        "gear": 157,
-        "seed": 157
+        "gear": 268,
+        "seed": 268
       },
-      "total_timer_wait_seconds": 6
+      "total_timer_wait_seconds": 22
     }
   },
   "shop_fingerprints": {
-    "crate": "a6a22047388c0e7bf3b92e98a778cad18a8fbc4ac3bc7390bf41d418bce392bb",
-    "gear": "26a3768227cae003f646f64607bde0bb330e8686bd0974841dadf527a5b864ed",
-    "seed": "2e835bc08ee200a201d2d088dd0fa0f0f59bb65590b456c051fcec9ea01defc5",
-    "sell": "4d50f0f142a5508f8baffd56f514ba76c20e6fabf4ab07c21c90a7a9b1d5ca08",
+    "crate": "3ced335350fc08e0e35471994b20f5a0af259d69ac2640322f285194cefd49ad",
+    "gear": "056acd19fd1c67942b573f22d0bebb798edb84217215739ccee0c57091ebe855",
+    "seed": "4f003b83a7474aa6ba43bb8abc3ac303e1e485e50a68edae34a45dbc7414e5f0",
+    "sell": "85cd8b4e3777c10ebda5e9c941d6212518f23c717416643c1343fe2141ad1506",
     "unknown": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
   },
   "targets": {
@@ -221,13 +291,13 @@
       "atlantic giant pumpkin": {
         "image_url": "https://cdn.gag2.gg/items/atlantic_giant_pumpkin.webp",
         "label": "Atlantic Giant Pumpkin",
-        "multi": 1.18,
+        "multi": 0.97,
         "present": true
       },
       "maple mushroom": {
         "image_url": "https://cdn.gag2.gg/items/maple_mushroom.webp",
         "label": "Maple Mushroom",
-        "multi": 1.0,
+        "multi": 0.95,
         "present": true
       }
     },
@@ -258,6 +328,6 @@
       }
     }
   },
-  "updated_at": "2026-08-08T02:47:30.738793+00:00",
+  "updated_at": "2026-08-08T02:50:39.836274+00:00",
   "version": "6.4.5.1"
 }
