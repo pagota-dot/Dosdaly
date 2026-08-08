@@ -22,16 +22,16 @@ MAX_READ_ATTEMPTS = 3
 RETRY_WAIT_SECONDS = 3
 
 # Alert windows
-PREPARE_THRESHOLD_SECONDS = 12 * 60
-READY_THRESHOLD_SECONDS = 5 * 60
-FINAL_ARM_THRESHOLD_SECONDS = 3 * 60
+PREPARE_THRESHOLD_SECONDS = 2 * 60
+READY_THRESHOLD_SECONDS = 2 * 60
+FINAL_ARM_THRESHOLD_SECONDS = 2 * 60
 
 # Aim to notify this long before the predicted event start.
-FINAL_TARGET_SECONDS = 45
+FINAL_TARGET_SECONDS = 40
 
 # If a refreshed countdown after waiting is still above this,
 # the schedule likely shifted; do not fire too early.
-FINAL_MAX_ACCEPTABLE_SECONDS = 80
+FINAL_MAX_ACCEPTABLE_SECONDS = 70
 
 # Active-event fallback suppression window.
 ACTIVE_RECENT_FINAL_SECONDS = 5 * 60
@@ -267,9 +267,10 @@ def parse_weather_page(text):
 def load_state():
     if not STATE_PATH.exists():
         return {
-            "version": 1,
+            "version": 2,
             "events": {},
             "last_final_by_kind": {},
+            "last_started_by_kind": {},
         }
 
     try:
@@ -280,9 +281,10 @@ def load_state():
     if not isinstance(raw, dict):
         raw = {}
 
-    raw.setdefault("version", 1)
+    raw.setdefault("version", 2)
     raw.setdefault("events", {})
     raw.setdefault("last_final_by_kind", {})
+    raw.setdefault("last_started_by_kind", {})
     return raw
 
 
@@ -358,16 +360,8 @@ def event_embed(event, level, remaining=None):
     if remaining is None:
         remaining = max(0, event_epoch - int(utc_now().timestamp()))
 
-    if level == "prepare":
-        title = f"🔔 {meta['emoji']} {meta['label']} — เตรียมตัว"
-        description = (
-            f"⏳ เหลือประมาณ **{format_seconds(remaining)}**\n"
-            f"🕐 คาดว่าเริ่มประมาณ **{event_time_th(event_epoch)} น.** เวลาไทย\n\n"
-            f"{meta['seed_emoji']} มีโอกาสเกิด **{meta['seed']}**\n"
-            "ยังไม่ต้องรีบ แต่เตรียมเข้าเกมไว้ได้เลย"
-        )
-    elif level == "ready":
-        title = f"⚠️ {meta['emoji']} {meta['label']} — ใกล้เริ่มแล้ว"
+    if level in {"prepare", "ready"}:
+        title = f"⚠️ {meta['emoji']} {meta['label']} — เตรียมเข้าเกม"
         description = (
             f"⏳ เหลือประมาณ **{format_seconds(remaining)}**\n"
             f"🕐 คาดว่าเริ่มประมาณ **{event_time_th(event_epoch)} น.** เวลาไทย\n\n"
@@ -380,20 +374,21 @@ def event_embed(event, level, remaining=None):
             f"⏳ เหลือประมาณ **{format_seconds(remaining)}**\n"
             f"🕐 คาดว่าเริ่มประมาณ **{event_time_th(event_epoch)} น.** เวลาไทย\n\n"
             f"{meta['seed_emoji']} **{meta['seed']}** กำลังจะมีโอกาสเกิด\n"
-            "นี่คือการเตือนรอบสุดท้ายก่อน Event"
+            "อีกไม่กี่วินาที Event จะเริ่ม"
         )
     else:
         title = f"🚨 {meta['emoji']} {meta['label']} — เริ่มแล้ว!"
         description = (
+            "⏳ เหลือประมาณ **0 วินาที**\n"
             f"{meta['seed_emoji']} **{meta['seed']}** สามารถมีโอกาสเกิดได้ตอนนี้\n"
-            "ระบบไม่ทันส่งเตือน ~45 วินาทีก่อนเริ่ม จึงแจ้งทันทีเมื่อพบว่า Event เริ่มแล้ว"
+            "เข้าเกมและหา Seed ได้เลย!"
         )
 
     return {
         "title": title,
         "description": description,
         "footer": {
-            "text": "GAG2 Moon Alert · Gold/Rainbow/Mega"
+            "text": "GAG2 Moon Alert · 2m / 40s / START · Gold/Rainbow/Mega"
         },
     }
 
@@ -492,27 +487,19 @@ def process_upcoming(state, parsed):
         # Keep predicted epoch fresh as countdown gets more precise.
         es["event_epoch"] = event["event_epoch"]
 
-        if remaining <= FINAL_ARM_THRESHOLD_SECONDS:
-            if not es.get("final"):
-                final_candidates.append(event)
-            continue
-
-        if remaining <= READY_THRESHOLD_SECONDS:
-            if not es.get("ready"):
-                send_level(event, "ready", remaining)
-                es["ready"] = True
-                mark_earlier_levels_skipped(es, "ready")
-                print(
-                    f"READY alert sent: {event['kind']} remaining={remaining}s"
-                )
-            continue
-
-        if not es.get("prepare"):
-            send_level(event, "prepare", remaining)
+        # First visible alert: once the event is within ~2 minutes.
+        if not es.get("ready"):
+            send_level(event, "ready", remaining)
+            es["ready"] = True
             es["prepare"] = True
             print(
-                f"PREPARE alert sent: {event['kind']} remaining={remaining}s"
+                f"2-MIN alert sent: {event['kind']} remaining={remaining}s"
             )
+
+        # Same job then waits toward the ~40-second alert.
+        if not es.get("final"):
+            final_candidates.append(event)
+        continue
 
     # Only one final wait at a time: nearest target moon wins.
     if final_candidates:
@@ -553,6 +540,34 @@ def process_upcoming(state, parsed):
                     f"FINAL alert sent: {event['kind']} "
                     f"remaining={actual_remaining}s"
                 )
+
+                # Keep this same workflow alive until the predicted start,
+                # then confirm GAG2 again and send one explicit START/0s alert.
+                start_wait = max(0, actual_remaining)
+                if start_wait:
+                    print(
+                        f"Waiting {start_wait}s for START confirmation: "
+                        f"{event['kind']}"
+                    )
+                    time.sleep(start_wait)
+
+                started_check = read_weather()
+                if started_check.get("active") == event["kind"]:
+                    send_level(match, "active", 0)
+                    es["started"] = True
+                    es["started_sent_at"] = iso_now()
+                    state.setdefault("last_started_by_kind", {})[
+                        event["kind"]
+                    ] = {
+                        "sent_epoch": int(utc_now().timestamp()),
+                        "event_epoch": match["event_epoch"],
+                    }
+                    print(f"START alert sent: {event['kind']} remaining=0s")
+                else:
+                    print(
+                        f"START confirmation not active yet: {event['kind']}; "
+                        "next Cloudflare run will use fallback if needed"
+                    )
             else:
                 print(
                     f"FINAL postponed: refreshed remaining={actual_remaining}s "
@@ -564,7 +579,14 @@ def process_upcoming(state, parsed):
             if active == event["kind"]:
                 send_level(event, "active", 0)
                 es["final"] = True
+                es["started"] = True
                 es["active_fallback"] = True
+                state.setdefault("last_started_by_kind", {})[
+                    event["kind"]
+                ] = {
+                    "sent_epoch": int(utc_now().timestamp()),
+                    "event_epoch": event["event_epoch"],
+                }
                 state.setdefault("last_final_by_kind", {})[
                     event["kind"]
                 ] = {
@@ -582,10 +604,10 @@ def process_active_fallback(state, parsed):
         return
 
     now_epoch = int(utc_now().timestamp())
-    last = (state.get("last_final_by_kind") or {}).get(active) or {}
+    last = (state.get("last_started_by_kind") or {}).get(active) or {}
     last_sent = int(last.get("sent_epoch", 0) or 0)
 
-    # If final alert was sent recently, don't send a redundant "started" message.
+    # If the explicit START alert was sent recently, don't duplicate it.
     if last_sent and now_epoch - last_sent <= ACTIVE_RECENT_FINAL_SECONDS:
         return
 
@@ -598,12 +620,12 @@ def process_active_fallback(state, parsed):
 
     send_level(pseudo_event, "active", 0)
 
-    state.setdefault("last_final_by_kind", {})[active] = {
+    state.setdefault("last_started_by_kind", {})[active] = {
         "sent_epoch": now_epoch,
         "event_epoch": now_epoch,
     }
 
-    print(f"ACTIVE fallback sent: {active}")
+    print(f"START fallback sent: {active}")
 
 
 def main():
