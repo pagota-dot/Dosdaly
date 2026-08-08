@@ -1,4 +1,4 @@
-name: GAG2 Moon Alert v1
+name: GAG2 Moon Alert v5 Frozen Anchor
 
 on:
   workflow_dispatch:
@@ -13,7 +13,7 @@ concurrency:
 jobs:
   moon-alert:
     runs-on: ubuntu-24.04
-    timeout-minutes: 6
+    timeout-minutes: 8
 
     env:
       DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
@@ -32,7 +32,7 @@ jobs:
       - name: Install dependencies
         run: pip install --disable-pip-version-check -r requirements.txt
 
-      - name: Check Gold/Rainbow Moon
+      - name: Check Gold Rainbow Mega Moon
         run: python moon_bot.py
 
       - name: Save moon state safely
