@@ -736,6 +736,36 @@ def read_sell_targets(driver):
     return results, diagnostics
 
 
+
+GAG2_ITEM_IMAGE_OVERRIDES = {
+    "atlantic giant pumpkin": "https://cdn.gag2.gg/items/atlantic_giant_pumpkin.webp",
+    "maple mushroom": "https://cdn.gag2.gg/items/maple_mushroom.webp",
+    "amber cranberry": "https://cdn.gag2.gg/items/amber_cranberry.webp",
+    "super syrup sprinkler": "https://cdn.gag2.gg/items/super_syrup_sprinkler.webp",
+    "super syrup watering can": "https://cdn.gag2.gg/items/super_syrup_watering_can.webp",
+}
+
+
+def gag2_item_image_url(item_name):
+    """
+    Exact GAG2 item image URL.
+
+    Known watched items use verified explicit URLs.
+    Magic Mail and any future simple item names use GAG2's item slug convention:
+      "Legendary Magic Mail" -> legendary_magic_mail.webp
+    """
+    item_key = key(item_name)
+    if item_key in GAG2_ITEM_IMAGE_OVERRIDES:
+        return GAG2_ITEM_IMAGE_OVERRIDES[item_key]
+
+    if "magic mail" in item_key:
+        slug = re.sub(r"[^a-z0-9]+", "_", item_key).strip("_")
+        if slug:
+            return f"https://cdn.gag2.gg/items/{slug}.webp"
+
+    return None
+
+
 def _is_reasonable_image_url(url):
     url = norm(url)
     if not url:
@@ -1035,14 +1065,14 @@ def target_snapshot(stock, sell, stock_image_map=None, sell_image_map=None):
                 "present": True,
                 "items": matches,
                 "label": meta["label"],
-                "image_url": stock_image_map.get(target_key),
+                "image_url": gag2_item_image_url(meta["label"]),
             }
         else:
             snapshot["stock"][target_key] = {
                 "present": False,
                 "items": [],
                 "label": meta["label"],
-                "image_url": stock_image_map.get(target_key),
+                "image_url": gag2_item_image_url(meta["label"]),
             }
 
     # Magic Mail variants: every rarity except Rare.
@@ -1056,10 +1086,7 @@ def target_snapshot(stock, sell, stock_image_map=None, sell_image_map=None):
             "rarity": rarity.upper() if rarity != "unknown" else "",
             "qty": int(item.get("qty", 0)),
             "type": item.get("type", "gear"),
-            "image_url": (
-                stock_image_map.get(key(item.get("name", "")))
-                or stock_image_map.get("magic mail")
-            ),
+            "image_url": gag2_item_image_url(item.get("name", "Magic Mail")),
         }
 
     # Sell: store actual current multiplier even if it is x1/x3/etc.
@@ -1072,14 +1099,14 @@ def target_snapshot(stock, sell, stock_image_map=None, sell_image_map=None):
                 "present": True,
                 "multi": float(item.get("multi", 0)),
                 "label": meta["label"],
-                "image_url": sell_image_map.get(target_key),
+                "image_url": gag2_item_image_url(meta["label"]),
             }
         else:
             snapshot["sell"][target_key] = {
                 "present": False,
                 "multi": None,
                 "label": meta["label"],
-                "image_url": sell_image_map.get(target_key),
+                "image_url": gag2_item_image_url(meta["label"]),
             }
 
     return snapshot
@@ -1365,10 +1392,13 @@ def collect_live_data():
 
             stock_sync = read_source_synced_stock(driver)
             stock = stock_sync["stock"]
-            stock_image_map = read_stock_target_images(driver)
 
             sell, sell_diag = read_sell_targets(driver)
-            sell_image_map = read_sell_target_images(driver)
+
+            # v6.4.5: do not infer image-to-item pairing from nearby DOM cards.
+            # Exact CDN image URLs are generated from the actual target item name.
+            stock_image_map = {}
+            sell_image_map = {}
 
             stock_ok = (
                 len(stock) >= MIN_STOCK_ITEMS
@@ -1487,7 +1517,7 @@ def send_discord(content="", embeds=None):
     r = requests.post(
         WEBHOOK,
         json=payload,
-        headers={"User-Agent": "GAG2-Reliability-Discord-Bot/6.4.4"},
+        headers={"User-Agent": "GAG2-Reliability-Discord-Bot/6.4.5"},
         timeout=30,
     )
 
@@ -1570,7 +1600,7 @@ def build_event_embed(event, attempts):
         "description": "\n".join(desc_lines)[:4000],
         "color": color,
         "image": {"url": image_url},
-        "footer": {"text": f"Reliability v6.4.4 Image Alert • attempts {attempts}"},
+        "footer": {"text": f"Reliability v6.4.5 Exact Image Alert • attempts {attempts}"},
     }
     return embed
 
@@ -1596,7 +1626,7 @@ def find_sell_value(sell, target_key):
 def format_health_message(stock, sell, snapshot, attempts, recovered=False, self_test=None, source_sync=None):
     lines = [
         "✅ **GAG2 Bot Health Check**",
-        "🛡️ Reliability v6.4.4 Image Alert + Block Detector + Timer-Sync",
+        "🛡️ Reliability v6.4.5 Exact Image Alert + Block Detector + Timer-Sync",
         f"• Stock parser: **OK** ({len(stock)} รายการ)",
         f"• Sell parser: **OK** ({len(sell)} รายการ)",
         f"• อ่านสำเร็จในครั้งที่: **{attempts}/{MAX_READ_ATTEMPTS}**",
@@ -1826,7 +1856,7 @@ def main():
     recovered = old_health_status in {"error", "blocked"}
 
     new_state = {
-        "version": "6.4.4",
+        "version": "6.4.5",
         "alert_logic_version": ALERT_LOGIC_VERSION,
         "updated_at": iso_now(),
         "shop_fingerprints": current_shop_fp,
@@ -1850,7 +1880,7 @@ def main():
 
     print(f"Parsed stock: {len(stock)} | sell: {len(sell)}")
     print(f"Read attempts used: {attempts}")
-    print(f"Has v6.4.4 baseline: {has_baseline}")
+    print(f"Has v6.4.5 baseline: {has_baseline}")
     print(f"Alert rules self-test: PASS ({self_test['passed_classes']}/{self_test['total_classes']})")
     print(f"Current wanted conditions: {len(current_events)}")
     print(f"Alert logic migration required: {logic_migration}")
@@ -1877,7 +1907,7 @@ def main():
             print("Manual run: no current wanted event; health check only")
 
         save_state(new_state)
-        print("Manual Health Check + current alerts sent; v6.4.4 state saved")
+        print("Manual Health Check + current alerts sent; v6.4.5 state saved")
         return
 
     # On first run or migration, alert currently-active targets instead of
