@@ -29,7 +29,7 @@ jobs:
       - name: Verify required files
         run: |
           echo "Checking required files..."
-          test -f "moon_bot(6).py" || (echo "ERROR: moon_bot(6).py not found" && exit 1)
+          test -f "moon_bot.py" || (echo "ERROR: moon_bot.py not found" && exit 1)
           test -f "test_moon.py" || (echo "ERROR: test_moon.py not found" && exit 1)
           echo "Required files found."
 
