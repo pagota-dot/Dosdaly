@@ -28,10 +28,6 @@ FINAL_ARM_THRESHOLD_SECONDS = 3 * 60
 
 # Aim to notify this long before the predicted event start.
 FINAL_TARGET_SECONDS = 45
-# If a workflow wakes up too close to the event (for example because another
-# workflow instance already handled the proper ~45s alert), skip sending a
-# duplicate late final. This keeps Discord to at most 2 alerts per event.
-FINAL_SEND_MIN_REMAINING_SECONDS = 30
 
 # If a refreshed countdown after waiting is still above this,
 # the schedule likely shifted; do not fire too early.
@@ -42,7 +38,7 @@ ACTIVE_RECENT_FINAL_SECONDS = 5 * 60
 
 # Freeze the predicted start time from the FIRST reliable <=5m alert.
 # Later GAG2 countdown changes must NOT move the final alert later.
-ANCHOR_LOGIC_VERSION = "v6.3-max-two-alerts"
+ANCHOR_LOGIC_VERSION = "v6.2-game-cycle-aware"
 
 # If the first time we ever see the event is already very late,
 # don't send two messages almost on top of each other.
@@ -777,7 +773,7 @@ def event_embed(event, level, remaining=None):
         "title": title,
         "description": description,
         "footer": {
-            "text": f"GAG2 Moon Alert v6.3 · {verify_text}"
+            "text": f"GAG2 Moon Alert v6.1 · {verify_text}"
         },
     }
 
@@ -1093,16 +1089,6 @@ def process_upcoming(state, parsed):
         print(
             f"FINAL missed frozen start for {event['kind']}; "
             "active fallback will handle it"
-        )
-        return
-
-    if actual_by_anchor < FINAL_SEND_MIN_REMAINING_SECONDS:
-        es["final_skipped_too_late"] = True
-        es["final_skip_remaining"] = actual_by_anchor
-        es["event_epoch"] = anchor_epoch
-        print(
-            f"FROZEN FINAL skipped (too late): {event['kind']} "
-            f"remaining={actual_by_anchor}s min_required={FINAL_SEND_MIN_REMAINING_SECONDS}s"
         )
         return
 
