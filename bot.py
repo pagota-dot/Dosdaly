@@ -59,6 +59,12 @@ SHOP_CYCLE_NAMES = ("seed", "gear", "crate")
 MIN_STOCK_ITEMS = 3
 MIN_SELL_ITEMS = 1
 HEALTH_ALERT_COOLDOWN_HOURS = 1
+
+# v6.5.3 Quiet NO_TIMER
+# One Cloudflare run already retries MAX_READ_ATTEMPTS internally.
+# Only after this many SEPARATE Cloudflare runs fail solely because
+# GAG2's countdown timer is missing do we notify Discord.
+NO_TIMER_WARNING_AFTER_CLOUDFLARE_ROUNDS = 3
 ALERT_LOGIC_VERSION = "6.4.4-image-alert-v1"
 
 # v6.5.0 Daily Statistics
@@ -1947,7 +1953,7 @@ def send_discord(content="", embeds=None):
     r = requests.post(
         WEBHOOK,
         json=payload,
-        headers={"User-Agent": "GAG2-Reliability-Discord-Bot/6.5.2"},
+        headers={"User-Agent": "GAG2-Reliability-Discord-Bot/6.5.3"},
         timeout=30,
     )
 
@@ -2089,7 +2095,7 @@ def find_sell_value(sell, target_key):
 def format_health_message(stock, sell, snapshot, attempts, recovered=False, self_test=None, source_sync=None, shop_cycles=None):
     lines = [
         "✅ **GAG2 Bot Health Check**",
-        "🛡️ Reliability v6.5.2 Compact Manual + Daily Counters + Thumbnail + Per-Shop Cycle + Smart State + Block Detector + Timer-Sync",
+        "🛡️ Reliability v6.5.3 Quiet NO_TIMER + Daily Counters + Thumbnail + Per-Shop Cycle + Smart State + Block Detector + Timer-Sync",
         f"• Stock parser: **OK** ({len(stock)} รายการ)",
         f"• Sell parser: **OK** ({len(sell)} รายการ)",
         f"• อ่านสำเร็จในครั้งที่: **{attempts}/{MAX_READ_ATTEMPTS}**",
@@ -2210,6 +2216,42 @@ def format_health_message(stock, sell, snapshot, attempts, recovered=False, self
     return "\n".join(lines)
 
 
+
+def is_no_timer_only_failure(diagnostics):
+    """
+    True only when parsing itself looks healthy and every failed attempt
+    is rejected solely because the GAG2 countdown timer is unavailable.
+
+    If Snapshot is unstable, parser errors occur, or access is blocked,
+    this returns False so the normal warning path is used immediately.
+    """
+    if not diagnostics:
+        return False
+
+    clean_attempts = 0
+
+    for d in diagnostics:
+        if d.get("access_block") or d.get("error"):
+            return False
+
+        if d.get("timer_available"):
+            return False
+
+        if not d.get("multi_snapshot_stable"):
+            return False
+
+        if int(d.get("stock_count", 0) or 0) < MIN_STOCK_ITEMS:
+            return False
+
+        if int(d.get("sell_count", 0) or 0) < MIN_SELL_ITEMS:
+            return False
+
+        clean_attempts += 1
+
+    return clean_attempts >= MAX_READ_ATTEMPTS
+
+
+
 def should_send_health_failure_alert(old_state):
     health = old_state.get("health", {}) if isinstance(old_state, dict) else {}
 
@@ -2235,6 +2277,136 @@ def handle_read_failure(old_state, result):
     diagnostics = result.get("diagnostics", [])
     block_diags = [d for d in diagnostics if d.get("access_block")]
     blocked = bool(block_diags)
+
+    no_timer_only = (
+        not blocked
+        and is_no_timer_only_failure(diagnostics)
+    )
+
+    is_cloudflare_run = (
+        EVENT_NAME == "workflow_dispatch"
+        and TRIGGER_SOURCE == "cloudflare"
+    )
+
+    # ---------------------------------------------------------------
+    # Quiet path: only GAG2 Timer is missing, while Stock/Sell +
+    # Multi-Snapshot are healthy.
+    #
+    # One Cloudflare run already tried 3 internal attempts. We do NOT
+    # notify Discord yet. We count SEPARATE Cloudflare runs instead.
+    # ---------------------------------------------------------------
+    if no_timer_only and is_cloudflare_run:
+        old_streak = int(
+            health.get("no_timer_cloudflare_streak", 0) or 0
+        )
+        streak = old_streak + 1
+        warning_already_sent = bool(
+            health.get("no_timer_warning_sent", False)
+        )
+
+        should_warn_now = (
+            streak >= NO_TIMER_WARNING_AFTER_CLOUDFLARE_ROUNDS
+            and not warning_already_sent
+        )
+
+        if should_warn_now:
+            last = diagnostics[-1] if diagnostics else {}
+            stock_count = int(last.get("stock_count", 0) or 0)
+            sell_count = int(last.get("sell_count", 0) or 0)
+
+            send_discord(
+                "\n".join(
+                    [
+                        "🛠️ **GAG2 SYSTEM — Timer Missing**",
+                        "**นี่ไม่ใช่แจ้งเตือน Stock / Sell**",
+                        "",
+                        f"Countdown ของ GAG2 หายต่อเนื่อง **{streak} รอบ Cloudflare**",
+                        f"Stock/Sell ยังอ่านได้: **Stock {stock_count} / Sell {sell_count}**",
+                        "Multi-Snapshot ยัง Stable แต่ระบบยังไม่ยอมเปลี่ยน baseline",
+                        "",
+                        "บอทจะเฝ้าต่ออัตโนมัติ และจะไม่ส่งข้อความนี้ซ้ำ",
+                        "จนกว่า Timer จะกลับมาปกติแล้วเกิดปัญหาใหม่อีกครั้ง",
+                    ]
+                )
+            )
+            warning_already_sent = True
+
+        health.update(
+            {
+                # Deliberately NOT "error": a recovery from this state should
+                # be silent, so Discord does not get a second distracting ping.
+                "status": "no_timer_wait",
+                "last_checked_at": now,
+                "last_diagnostics": diagnostics,
+                "last_block_kind": None,
+                "last_block_status_code": None,
+                "no_timer_cloudflare_streak": streak,
+                "no_timer_warning_sent": warning_already_sent,
+            }
+        )
+
+        new_state["health"] = health
+        new_state.setdefault("version", "6.5.3")
+        save_state(new_state)
+
+        if should_warn_now:
+            print(
+                f"NO_TIMER streak {streak}: system warning sent once"
+            )
+        else:
+            print(
+                f"NO_TIMER streak {streak}/"
+                f"{NO_TIMER_WARNING_AFTER_CLOUDFLARE_ROUNDS}: Discord silent"
+            )
+        return
+
+    # ---------------------------------------------------------------
+    # Manual NO_TIMER: user explicitly requested a Health Check, so
+    # explain the failure immediately, but do not increment the
+    # automatic Cloudflare streak.
+    # ---------------------------------------------------------------
+    if no_timer_only and not is_cloudflare_run:
+        last = diagnostics[-1] if diagnostics else {}
+        send_discord(
+            "\n".join(
+                [
+                    "🛠️ **GAG2 Manual Health — NO_TIMER**",
+                    "**นี่ไม่ใช่แจ้งเตือนของเข้า**",
+                    "",
+                    f"Stock {int(last.get('stock_count',0) or 0)} / "
+                    f"Sell {int(last.get('sell_count',0) or 0)} อ่านได้",
+                    "Snapshot Stable แต่หน้า GAG2 ไม่มี Countdown ในรอบ Manual นี้",
+                    "ระบบจึงไม่เปลี่ยน baseline เพื่อความปลอดภัย",
+                ]
+            )
+        )
+
+        health.update(
+            {
+                "status": health.get("status") or "no_timer_wait",
+                "last_checked_at": now,
+                "last_diagnostics": diagnostics,
+                "last_block_kind": None,
+                "last_block_status_code": None,
+                # Preserve automatic streak exactly as-is.
+                "no_timer_cloudflare_streak": int(
+                    health.get("no_timer_cloudflare_streak", 0) or 0
+                ),
+                "no_timer_warning_sent": bool(
+                    health.get("no_timer_warning_sent", False)
+                ),
+            }
+        )
+
+        new_state["health"] = health
+        new_state.setdefault("version", "6.5.3")
+        save_state(new_state)
+        print("Manual NO_TIMER Health message sent; automatic streak unchanged")
+        return
+
+    # Any OTHER failure breaks the consecutive-NO_TIMER chain.
+    health["no_timer_cloudflare_streak"] = 0
+    health["no_timer_warning_sent"] = False
 
     send_warning = should_send_health_failure_alert(old_state)
 
@@ -2312,7 +2484,8 @@ def handle_read_failure(old_state, result):
             send_discord(
                 "\n".join(
                     [
-                        "⚠️ **GAG2 Bot Health Warning**",
+                        "🛠️ **GAG2 SYSTEM Warning**",
+                        "**นี่ไม่ใช่แจ้งเตือนของเข้า**",
                         f"อ่านข้อมูลไม่ผ่านหลังลอง {MAX_READ_ATTEMPTS} ครั้ง",
                         "บอทจะ **ไม่เปลี่ยน baseline และไม่ส่ง Stock มั่ว**",
                         "",
@@ -2332,13 +2505,14 @@ def handle_read_failure(old_state, result):
             "last_diagnostics": diagnostics,
             "last_block_kind": block_diags[-1].get("block_kind") if blocked else None,
             "last_block_status_code": block_diags[-1].get("status_code") if blocked else None,
+            "no_timer_cloudflare_streak": 0,
+            "no_timer_warning_sent": False,
         }
     )
 
     new_state["health"] = health
-    new_state.setdefault("version", "6.5.2")
+    new_state.setdefault("version", "6.5.3")
     save_state(new_state)
-
 
 
 
@@ -2787,6 +2961,12 @@ def semantic_state_view(state):
             "last_error_alert_at": health.get("last_error_alert_at"),
             "last_block_kind": health.get("last_block_kind"),
             "last_block_status_code": health.get("last_block_status_code"),
+            "no_timer_cloudflare_streak": int(
+                health.get("no_timer_cloudflare_streak", 0) or 0
+            ),
+            "no_timer_warning_sent": bool(
+                health.get("no_timer_warning_sent", False)
+            ),
         },
     }
 
@@ -2861,7 +3041,7 @@ def main():
     old_health = old_state.get("health", {}) if isinstance(old_state, dict) else {}
 
     new_state = {
-        "version": "6.5.2",
+        "version": "6.5.3",
         "alert_logic_version": ALERT_LOGIC_VERSION,
         "updated_at": old_state.get("updated_at"),
         "shop_fingerprints": current_shop_fp,
@@ -2874,6 +3054,8 @@ def main():
             "last_error_alert_at": old_health.get("last_error_alert_at"),
             "last_block_kind": None,
             "last_block_status_code": None,
+            "no_timer_cloudflare_streak": 0,
+            "no_timer_warning_sent": False,
         },
     }
 
@@ -2882,7 +3064,7 @@ def main():
 
     print(f"Parsed stock: {len(stock)} | sell: {len(sell)}")
     print(f"Read attempts used: {attempts}")
-    print(f"Has v6.5.2 baseline: {has_baseline}")
+    print(f"Has v6.5.3 baseline: {has_baseline}")
     print(f"Alert rules self-test: PASS ({self_test['passed_classes']}/{self_test['total_classes']})")
     print(f"Current wanted conditions: {len(current_events)}")
     print(f"Alert logic migration required: {logic_migration}")
@@ -2944,7 +3126,6 @@ def main():
         # Do NOT send Pumpkin/Mushroom Image Self-Test on every Manual Run.
         # Real Stock/Sell/Magic alerts still keep their thumbnail images.
         print("Manual Image Self-Test skipped (real alert thumbnails remain enabled)")
-        print("Manual image self-test sent")
 
         if current_events:
             send_event_alerts(current_events, attempts)
@@ -2953,7 +3134,7 @@ def main():
             print("Manual run: no current wanted event; health check only")
 
         smart_save_state(old_state, new_state, force=True)
-        print("Manual Health Check + current alerts sent; v6.5.2 state handled")
+        print("Manual Health Check + current alerts sent; v6.5.3 state handled")
         return
 
     # On first run or migration, alert currently-active targets instead of
