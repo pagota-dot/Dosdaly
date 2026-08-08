@@ -4,12 +4,12 @@ import importlib.util
 from pathlib import Path
 from datetime import datetime, timedelta, timezone
 
-BOT_FILENAME = "moon_bot.py"
+BOT_FILENAME = "moon_bot(6).py"
 
 def install_optional_dependency_stubs():
     """
     Offline logic tests do not open Chrome/Selenium.
-    Stub Selenium only when it is not installed, so moon_bot.py can be
+    Stub Selenium only when it is not installed, so moon_bot(6).py can be
     imported on a clean Windows/Python machine for pure parsing tests.
     """
     try:
@@ -55,7 +55,7 @@ def load_bot():
     path = here / BOT_FILENAME
     if not path.exists():
         print(f"[ERROR] ไม่พบไฟล์ {BOT_FILENAME}")
-        print("ให้นำ test_moon.py วางไว้โฟลเดอร์เดียวกับ moon_bot.py")
+        print("ให้นำ test_moon.py วางไว้โฟลเดอร์เดียวกับ moon_bot(6).py")
         input("\nกด Enter เพื่อปิด...")
         sys.exit(1)
 

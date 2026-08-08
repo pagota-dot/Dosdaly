@@ -38,7 +38,7 @@ ACTIVE_RECENT_FINAL_SECONDS = 5 * 60
 
 # Freeze the predicted start time from the FIRST reliable <=5m alert.
 # Later GAG2 countdown changes must NOT move the final alert later.
-ANCHOR_LOGIC_VERSION = "v6.1-row-verified-timezone-safe"
+ANCHOR_LOGIC_VERSION = "v6.2-game-cycle-aware"
 
 # If the first time we ever see the event is already very late,
 # don't send two messages almost on top of each other.
@@ -53,6 +53,20 @@ ANCHOR_MATCH_TOLERANCE_SECONDS = 4 * 60
 ROW_CLOCK_TOLERANCE_MINUTES = 2
 SNAPSHOT_VERIFY_DELAY_SECONDS = 4
 HEALTH_WARNING_COOLDOWN_SECONDS = 60 * 60
+
+# Grow a Garden 2 day/night cycle reference (GAG2.GG current guide):
+# Day 7m30s -> Sunset 30s -> Night 2m = 10 minutes per full cycle.
+GAME_DAY_SECONDS = 7 * 60 + 30
+GAME_SUNSET_SECONDS = 30
+GAME_NIGHT_SECONDS = 2 * 60
+GAME_CYCLE_SECONDS = 10 * 60
+GAME_CYCLE_MINUTES = GAME_CYCLE_SECONDS // 60
+
+# We infer the current night-start minute phase dynamically from upcoming Moon
+# rows instead of hard-coding a wall-clock phase. This survives a future global
+# phase shift while still rejecting one bad/out-of-cycle row.
+GAME_CYCLE_MIN_SAMPLES = 2
+GAME_CYCLE_MIN_CONSENSUS_RATIO = 2 / 3
 
 TARGET_MOONS = {
     "gold": {
@@ -249,6 +263,68 @@ def minute_distance(a, b):
     return min(diff, 24 * 60 - diff)
 
 
+def cycle_phase_minute(clock_minutes):
+    """Return the minute phase within the 10-minute global game cycle."""
+    if clock_minutes is None:
+        return None
+    return int(clock_minutes) % GAME_CYCLE_MINUTES
+
+
+def infer_game_cycle_phase(clock_samples):
+    """
+    Infer the global Night/Moon-start phase from ALL upcoming Moon rows,
+    including non-target rows such as Bloodmoon.
+
+    Example: 19:28, 19:58, 20:18 all have minute phase 8 (mod 10).
+    We do not hard-code phase=8; the majority phase is learned every scan.
+    """
+    phases = []
+    for sample in clock_samples:
+        minutes = sample.get("clock_minutes")
+        if minutes is None:
+            continue
+        phases.append(cycle_phase_minute(minutes))
+
+    if len(phases) < GAME_CYCLE_MIN_SAMPLES:
+        return {
+            "verified": False,
+            "phase": None,
+            "sample_count": len(phases),
+            "consensus_count": 0,
+            "consensus_ratio": 0.0,
+            "reason": "not enough Moon clock samples for 10-minute cycle verification",
+        }
+
+    counts = {}
+    for phase in phases:
+        counts[phase] = counts.get(phase, 0) + 1
+
+    best_phase, best_count = max(
+        counts.items(),
+        key=lambda item: (item[1], -item[0]),
+    )
+    ratio = best_count / len(phases)
+    verified = (
+        best_count >= GAME_CYCLE_MIN_SAMPLES
+        and ratio >= GAME_CYCLE_MIN_CONSENSUS_RATIO
+    )
+
+    return {
+        "verified": verified,
+        "phase": best_phase if verified else None,
+        "sample_count": len(phases),
+        "consensus_count": best_count,
+        "consensus_ratio": ratio,
+        "phase_counts": counts,
+        "reason": (
+            f"10-minute Night/Moon grid verified: phase={best_phase} "
+            f"samples={best_count}/{len(phases)}"
+            if verified
+            else f"no reliable 10-minute Moon-grid consensus: {counts}"
+        ),
+    }
+
+
 def countdown_is_precise(countdown_text):
     s = norm(countdown_text).lower()
     return bool(re.fullmatch(r"\d{1,3}:[0-5]\d", s) or re.search(r"\d+\s*s", s))
@@ -324,6 +400,10 @@ def parse_weather_page(text, observed_epoch=None):
             "active": active,
             "upcoming": upcoming,
             "parse_errors": ["Upcoming moons section not found"],
+            "game_cycle": {
+                "verified": False,
+                "reason": "Upcoming moons section not found",
+            },
         }
 
     recent_idx = next(
@@ -341,28 +421,62 @@ def parse_weather_page(text, observed_epoch=None):
         if is_any_moon_row_name(line)
     ]
 
+    # First pass: collect absolute clock samples from every Moon row, including
+    # Bloodmoon and other non-target moons. All Moon starts should lie on the
+    # same 10-minute Night-start grid.
+    cycle_clock_samples = []
+    row_bounds = []
+
     for position_index, i in enumerate(all_moon_positions):
-        line = section[i]
-        kind = canonical_moon_name(line)
-
-        # Non-target moons are still important row boundaries, but we do not
-        # alert for them.
-        if not kind:
-            continue
-
-        # Never borrow the clock/countdown from ANY next Moon row, including
-        # Bloodmoon and other non-target weather rows.
         next_i = (
             all_moon_positions[position_index + 1]
             if position_index + 1 < len(all_moon_positions)
             else len(section)
         )
         row_lines = section[i + 1:next_i]
-
         clock_text = next(
-            (parse_clock_text(candidate) for candidate in row_lines if parse_clock_text(candidate)),
+            (
+                parse_clock_text(candidate)
+                for candidate in row_lines
+                if parse_clock_text(candidate)
+            ),
             None,
         )
+        clock_minutes = clock_text_to_minutes(clock_text) if clock_text else None
+
+        row_bounds.append(
+            {
+                "index": i,
+                "next_index": next_i,
+                "row_name": section[i],
+                "row_lines": row_lines,
+                "clock_text": clock_text,
+                "clock_minutes": clock_minutes,
+            }
+        )
+
+        if clock_minutes is not None:
+            cycle_clock_samples.append(
+                {
+                    "row_name": section[i],
+                    "clock_text": clock_text,
+                    "clock_minutes": clock_minutes,
+                }
+            )
+
+    game_cycle = infer_game_cycle_phase(cycle_clock_samples)
+
+    for row in row_bounds:
+        line = row["row_name"]
+        kind = canonical_moon_name(line)
+
+        # Non-target moons are used as cycle anchors/row boundaries only.
+        if not kind:
+            continue
+
+        row_lines = row["row_lines"]
+        clock_text = row["clock_text"]
+        displayed_minutes = row["clock_minutes"]
 
         countdown_text = None
         countdown = None
@@ -384,8 +498,7 @@ def parse_weather_page(text, observed_epoch=None):
             observed_epoch,
         )
 
-        # If all 3 signals exist but disagree, reject this row rather than
-        # silently attaching the countdown to the wrong clock/name.
+        # Signal 1+2+3: name + displayed clock + countdown must agree.
         if clock_text and not identity["clock_consistent"]:
             parse_errors.append(
                 f"{kind}: clock/countdown mismatch "
@@ -393,6 +506,32 @@ def parse_weather_page(text, observed_epoch=None):
                 f"diff={identity['clock_diff_minutes']}m"
             )
             continue
+
+        # Game-cycle validation: Night/Moon starts repeat every 10 minutes.
+        cycle_verified = False
+        cycle_reason = game_cycle.get("reason", "cycle verification unavailable")
+        event_phase = cycle_phase_minute(displayed_minutes)
+
+        if game_cycle.get("verified") and displayed_minutes is not None:
+            expected_phase = game_cycle.get("phase")
+            cycle_verified = event_phase == expected_phase
+
+            if not cycle_verified:
+                parse_errors.append(
+                    f"{kind}: off 10-minute Night/Moon grid "
+                    f"clock={clock_text} phase={event_phase} "
+                    f"expected_phase={expected_phase}"
+                )
+                # A row that contradicts the verified game cycle is rejected,
+                # rather than allowed to trigger a Discord alert.
+                continue
+
+            cycle_reason = (
+                f"clock phase {event_phase} matches verified "
+                f"10-minute Night/Moon grid"
+            )
+        elif displayed_minutes is None:
+            cycle_reason = "no absolute clock; game-cycle check unavailable"
 
         upcoming.append(
             {
@@ -407,6 +546,9 @@ def parse_weather_page(text, observed_epoch=None):
                 "row_quality": identity["quality"],
                 "clock_diff_minutes": identity["clock_diff_minutes"],
                 "observed_epoch": observed_epoch,
+                "game_cycle_verified": bool(cycle_verified),
+                "game_cycle_phase": event_phase,
+                "game_cycle_reason": cycle_reason,
             }
         )
 
@@ -415,8 +557,9 @@ def parse_weather_page(text, observed_epoch=None):
         "active": active,
         "upcoming": upcoming,
         "parse_errors": parse_errors,
+        "game_cycle": game_cycle,
+        "game_cycle_samples": cycle_clock_samples,
     }
-
 
 def verify_snapshots(first, second, elapsed_seconds):
     """
@@ -473,6 +616,8 @@ def verify_snapshots(first, second, elapsed_seconds):
         "parse_errors": list(first.get("parse_errors", [])) + list(second.get("parse_errors", [])),
         "snapshot_verified_count": len(verified),
         "snapshot_unverified_count": len(unverified),
+        "game_cycle": second.get("game_cycle", {}),
+        "game_cycle_samples": second.get("game_cycle_samples", []),
     }
 
 
@@ -585,7 +730,7 @@ def event_embed(event, level, remaining=None):
         title = f"🔔 {meta['emoji']} {meta['label']} — เตรียมตัว"
         description = (
             f"⏳ เหลือประมาณ **{format_seconds(remaining)}**\n"
-            f"🕐 คาดว่าเริ่มประมาณ **{event_time_th(event_epoch)} น.** เวลาไทย\n\n"
+            f"🌙 คาดว่าเข้าสู่ **Night / Moon เริ่ม** ประมาณ **{event_time_th(event_epoch)} น.** เวลาไทย\n\n"
             f"{meta['seed_emoji']} มีโอกาสเกิด **{meta['seed']}**\n"
             "ยังไม่ต้องรีบ แต่เตรียมเข้าเกมไว้ได้เลย"
         )
@@ -593,7 +738,7 @@ def event_embed(event, level, remaining=None):
         title = f"⚠️ {meta['emoji']} {meta['label']} — ใกล้เริ่มแล้ว"
         description = (
             f"⏳ เหลือประมาณ **{format_seconds(remaining)}**\n"
-            f"🕐 คาดว่าเริ่มประมาณ **{event_time_th(event_epoch)} น.** เวลาไทย\n\n"
+            f"🌙 คาดว่าเข้าสู่ **Night / Moon เริ่ม** ประมาณ **{event_time_th(event_epoch)} น.** เวลาไทย\n\n"
             f"{meta['seed_emoji']} เตรียมหา **{meta['seed']}**\n"
             "แนะนำเปิดเกมและเตรียมเข้าเซิร์ฟเวอร์ได้เลย"
         )
@@ -601,7 +746,7 @@ def event_embed(event, level, remaining=None):
         title = f"🚨 {meta['emoji']} {meta['label']} — เข้าเกมตอนนี้!"
         description = (
             f"⏳ เหลือประมาณ **{format_seconds(remaining)}**\n"
-            f"🕐 คาดว่าเริ่มประมาณ **{event_time_th(event_epoch)} น.** เวลาไทย\n\n"
+            f"🌙 คาดว่าเข้าสู่ **Night / Moon เริ่ม** ประมาณ **{event_time_th(event_epoch)} น.** เวลาไทย\n\n"
             f"{meta['seed_emoji']} **{meta['seed']}** กำลังจะมีโอกาสเกิด\n"
             "นี่คือการเตือนรอบสุดท้ายก่อน Event"
         )
@@ -621,6 +766,8 @@ def event_embed(event, level, remaining=None):
         if event.get("snapshot_verified")
         else "Verified Name+Time+Countdown"
     )
+    if event.get("game_cycle_verified"):
+        verify_text += "+10m Game Cycle"
 
     return {
         "title": title,
@@ -854,6 +1001,8 @@ def process_upcoming(state, parsed):
             es["clock_text"] = event.get("clock_text")
             es["row_quality"] = event.get("row_quality")
             es["snapshot_verified"] = bool(event.get("snapshot_verified"))
+            es["game_cycle_verified"] = bool(event.get("game_cycle_verified"))
+            es["game_cycle_phase"] = event.get("game_cycle_phase")
 
             print(
                 f"ANCHOR frozen: {event['kind']} "
@@ -1005,7 +1154,7 @@ def maybe_send_scanner_warning(state, error_text):
 
     send_discord(
         "⚠️ **GAG2 Moon Scanner Warning**\n"
-        "ระบบตรวจ **ชื่อ Moon + เวลาในแถว + Countdown + 2 Snapshots** "
+        "ระบบตรวจ **ชื่อ Moon + เวลาในแถว + Countdown + 2 Snapshots + รอบเกม 10 นาที** "
         "ไม่สามารถยืนยันข้อมูลได้ในรอบนี้ จึงไม่เดาเวลาแจ้งเตือน\n"
         f"`{str(error_text)[:350]}`\n"
         "ระบบจะลองใหม่อัตโนมัติรอบถัดไป"
@@ -1039,11 +1188,16 @@ def main():
             + " | ".join(parsed.get("parse_errors", [])[:3]),
         )
 
+    cycle_info = parsed.get("game_cycle") or {}
     print(
         "Weather parsed: "
         f"active={parsed.get('active')} "
         f"upcoming_targets={len(parsed.get('upcoming', []))} "
         f"verified={parsed.get('snapshot_verified_count', 0)} "
+        f"cycle_verified={cycle_info.get('verified')} "
+        f"cycle_phase={cycle_info.get('phase')} "
+        f"cycle_samples={cycle_info.get('consensus_count', 0)}/"
+        f"{cycle_info.get('sample_count', 0)} "
         f"attempt={parsed.get('attempt')} logic={ANCHOR_LOGIC_VERSION}"
     )
 
@@ -1054,7 +1208,9 @@ def main():
             f"slot={event.get('slot_id')} "
             f"clock={event.get('clock_text')} "
             f"countdown={event.get('countdown_text')} "
-            f"snapshot={event.get('snapshot_verified')}"
+            f"snapshot={event.get('snapshot_verified')} "
+            f"cycle={event.get('game_cycle_verified')} "
+            f"cycle_phase={event.get('game_cycle_phase')}"
         )
 
     process_upcoming(state, parsed)
