@@ -1517,7 +1517,7 @@ def send_discord(content="", embeds=None):
     r = requests.post(
         WEBHOOK,
         json=payload,
-        headers={"User-Agent": "GAG2-Reliability-Discord-Bot/6.4.5"},
+        headers={"User-Agent": "GAG2-Reliability-Discord-Bot/6.4.5.1"},
         timeout=30,
     )
 
@@ -1600,7 +1600,7 @@ def build_event_embed(event, attempts):
         "description": "\n".join(desc_lines)[:4000],
         "color": color,
         "image": {"url": image_url},
-        "footer": {"text": f"Reliability v6.4.5 Exact Image Alert • attempts {attempts}"},
+        "footer": {"text": f"Reliability v6.4.5.1 Image Self-Test • attempts {attempts}"},
     }
     return embed
 
@@ -1610,6 +1610,41 @@ def send_event_alerts(events, attempts):
         content = format_single_event_message(event, attempts)
         embed = build_event_embed(event, attempts)
         send_discord(content, [embed] if embed else None)
+
+
+
+def send_image_self_test():
+    """
+    Manual-only visual test.
+    This is explicitly labeled as TEST and does not touch target state/baseline.
+    """
+    tests = [
+        {
+            "title": "🎃 TEST — Atlantic Giant Pumpkin",
+            "description": "🧪 ทดสอบรูปเท่านั้น — **ไม่ใช่สต็อกจริง**",
+            "image": {"url": gag2_item_image_url("Atlantic Giant Pumpkin")},
+            "color": 0x57F287,
+        },
+        {
+            "title": "🍄 TEST — Maple Mushroom",
+            "description": "🧪 ทดสอบรูปเท่านั้น — **ไม่ใช่ Sell จริง**",
+            "image": {"url": gag2_item_image_url("Maple Mushroom")},
+            "color": 0xFEE75C,
+        },
+    ]
+
+    valid = []
+    for embed in tests:
+        url = embed.get("image", {}).get("url")
+        if _is_reasonable_image_url(url):
+            embed["footer"] = {"text": "v6.4.5.1 Image Self-Test"}
+            valid.append(embed)
+
+    send_discord(
+        "🧪 **GAG2 Image Self-Test**\n"
+        "ข้อความนี้ใช้เช็กรูปเท่านั้น **ไม่ใช่การแจ้ง Stock/Sell จริง**",
+        valid,
+    )
 
 
 def find_exact_stock(stock, target_key):
@@ -1626,7 +1661,7 @@ def find_sell_value(sell, target_key):
 def format_health_message(stock, sell, snapshot, attempts, recovered=False, self_test=None, source_sync=None):
     lines = [
         "✅ **GAG2 Bot Health Check**",
-        "🛡️ Reliability v6.4.5 Exact Image Alert + Block Detector + Timer-Sync",
+        "🛡️ Reliability v6.4.5.1 Image Self-Test + Block Detector + Timer-Sync",
         f"• Stock parser: **OK** ({len(stock)} รายการ)",
         f"• Sell parser: **OK** ({len(sell)} รายการ)",
         f"• อ่านสำเร็จในครั้งที่: **{attempts}/{MAX_READ_ATTEMPTS}**",
@@ -1856,7 +1891,7 @@ def main():
     recovered = old_health_status in {"error", "blocked"}
 
     new_state = {
-        "version": "6.4.5",
+        "version": "6.4.5.1",
         "alert_logic_version": ALERT_LOGIC_VERSION,
         "updated_at": iso_now(),
         "shop_fingerprints": current_shop_fp,
@@ -1880,7 +1915,7 @@ def main():
 
     print(f"Parsed stock: {len(stock)} | sell: {len(sell)}")
     print(f"Read attempts used: {attempts}")
-    print(f"Has v6.4.5 baseline: {has_baseline}")
+    print(f"Has v6.4.5.1 baseline: {has_baseline}")
     print(f"Alert rules self-test: PASS ({self_test['passed_classes']}/{self_test['total_classes']})")
     print(f"Current wanted conditions: {len(current_events)}")
     print(f"Alert logic migration required: {logic_migration}")
@@ -1900,6 +1935,9 @@ def main():
             )
         )
 
+        send_image_self_test()
+        print("Manual image self-test sent")
+
         if current_events:
             send_event_alerts(current_events, attempts)
             print(f"Manual run sent {len(current_events)} current wanted event(s)")
@@ -1907,7 +1945,7 @@ def main():
             print("Manual run: no current wanted event; health check only")
 
         save_state(new_state)
-        print("Manual Health Check + current alerts sent; v6.4.5 state saved")
+        print("Manual Health Check + current alerts sent; v6.4.5.1 state saved")
         return
 
     # On first run or migration, alert currently-active targets instead of
