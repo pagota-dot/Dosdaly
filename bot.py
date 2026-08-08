@@ -134,7 +134,172 @@ def make_driver():
         "--user-agent=Mozilla/5.0 (X11; Linux x86_64) "
         "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/147 Safari/537.36"
     )
+    # Chrome performance log lets us detect exact document HTTP 403/429
+    # without making extra requests to GAG2.
+    opts.set_capability("goog:loggingPrefs", {"performance": "ALL"})
     return webdriver.Chrome(options=opts)
+
+
+
+class GAG2AccessBlocked(RuntimeError):
+    def __init__(self, kind, evidence, status_code=None):
+        self.kind = kind
+        self.evidence = norm(evidence)[:180]
+        self.status_code = status_code
+        super().__init__(
+            f"{kind}"
+            + (f" HTTP {status_code}" if status_code else "")
+            + f": {self.evidence}"
+        )
+
+
+def detect_block_markers(title="", body="", current_url="", page_source=""):
+    """
+    Pure text detector for common access/rate-limit/challenge pages.
+    Does NOT treat a bare number 403/429 as a block to avoid false positives.
+    """
+    blob = "\n".join([
+        norm(title),
+        norm(body)[:12000],
+        norm(current_url),
+        norm(page_source)[:20000],
+    ]).lower()
+
+    patterns = [
+        ("429-rate-limit", 429, [
+            "429 too many requests",
+            "http 429",
+            "error 429",
+            "too many requests",
+            "rate limit exceeded",
+            "rate limited",
+        ]),
+        ("403-forbidden", 403, [
+            "403 forbidden",
+            "http 403",
+            "error 403",
+            "access denied",
+            "request forbidden",
+            "you don't have permission to access",
+        ]),
+        ("challenge-captcha", None, [
+            "verify you are human",
+            "checking your browser",
+            "just a moment",
+            "attention required",
+            "security verification",
+            "captcha",
+            "cf-chl",
+            "challenge-platform",
+        ]),
+    ]
+
+    for kind, status, markers in patterns:
+        for marker in markers:
+            if marker in blob:
+                return {
+                    "blocked": True,
+                    "kind": kind,
+                    "status_code": status,
+                    "evidence": marker,
+                }
+
+    return {
+        "blocked": False,
+        "kind": None,
+        "status_code": None,
+        "evidence": "",
+    }
+
+
+def detect_network_document_block(driver):
+    """
+    Inspect Chrome's own Network.responseReceived events.
+    Only the main Document from gag2.gg counts, so a blocked image/font
+    cannot falsely mark the whole site as blocked.
+    """
+    try:
+        entries = driver.get_log("performance")
+    except Exception:
+        return None
+
+    found = []
+    for entry in entries:
+        try:
+            payload = json.loads(entry.get("message", "{}"))
+            message = payload.get("message", {})
+            if message.get("method") != "Network.responseReceived":
+                continue
+
+            params = message.get("params", {})
+            if params.get("type") != "Document":
+                continue
+
+            response = params.get("response", {})
+            url = str(response.get("url", ""))
+            if "gag2.gg" not in url.lower():
+                continue
+
+            status = int(float(response.get("status", 0)))
+            if status in (403, 429):
+                found.append((status, url))
+        except Exception:
+            continue
+
+    if not found:
+        return None
+
+    status, url = found[-1]
+    return {
+        "blocked": True,
+        "kind": "429-rate-limit" if status == 429 else "403-forbidden",
+        "status_code": status,
+        "evidence": f"main document returned HTTP {status}: {url}",
+    }
+
+
+def assert_not_blocked(driver, body_text=None):
+    network = detect_network_document_block(driver)
+    if network:
+        raise GAG2AccessBlocked(
+            network["kind"],
+            network["evidence"],
+            network["status_code"],
+        )
+
+    try:
+        title = driver.title
+    except Exception:
+        title = ""
+
+    try:
+        current_url = driver.current_url
+    except Exception:
+        current_url = ""
+
+    if body_text is None:
+        try:
+            body_text = driver.find_element("tag name", "body").text
+        except Exception:
+            body_text = ""
+
+    try:
+        page_source = driver.page_source
+    except Exception:
+        page_source = ""
+
+    marker = detect_block_markers(
+        title=title,
+        body=body_text,
+        current_url=current_url,
+        page_source=page_source,
+    )
+    if marker["blocked"]:
+        raise GAG2AccessBlocked(
+            marker["kind"],
+            marker["evidence"],
+            marker["status_code"],
+        )
 
 
 def rendered_text(driver, url, hints):
@@ -155,7 +320,9 @@ def rendered_text(driver, url, hints):
 
     # Let client-rendered live cards settle.
     time.sleep(3)
-    return driver.find_element("tag name", "body").text
+    body_text = driver.find_element("tag name", "body").text
+    assert_not_blocked(driver, body_text)
+    return body_text
 
 
 
@@ -224,6 +391,7 @@ def extract_shop_timers(text):
 
 def stock_snapshot(driver):
     text = driver.find_element("tag name", "body").text
+    assert_not_blocked(driver, text)
     stock = parse_stock(text)
     timers = extract_countdowns(text)
     shop_timers = extract_shop_timers(text)
@@ -528,6 +696,7 @@ def read_sell_targets(driver):
         pass
 
     body_text = driver.find_element("tag name", "body").text
+    assert_not_blocked(driver, body_text)
     html = driver.page_source
 
     results = []
@@ -1128,6 +1297,21 @@ def collect_live_data():
                     "source_sync": stock_sync,
                 }
 
+        except GAG2AccessBlocked as e:
+            diagnostics.append(
+                {
+                    "attempt": attempt,
+                    "access_block": True,
+                    "block_kind": e.kind,
+                    "status_code": e.status_code,
+                    "block_evidence": e.evidence,
+                    "error": f"GAG2AccessBlocked: {str(e)[:180]}",
+                }
+            )
+            print(
+                f"GAG2 access block detected on attempt {attempt}: "
+                f"kind={e.kind} status={e.status_code or 'marker'} evidence={e.evidence}"
+            )
         except Exception as e:
             diagnostics.append(
                 {
@@ -1177,7 +1361,7 @@ def send_discord(content):
     r = requests.post(
         WEBHOOK,
         json={"content": content[:1950]},
-        headers={"User-Agent": "GAG2-Reliability-Discord-Bot/6.4"},
+        headers={"User-Agent": "GAG2-Reliability-Discord-Bot/6.4.3"},
         timeout=30,
     )
 
@@ -1227,13 +1411,14 @@ def find_sell_value(sell, target_key):
 def format_health_message(stock, sell, snapshot, attempts, recovered=False, self_test=None, source_sync=None):
     lines = [
         "✅ **GAG2 Bot Health Check**",
-        "🛡️ Reliability v6.4 Cloudflare + GAG2 Timer-Sync",
+        "🛡️ Reliability v6.4.3 Block Detector + Timer-Sync",
         f"• Stock parser: **OK** ({len(stock)} รายการ)",
         f"• Sell parser: **OK** ({len(sell)} รายการ)",
         f"• อ่านสำเร็จในครั้งที่: **{attempts}/{MAX_READ_ATTEMPTS}**",
         "• Source-Sync: **ON**",
         "• GAG2 Timer-Sync: **ON** (อิง Countdown จากหน้า GAG2)",
         "• Sell reader: **Target DOM Probe**",
+        "• Block detector: **ON** (403 / 429 / CAPTCHA / Access Denied)",
     ]
 
     if source_sync:
@@ -1314,7 +1499,7 @@ def format_health_message(stock, sell, snapshot, attempts, recovered=False, self
 def should_send_health_failure_alert(old_state):
     health = old_state.get("health", {}) if isinstance(old_state, dict) else {}
 
-    if health.get("status") != "error":
+    if health.get("status") not in {"error", "blocked"}:
         return True
 
     last = health.get("last_error_alert_at")
@@ -1333,45 +1518,90 @@ def handle_read_failure(old_state, result):
     new_state = dict(old_state) if isinstance(old_state, dict) else {}
     health = dict(new_state.get("health", {}))
 
+    diagnostics = result.get("diagnostics", [])
+    block_diags = [d for d in diagnostics if d.get("access_block")]
+    blocked = bool(block_diags)
+
     send_warning = should_send_health_failure_alert(old_state)
 
     if send_warning:
-        diag = result.get("diagnostics", [])
-        summary = []
-        for d in diag[-3:]:
-            if d.get("error"):
-                summary.append(f"ครั้ง {d['attempt']}: {d['error']}")
+        if blocked:
+            last = block_diags[-1]
+            status_code = last.get("status_code")
+            kind = last.get("block_kind", "access-block")
+            evidence = last.get("block_evidence", "")
+
+            if status_code == 429:
+                headline = "🚦 **GAG2 Rate Limit Warning (HTTP 429)**"
+                advice = (
+                    "ถ้าเกิดซ้ำหลายรอบ แนะนำเพิ่ม Cloudflare จาก **2 นาที → 3–5 นาที**"
+                )
+            elif status_code == 403:
+                headline = "🚧 **GAG2 Access Warning (HTTP 403)**"
+                advice = (
+                    "ถ้าเกิดซ้ำหลายรอบ แนะนำลดความถี่เป็น **3–5 นาที** และตรวจว่าเว็บเปิดปกติ"
+                )
             else:
-                summary.append(
-                    f"ครั้ง {d['attempt']}: Stock {d.get('stock_count',0)} / "
-                    f"Sell {d.get('sell_count',0)}"
+                headline = "🧩 **GAG2 Challenge / CAPTCHA Warning**"
+                advice = (
+                    "หน้าเว็บดูเหมือนมี CAPTCHA/Challenge; ถ้าเกิดซ้ำให้ลดความถี่เป็น **3–5 นาที**"
                 )
 
-        send_discord(
-            "\n".join(
-                [
-                    "⚠️ **GAG2 Bot Health Warning**",
-                    f"อ่านข้อมูลไม่ผ่านหลังลอง {MAX_READ_ATTEMPTS} ครั้ง",
-                    "บอทจะ **ไม่เปลี่ยน baseline และไม่ส่ง Stock มั่ว**",
-                    "",
-                    *summary,
-                    "",
-                    "ระบบจะลองใหม่อัตโนมัติในรอบถัดไป",
-                ]
+            attempts_hit = ", ".join(str(d.get("attempt")) for d in block_diags)
+            send_discord(
+                "\n".join(
+                    [
+                        headline,
+                        "บอทตรวจพบว่า GAG2 อาจกำลังจำกัด/ตรวจสอบการเข้าถึง",
+                        f"• ประเภท: **{kind}**",
+                        f"• พบในครั้งที่: **{attempts_hit}**",
+                        f"• หลักฐาน: `{evidence[:120]}`",
+                        "",
+                        "บอทจะ **ไม่เปลี่ยน baseline และไม่ส่ง Stock มั่ว**",
+                        advice,
+                        "ระบบจะลองใหม่อัตโนมัติในรอบถัดไป",
+                    ]
+                )
             )
-        )
+        else:
+            summary = []
+            for d in diagnostics[-3:]:
+                if d.get("error"):
+                    summary.append(f"ครั้ง {d['attempt']}: {d['error']}")
+                else:
+                    summary.append(
+                        f"ครั้ง {d['attempt']}: Stock {d.get('stock_count',0)} / "
+                        f"Sell {d.get('sell_count',0)}"
+                    )
+
+            send_discord(
+                "\n".join(
+                    [
+                        "⚠️ **GAG2 Bot Health Warning**",
+                        f"อ่านข้อมูลไม่ผ่านหลังลอง {MAX_READ_ATTEMPTS} ครั้ง",
+                        "บอทจะ **ไม่เปลี่ยน baseline และไม่ส่ง Stock มั่ว**",
+                        "",
+                        *summary,
+                        "",
+                        "ระบบจะลองใหม่อัตโนมัติในรอบถัดไป",
+                    ]
+                )
+            )
+
         health["last_error_alert_at"] = now
 
     health.update(
         {
-            "status": "error",
+            "status": "blocked" if blocked else "error",
             "last_checked_at": now,
-            "last_diagnostics": result.get("diagnostics", []),
+            "last_diagnostics": diagnostics,
+            "last_block_kind": block_diags[-1].get("block_kind") if blocked else None,
+            "last_block_status_code": block_diags[-1].get("status_code") if blocked else None,
         }
     )
 
     new_state["health"] = health
-    new_state.setdefault("version", "6.3")
+    new_state.setdefault("version", "6.4.3")
     save_state(new_state)
 
 
@@ -1403,10 +1633,10 @@ def main():
 
     old_shop_fp = old_state.get("shop_fingerprints", {})
     old_health_status = old_state.get("health", {}).get("status")
-    recovered = old_health_status == "error"
+    recovered = old_health_status in {"error", "blocked"}
 
     new_state = {
-        "version": "6.4",
+        "version": "6.4.3",
         "alert_logic_version": ALERT_LOGIC_VERSION,
         "updated_at": iso_now(),
         "shop_fingerprints": current_shop_fp,
@@ -1430,7 +1660,7 @@ def main():
 
     print(f"Parsed stock: {len(stock)} | sell: {len(sell)}")
     print(f"Read attempts used: {attempts}")
-    print(f"Has v6.4 baseline: {has_baseline}")
+    print(f"Has v6.4.3 baseline: {has_baseline}")
     print(f"Alert rules self-test: PASS ({self_test['passed_classes']}/{self_test['total_classes']})")
     print(f"Current wanted conditions: {len(current_events)}")
     print(f"Alert logic migration required: {logic_migration}")
@@ -1457,7 +1687,7 @@ def main():
             print("Manual run: no current wanted event; health check only")
 
         save_state(new_state)
-        print("Manual Health Check + current alerts sent; v6.4 state saved")
+        print("Manual Health Check + current alerts sent; v6.4.3 state saved")
         return
 
     # On first run or migration, alert currently-active targets instead of
