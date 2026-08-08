@@ -17,6 +17,7 @@ STATE_PATH = Path("state.json")
 
 WEBHOOK = os.environ.get("DISCORD_WEBHOOK", "").strip()
 EVENT_NAME = os.environ.get("GITHUB_EVENT_NAME", "").strip()
+TRIGGER_SOURCE = os.environ.get("TRIGGER_SOURCE", "").strip().lower()
 
 RARITIES = r"(?:COMMON|UNCOMMON|RARE|EPIC|LEGENDARY|MYTHIC|SUPER)"
 RARITY_WORDS = ("common", "uncommon", "rare", "epic", "legendary", "mythic", "super")
@@ -41,7 +42,7 @@ GAG2_TIMER_TARGET_SHOPS = ("seed", "gear")
 MIN_STOCK_ITEMS = 3
 MIN_SELL_ITEMS = 1
 HEALTH_ALERT_COOLDOWN_HOURS = 1
-ALERT_LOGIC_VERSION = "6.3-gag-timer-sync-v1"
+ALERT_LOGIC_VERSION = "6.4-cloudflare-ready-v1"
 
 # Exact GAG2 targets
 EXACT_STOCK_TARGETS = {
@@ -1176,7 +1177,7 @@ def send_discord(content):
     r = requests.post(
         WEBHOOK,
         json={"content": content[:1950]},
-        headers={"User-Agent": "GAG2-Reliability-Discord-Bot/6.3"},
+        headers={"User-Agent": "GAG2-Reliability-Discord-Bot/6.4"},
         timeout=30,
     )
 
@@ -1226,7 +1227,7 @@ def find_sell_value(sell, target_key):
 def format_health_message(stock, sell, snapshot, attempts, recovered=False, self_test=None, source_sync=None):
     lines = [
         "✅ **GAG2 Bot Health Check**",
-        "🛡️ Reliability v6.3 GAG2 Timer-Sync",
+        "🛡️ Reliability v6.4 Cloudflare + GAG2 Timer-Sync",
         f"• Stock parser: **OK** ({len(stock)} รายการ)",
         f"• Sell parser: **OK** ({len(sell)} รายการ)",
         f"• อ่านสำเร็จในครั้งที่: **{attempts}/{MAX_READ_ATTEMPTS}**",
@@ -1405,7 +1406,7 @@ def main():
     recovered = old_health_status == "error"
 
     new_state = {
-        "version": "6.3",
+        "version": "6.4",
         "alert_logic_version": ALERT_LOGIC_VERSION,
         "updated_at": iso_now(),
         "shop_fingerprints": current_shop_fp,
@@ -1429,13 +1430,14 @@ def main():
 
     print(f"Parsed stock: {len(stock)} | sell: {len(sell)}")
     print(f"Read attempts used: {attempts}")
-    print(f"Has v6.3 baseline: {has_baseline}")
+    print(f"Has v6.4 baseline: {has_baseline}")
     print(f"Alert rules self-test: PASS ({self_test['passed_classes']}/{self_test['total_classes']})")
     print(f"Current wanted conditions: {len(current_events)}")
     print(f"Alert logic migration required: {logic_migration}")
+    print(f"Trigger: event={EVENT_NAME or 'unknown'} source={TRIGGER_SOURCE or 'manual/default'}")
 
     # Manual Run is now a health check AND a real target-alert test.
-    if EVENT_NAME == "workflow_dispatch":
+    if EVENT_NAME == "workflow_dispatch" and TRIGGER_SOURCE != "cloudflare":
         send_discord(
             format_health_message(
                 stock,
@@ -1455,7 +1457,7 @@ def main():
             print("Manual run: no current wanted event; health check only")
 
         save_state(new_state)
-        print("Manual Health Check + current alerts sent; v6.3 state saved")
+        print("Manual Health Check + current alerts sent; v6.4 state saved")
         return
 
     # On first run or migration, alert currently-active targets instead of
