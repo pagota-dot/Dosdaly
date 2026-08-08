@@ -38,14 +38,21 @@ ACTIVE_RECENT_FINAL_SECONDS = 5 * 60
 
 # Freeze the predicted start time from the FIRST reliable <=5m alert.
 # Later GAG2 countdown changes must NOT move the final alert later.
-ANCHOR_LOGIC_VERSION = "v5-frozen-first-countdown"
+ANCHOR_LOGIC_VERSION = "v6.1-row-verified-timezone-safe"
 
 # If the first time we ever see the event is already very late,
 # don't send two messages almost on top of each other.
 FIRST_ALERT_MIN_REMAINING_SECONDS = 90
 
 # Match the same event even if GAG2's later prediction drifts.
-ANCHOR_MATCH_TOLERANCE_SECONDS = 10 * 60
+# Same moon type can appear only ~10 minutes apart on GAG2.
+# Keep matching much tighter so adjacent Gold/Rainbow/Mega slots never merge.
+ANCHOR_MATCH_TOLERANCE_SECONDS = 4 * 60
+
+# Multi-signal row verification.
+ROW_CLOCK_TOLERANCE_MINUTES = 2
+SNAPSHOT_VERIFY_DELAY_SECONDS = 4
+HEALTH_WARNING_COOLDOWN_SECONDS = 60 * 60
 
 TARGET_MOONS = {
     "gold": {
@@ -99,7 +106,15 @@ def make_driver():
         "--user-agent=Mozilla/5.0 (X11; Linux x86_64) "
         "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/147 Safari/537.36"
     )
-    return webdriver.Chrome(options=opts)
+    driver = webdriver.Chrome(options=opts)
+    try:
+        driver.execute_cdp_cmd(
+            "Emulation.setTimezoneOverride",
+            {"timezoneId": "Asia/Bangkok"},
+        )
+    except Exception as exc:
+        print(f"Timezone override warning: {exc}")
+    return driver
 
 
 def assert_not_blocked(text):
@@ -152,6 +167,16 @@ def canonical_moon_name(text):
     return None
 
 
+def is_any_moon_row_name(text):
+    """
+    Row-boundary detector for target and non-target moons (Bloodmoon, etc.).
+    This prevents a broken Gold/Rainbow/Mega row from borrowing the time or
+    countdown belonging to the next Bloodmoon/other moon row.
+    """
+    compact = re.sub(r"[^a-z]", "", norm(text).lower())
+    return bool(compact and compact.endswith("moon") and len(compact) <= 32)
+
+
 def parse_duration_seconds(text):
     """
     Handles GAG2 countdown forms such as:
@@ -198,10 +223,84 @@ def parse_clock_text(text):
     return None
 
 
-def parse_weather_page(text):
+def clock_text_to_minutes(clock_text):
+    value = parse_clock_text(clock_text)
+    if not value:
+        return None
+
+    match = re.fullmatch(r"(\d{1,2}):(\d{2})\s*(AM|PM)", value, re.I)
+    if not match:
+        return None
+
+    hour = int(match.group(1))
+    minute = int(match.group(2))
+    ampm = match.group(3).upper()
+
+    if hour == 12:
+        hour = 0
+    if ampm == "PM":
+        hour += 12
+
+    return hour * 60 + minute
+
+
+def minute_distance(a, b):
+    diff = abs(int(a) - int(b)) % (24 * 60)
+    return min(diff, 24 * 60 - diff)
+
+
+def countdown_is_precise(countdown_text):
+    s = norm(countdown_text).lower()
+    return bool(re.fullmatch(r"\d{1,3}:[0-5]\d", s) or re.search(r"\d+\s*s", s))
+
+
+def build_slot_identity(kind, clock_text, countdown, observed_epoch):
+    """
+    Primary identity = moon name + projected local date + displayed GAG2 clock.
+    Countdown is used to determine the date and verify that the clock belongs
+    to the same row/event. The exact alert second remains frozen from the first
+    reliable countdown, because GAG2's displayed clock has minute precision.
+    """
+    projected_epoch = int(observed_epoch) + int(countdown)
+    projected_th = datetime.fromtimestamp(
+        projected_epoch,
+        tz=timezone.utc,
+    ).astimezone(THAILAND_TZ)
+
+    displayed_minutes = clock_text_to_minutes(clock_text)
+    projected_minutes = projected_th.hour * 60 + projected_th.minute
+
+    if displayed_minutes is not None:
+        clock_diff = minute_distance(displayed_minutes, projected_minutes)
+        clock_consistent = clock_diff <= ROW_CLOCK_TOLERANCE_MINUTES
+
+        display_hour, display_minute = divmod(displayed_minutes, 60)
+        slot_clock = f"{display_hour:02d}:{display_minute:02d}"
+        slot_date = projected_th.strftime("%Y-%m-%d")
+        slot_id = f"{kind}|{slot_date}|{slot_clock}"
+        quality = "NAME_CLOCK_COUNTDOWN" if clock_consistent else "CLOCK_MISMATCH"
+    else:
+        clock_diff = None
+        clock_consistent = False
+        # Fallback keeps the scanner alive if GAG2 temporarily omits the
+        # absolute clock, but this is lower confidence and is logged clearly.
+        fallback_minute = int((projected_epoch + 30) // 60)
+        slot_id = f"{kind}|fallback|{fallback_minute}"
+        quality = "COUNTDOWN_ONLY"
+
+    return {
+        "slot_id": slot_id,
+        "projected_epoch": projected_epoch,
+        "clock_consistent": clock_consistent,
+        "clock_diff_minutes": clock_diff,
+        "quality": quality,
+    }
+
+
+def parse_weather_page(text, observed_epoch=None):
+    observed_epoch = int(observed_epoch or utc_now().timestamp())
     lines = [norm(x) for x in (text or "").splitlines() if norm(x)]
 
-    # Active weather is above "Upcoming moons".
     upcoming_idx = next(
         (i for i, line in enumerate(lines) if key(line) == "upcoming moons"),
         None,
@@ -211,7 +310,6 @@ def parse_weather_page(text):
     if upcoming_idx is not None:
         top = lines[:upcoming_idx]
         if not any("no active weather" in key(x) for x in top):
-            # Search the nearest target moon in the active section.
             for line in reversed(top[-15:]):
                 kind = canonical_moon_name(line)
                 if kind:
@@ -219,8 +317,14 @@ def parse_weather_page(text):
                     break
 
     upcoming = []
+    parse_errors = []
+
     if upcoming_idx is None:
-        return {"active": active, "upcoming": upcoming}
+        return {
+            "active": active,
+            "upcoming": upcoming,
+            "parse_errors": ["Upcoming moons section not found"],
+        }
 
     recent_idx = next(
         (
@@ -232,47 +336,144 @@ def parse_weather_page(text):
 
     section = lines[upcoming_idx + 1:recent_idx]
 
-    for i, line in enumerate(section):
+    all_moon_positions = [
+        i for i, line in enumerate(section)
+        if is_any_moon_row_name(line)
+    ]
+
+    for position_index, i in enumerate(all_moon_positions):
+        line = section[i]
         kind = canonical_moon_name(line)
+
+        # Non-target moons are still important row boundaries, but we do not
+        # alert for them.
         if not kind:
             continue
 
+        # Never borrow the clock/countdown from ANY next Moon row, including
+        # Bloodmoon and other non-target weather rows.
+        next_i = (
+            all_moon_positions[position_index + 1]
+            if position_index + 1 < len(all_moon_positions)
+            else len(section)
+        )
+        row_lines = section[i + 1:next_i]
+
+        clock_text = next(
+            (parse_clock_text(candidate) for candidate in row_lines if parse_clock_text(candidate)),
+            None,
+        )
+
+        countdown_text = None
         countdown = None
-        clock_text = None
-
-        # GAG2 currently renders: Name -> absolute clock -> countdown.
-        # Search a small window to tolerate layout changes.
-        for candidate in section[i + 1:i + 6]:
-            if clock_text is None:
-                clock_text = parse_clock_text(candidate)
-
-            if countdown is None:
-                val = parse_duration_seconds(candidate)
-                if val is not None:
-                    countdown = val
+        for candidate in row_lines:
+            value = parse_duration_seconds(candidate)
+            if value is not None:
+                countdown_text = candidate
+                countdown = value
+                break
 
         if countdown is None:
+            parse_errors.append(f"{kind}: countdown missing near row '{line}'")
             continue
 
-        event_epoch = int(utc_now().timestamp()) + int(countdown)
+        identity = build_slot_identity(
+            kind,
+            clock_text,
+            countdown,
+            observed_epoch,
+        )
 
-        # 5-minute bucket provides a stable identity even when long countdowns
-        # are rendered only to whole minutes.
-        event_bucket = int((event_epoch + 150) // 300)
-        event_key = f"{kind}:{event_bucket}"
+        # If all 3 signals exist but disagree, reject this row rather than
+        # silently attaching the countdown to the wrong clock/name.
+        if clock_text and not identity["clock_consistent"]:
+            parse_errors.append(
+                f"{kind}: clock/countdown mismatch "
+                f"clock={clock_text} countdown={countdown_text} "
+                f"diff={identity['clock_diff_minutes']}m"
+            )
+            continue
 
         upcoming.append(
             {
                 "kind": kind,
                 "remaining": int(countdown),
+                "countdown_text": countdown_text,
+                "countdown_precise": countdown_is_precise(countdown_text),
                 "clock_text": clock_text,
-                "event_epoch": event_epoch,
-                "event_key": event_key,
+                "event_epoch": int(identity["projected_epoch"]),
+                "event_key": identity["slot_id"],
+                "slot_id": identity["slot_id"],
+                "row_quality": identity["quality"],
+                "clock_diff_minutes": identity["clock_diff_minutes"],
+                "observed_epoch": observed_epoch,
             }
         )
 
     upcoming.sort(key=lambda x: x["remaining"])
-    return {"active": active, "upcoming": upcoming}
+    return {
+        "active": active,
+        "upcoming": upcoming,
+        "parse_errors": parse_errors,
+    }
+
+
+def verify_snapshots(first, second, elapsed_seconds):
+    """
+    Match by exact slot_id (name + date + displayed clock), then verify that
+    the countdown moves in a physically plausible direction between reads.
+    """
+    first_map = {e.get("slot_id"): e for e in first.get("upcoming", [])}
+    verified = []
+    unverified = []
+
+    for current in second.get("upcoming", []):
+        slot_id = current.get("slot_id")
+        previous = first_map.get(slot_id)
+
+        if previous is None:
+            candidate = dict(current)
+            candidate["snapshot_verified"] = False
+            candidate["snapshot_reason"] = "slot only appeared in second snapshot"
+            unverified.append(candidate)
+            continue
+
+        before = int(previous.get("remaining", 0))
+        after = int(current.get("remaining", 0))
+        drop = before - after
+
+        precise = bool(previous.get("countdown_precise") or current.get("countdown_precise"))
+        if precise:
+            plausible = -2 <= drop <= int(elapsed_seconds) + 8
+        else:
+            # Long countdowns may be rounded to whole minutes.
+            plausible = -5 <= drop <= 65
+
+        candidate = dict(current)
+        candidate["snapshot_drop_seconds"] = drop
+        candidate["snapshot_verified"] = bool(plausible)
+        candidate["snapshot_reason"] = (
+            "name+clock+countdown stable across 2 snapshots"
+            if plausible
+            else f"countdown changed implausibly: {before}->{after}"
+        )
+
+        if plausible:
+            verified.append(candidate)
+        else:
+            unverified.append(candidate)
+
+    verified.sort(key=lambda x: x["remaining"])
+    unverified.sort(key=lambda x: x["remaining"])
+
+    return {
+        "active": second.get("active"),
+        "upcoming": verified,
+        "unverified": unverified,
+        "parse_errors": list(first.get("parse_errors", [])) + list(second.get("parse_errors", [])),
+        "snapshot_verified_count": len(verified),
+        "snapshot_unverified_count": len(unverified),
+    }
 
 
 def load_state():
@@ -282,6 +483,7 @@ def load_state():
             "logic_version": ANCHOR_LOGIC_VERSION,
             "events": {},
             "last_final_by_kind": {},
+            "health": {"last_warning_epoch": 0},
         }
 
     try:
@@ -295,6 +497,7 @@ def load_state():
     raw.setdefault("version", 2)
     raw.setdefault("events", {})
     raw.setdefault("last_final_by_kind", {})
+    raw.setdefault("health", {"last_warning_epoch": 0})
 
     # One-time migration from the older moving-countdown logic.
     # Clear only Moon event-cycle flags; keep the file itself and other state.
@@ -409,11 +612,21 @@ def event_embed(event, level, remaining=None):
             "ระบบไม่ทันส่งเตือน ~45 วินาทีก่อนเริ่ม จึงแจ้งทันทีเมื่อพบว่า Event เริ่มแล้ว"
         )
 
+    slot_clock = event.get("clock_text")
+    if slot_clock:
+        description += f"\n\n🧭 GAG2 slot: **{slot_clock}**"
+
+    verify_text = (
+        "Verified Name+Time+Countdown+2 Snapshots"
+        if event.get("snapshot_verified")
+        else "Verified Name+Time+Countdown"
+    )
+
     return {
         "title": title,
         "description": description,
         "footer": {
-            "text": "GAG2 Moon Alert · Frozen 5m Anchor → ~45s · Gold/Rainbow/Mega"
+            "text": f"GAG2 Moon Alert v6.1 · {verify_text}"
         },
     }
 
@@ -429,15 +642,71 @@ def read_weather():
         driver = None
         try:
             driver = make_driver()
-            text = rendered_weather_text(driver)
-            parsed = parse_weather_page(text)
+
+            first_epoch = int(utc_now().timestamp())
+            first_text = rendered_weather_text(driver)
+            first = parse_weather_page(first_text, first_epoch)
+
+            time.sleep(SNAPSHOT_VERIFY_DELAY_SECONDS)
+
+            second_epoch = int(utc_now().timestamp())
+            second_text = driver.find_element("tag name", "body").text
+            assert_not_blocked(second_text)
+            second = parse_weather_page(second_text, second_epoch)
+
+            parsed = verify_snapshots(
+                first,
+                second,
+                max(1, second_epoch - first_epoch),
+            )
             parsed["attempt"] = attempt
+
+            # Parsing errors indicate at least one target row was visible but
+            # could not be verified. Retry first. On the last attempt we may
+            # still use other fully verified rows rather than throwing away
+            # good Moon data because one distant row rendered badly.
+            if parsed.get("parse_errors") and attempt < MAX_READ_ATTEMPTS:
+                raise RuntimeError(
+                    "Weather row verification errors: "
+                    + " | ".join(parsed["parse_errors"][:4])
+                )
+
+            if parsed.get("parse_errors") and attempt == MAX_READ_ATTEMPTS:
+                parsed["degraded"] = True
+
+            # If a full row has all three signals but only one snapshot caught
+            # it, accept it as a last-resort candidate after retries. During
+            # normal runs, verified rows are always preferred.
+            if not parsed.get("upcoming") and parsed.get("unverified"):
+                strong = [
+                    e for e in parsed["unverified"]
+                    if e.get("clock_text")
+                    and e.get("row_quality") == "NAME_CLOCK_COUNTDOWN"
+                ]
+                if strong and attempt == MAX_READ_ATTEMPTS:
+                    for event in strong:
+                        event["snapshot_verified"] = False
+                        event["snapshot_reason"] = "single-snapshot fallback after retries"
+                    parsed["upcoming"] = sorted(strong, key=lambda x: x["remaining"])
+                    parsed["single_snapshot_fallback"] = True
+
+            if (
+                attempt == MAX_READ_ATTEMPTS
+                and parsed.get("parse_errors")
+                and not parsed.get("upcoming")
+            ):
+                raise RuntimeError(
+                    "No verified target Moon rows after retries: "
+                    + " | ".join(parsed["parse_errors"][:4])
+                )
+
             return parsed
+
         except Exception as exc:
             last_error = exc
             print(
                 f"Weather read attempt {attempt}/{MAX_READ_ATTEMPTS} failed: "
-                f"{type(exc).__name__}: {str(exc)[:180]}"
+                f"{type(exc).__name__}: {str(exc)[:260]}"
             )
         finally:
             if driver:
@@ -488,11 +757,19 @@ def mark_earlier_levels_skipped(event_state, level):
 
 def resolve_anchor_state(events_state, event):
     """
-    Reuse the same Moon state even when a later GAG2 read moves the
-    predicted time / event_key. This prevents duplicate or delayed alerts.
+    Primary key is the exact GAG2 slot_id:
+      moon kind + projected Thai date + displayed clock text.
+
+    Only if GAG2 changes the displayed clock by a few minutes do we alias it
+    to an already-frozen same-kind event. Adjacent slots ~10 minutes apart
+    remain separate.
     """
     kind = event.get("kind")
+    slot_id = event.get("slot_id") or event.get("event_key")
     predicted_epoch = int(event.get("event_epoch", 0) or 0)
+
+    if slot_id in events_state:
+        return slot_id, events_state[slot_id]
 
     best_key = None
     best_state = None
@@ -518,13 +795,18 @@ def resolve_anchor_state(events_state, event):
                 best_diff = diff
 
     if best_state is not None:
+        aliases = best_state.setdefault("slot_aliases", [])
+        if slot_id and slot_id not in aliases:
+            aliases.append(slot_id)
         return best_key, best_state
 
-    state_key = event["event_key"]
+    state_key = slot_id
     info = events_state.setdefault(
         state_key,
         {
             "kind": kind,
+            "slot_id": slot_id,
+            "clock_text": event.get("clock_text"),
             "event_epoch": predicted_epoch,
             "anchor_epoch": 0,
             "ready": False,
@@ -567,6 +849,11 @@ def process_upcoming(state, parsed):
             es["event_epoch"] = anchor_epoch
             es["first_seen_remaining"] = remaining
             es["first_seen_at"] = iso_now()
+            es["slot_time_th"] = event_time_th(anchor_epoch)
+            es["slot_id"] = event.get("slot_id")
+            es["clock_text"] = event.get("clock_text")
+            es["row_quality"] = event.get("row_quality")
+            es["snapshot_verified"] = bool(event.get("snapshot_verified"))
 
             print(
                 f"ANCHOR frozen: {event['kind']} "
@@ -708,6 +995,26 @@ def process_active_fallback(state, parsed):
     print(f"ACTIVE fallback sent: {active}")
 
 
+def maybe_send_scanner_warning(state, error_text):
+    health = state.setdefault("health", {"last_warning_epoch": 0})
+    now_epoch = int(utc_now().timestamp())
+    last_warning = int(health.get("last_warning_epoch", 0) or 0)
+
+    if now_epoch - last_warning < HEALTH_WARNING_COOLDOWN_SECONDS:
+        return
+
+    send_discord(
+        "⚠️ **GAG2 Moon Scanner Warning**\n"
+        "ระบบตรวจ **ชื่อ Moon + เวลาในแถว + Countdown + 2 Snapshots** "
+        "ไม่สามารถยืนยันข้อมูลได้ในรอบนี้ จึงไม่เดาเวลาแจ้งเตือน\n"
+        f"`{str(error_text)[:350]}`\n"
+        "ระบบจะลองใหม่อัตโนมัติรอบถัดไป"
+    )
+    health["last_warning_epoch"] = now_epoch
+    health["last_warning_at"] = iso_now()
+
+
+
 def main():
     if not WEBHOOK:
         raise RuntimeError("Missing GitHub Actions secret: DISCORD_WEBHOOK")
@@ -715,14 +1022,40 @@ def main():
     state = load_state()
     prune_state(state)
 
-    parsed = read_weather()
+    try:
+        parsed = read_weather()
+    except Exception as exc:
+        print(f"Moon scanner verification failed: {type(exc).__name__}: {exc}")
+        maybe_send_scanner_warning(state, exc)
+        save_state(state)
+        return
+
+    state.setdefault("health", {})["last_success_at"] = iso_now()
+
+    if parsed.get("degraded"):
+        maybe_send_scanner_warning(
+            state,
+            "บาง Moon row ยืนยันไม่ผ่าน แต่ระบบยังใช้เฉพาะ row ที่ยืนยันครบ: "
+            + " | ".join(parsed.get("parse_errors", [])[:3]),
+        )
 
     print(
         "Weather parsed: "
         f"active={parsed.get('active')} "
         f"upcoming_targets={len(parsed.get('upcoming', []))} "
+        f"verified={parsed.get('snapshot_verified_count', 0)} "
         f"attempt={parsed.get('attempt')} logic={ANCHOR_LOGIC_VERSION}"
     )
+
+    for event in parsed.get("upcoming", []):
+        print(
+            "ROW VERIFIED "
+            f"kind={event.get('kind')} "
+            f"slot={event.get('slot_id')} "
+            f"clock={event.get('clock_text')} "
+            f"countdown={event.get('countdown_text')} "
+            f"snapshot={event.get('snapshot_verified')}"
+        )
 
     process_upcoming(state, parsed)
 
