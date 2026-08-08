@@ -6,6 +6,9 @@ on:
 permissions:
   contents: read
 
+env:
+  MOON_BOT_FILE: moon_bot.py
+
 jobs:
   test-moon-logic:
     name: Test Moon Logic
@@ -21,17 +24,41 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: Install required package
+      - name: Install required packages
         run: |
           python -m pip install --upgrade pip
-          pip install requests
+          pip install requests selenium
 
-      - name: Verify required files
+      - name: Verify exact files
+        shell: bash
         run: |
-          echo "Checking required files..."
-          test -f "moon_bot.py" || (echo "ERROR: moon_bot.py not found" && exit 1)
+          echo "Moon bot file: ${MOON_BOT_FILE}"
+          test -f "${MOON_BOT_FILE}" || (echo "ERROR: ${MOON_BOT_FILE} not found" && exit 1)
           test -f "test_moon.py" || (echo "ERROR: test_moon.py not found" && exit 1)
-          echo "Required files found."
+          echo "Files OK."
+
+      - name: Verify tester configuration
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          text = Path("test_moon.py").read_text(encoding="utf-8")
+
+          required = [
+              "MOON_BOT_FILE",
+              '"moon_bot.py"',
+              "HARD MAX-2 TEST",
+              "Active fallback suppressed (hard max 2 alerts)",
+          ]
+
+          missing = [item for item in required if item not in text]
+          if missing:
+              raise SystemExit(
+                  f"ERROR: stale/wrong test_moon.py; missing markers: {missing}"
+              )
+
+          print("Tester configuration OK: moon_bot.py / v6.4 hard-max-2")
+          PY
 
       - name: Run Moon logic tests
         run: |
