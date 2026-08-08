@@ -61,6 +61,10 @@ MIN_SELL_ITEMS = 1
 HEALTH_ALERT_COOLDOWN_HOURS = 1
 ALERT_LOGIC_VERSION = "6.4.4-image-alert-v1"
 
+# v6.5.0 Daily Statistics
+THAILAND_TZ = timezone(timedelta(hours=7))
+DAILY_STATS_RETENTION_DAYS = 4
+
 # Exact GAG2 targets
 EXACT_STOCK_TARGETS = {
     "atlantic giant pumpkin": {
@@ -1943,7 +1947,7 @@ def send_discord(content="", embeds=None):
     r = requests.post(
         WEBHOOK,
         json=payload,
-        headers={"User-Agent": "GAG2-Reliability-Discord-Bot/6.4.9"},
+        headers={"User-Agent": "GAG2-Reliability-Discord-Bot/6.5.0"},
         timeout=30,
     )
 
@@ -2024,7 +2028,7 @@ def build_event_embed(event, attempts):
         "description": "\n".join(desc_lines)[:4000],
         "color": color,
         "thumbnail": {"url": image_url},
-        "footer": {"text": f"v6.4.9 Thumbnail Alert • attempts {attempts}"},
+        "footer": {"text": f"v6.5.0 Daily Statistics • attempts {attempts}"},
     }
     return embed
 
@@ -2085,13 +2089,14 @@ def find_sell_value(sell, target_key):
 def format_health_message(stock, sell, snapshot, attempts, recovered=False, self_test=None, source_sync=None, shop_cycles=None):
     lines = [
         "✅ **GAG2 Bot Health Check**",
-        "🛡️ Reliability v6.4.9 Thumbnail Alert + Per-Shop Cycle + Smart State + Block Detector + Timer-Sync",
+        "🛡️ Reliability v6.5.0 Daily Statistics + Thumbnail + Per-Shop Cycle + Smart State + Block Detector + Timer-Sync",
         f"• Stock parser: **OK** ({len(stock)} รายการ)",
         f"• Sell parser: **OK** ({len(sell)} รายการ)",
         f"• อ่านสำเร็จในครั้งที่: **{attempts}/{MAX_READ_ATTEMPTS}**",
         "• Source-Sync: **ON**",
         "• GAG2 Timer-Sync: **ON** (อิง Countdown จากหน้า GAG2)",
         "• Multi-Snapshot Verify: **ON** (เทียบ Full Stock หลายช่วง)",
+        "• Daily Statistics: **ON** (เวลาไทย · นับต่อรอบ)",
         "• Sell reader: **Target DOM Probe**",
         "• Block detector: **ON** (403 / 429 / CAPTCHA / Access Denied)",
     ]
@@ -2331,8 +2336,318 @@ def handle_read_failure(old_state, result):
     )
 
     new_state["health"] = health
-    new_state.setdefault("version", "6.4.4")
+    new_state.setdefault("version", "6.5.0")
     save_state(new_state)
+
+
+
+
+def thailand_now():
+    return utc_now().astimezone(THAILAND_TZ)
+
+
+def thailand_date_str():
+    return thailand_now().date().isoformat()
+
+
+def yesterday_thailand_date_str():
+    return (thailand_now().date() - timedelta(days=1)).isoformat()
+
+
+def empty_daily_day():
+    return {
+        "stock_occurrences": {},
+        "stock_seen_cycles": {},
+        "magic_mail": {},
+        "magic_seen_cycles": {},
+        "sell": {},
+        "sell_seen_rotations": {},
+        "alerts_sent": 0,
+    }
+
+
+def normalize_daily_stats(old_state):
+    raw = copy.deepcopy(
+        old_state.get("daily_stats", {})
+        if isinstance(old_state, dict)
+        else {}
+    )
+    if not isinstance(raw, dict):
+        raw = {}
+
+    raw.setdefault("timezone", "Asia/Bangkok")
+    raw.setdefault("last_summary_date", None)
+    raw.setdefault("days", {})
+
+    if not isinstance(raw["days"], dict):
+        raw["days"] = {}
+
+    return raw
+
+
+def ensure_daily_day(stats, day_key):
+    days = stats.setdefault("days", {})
+    day = days.get(day_key)
+
+    if not isinstance(day, dict):
+        day = empty_daily_day()
+        days[day_key] = day
+
+    defaults = empty_daily_day()
+    for k, default in defaults.items():
+        if k not in day or not isinstance(day[k], type(default)):
+            day[k] = copy.deepcopy(default)
+
+    return day
+
+
+def cycle_marker_for_shop(shop_cycles, shop, current_shop_fp):
+    cycle = (shop_cycles.get(shop) or {})
+    key_value = cycle.get("key")
+    cycle_id = int(cycle.get("id", 0) or 0)
+
+    if key_value:
+        return f"{shop}|{key_value}"
+
+    if cycle_id:
+        return f"{shop}|id:{cycle_id}"
+
+    fp = current_shop_fp.get(shop)
+    return f"{shop}|fp:{fp}" if fp else None
+
+
+def _register_unique_seen(seen_map, counter_map, key_name, marker):
+    if not marker:
+        return False
+
+    seen = seen_map.setdefault(key_name, [])
+    if marker in seen:
+        return False
+
+    seen.append(marker)
+    counter_map[key_name] = int(counter_map.get(key_name, 0) or 0) + 1
+    return True
+
+
+def update_daily_occurrence_stats(
+    daily_stats,
+    stock,
+    sell,
+    current_snapshot,
+    current_shop_cycles,
+    current_shop_fp,
+):
+    """
+    Count detected occurrences once per source cycle/rotation.
+
+    Exact Stock:
+      once per Seed/Gear/Crate cycle.
+
+    Magic Mail:
+      every rarity INCLUDING Rare for statistics, once per shop cycle.
+      Rare is still excluded from alerts.
+
+    Sell:
+      x2/x4 once per distinct detected Sell rotation fingerprint.
+
+    Manual runs never call this.
+    """
+    day_key = thailand_date_str()
+    day = ensure_daily_day(daily_stats, day_key)
+
+    # Exact Stock targets.
+    for target_key, cur in current_snapshot.get("stock", {}).items():
+        if not cur.get("present"):
+            continue
+
+        group = stock_group_for_target(target_key, cur)
+        marker = cycle_marker_for_shop(
+            current_shop_cycles,
+            group,
+            current_shop_fp,
+        )
+        _register_unique_seen(
+            day["stock_seen_cycles"],
+            day["stock_occurrences"],
+            target_key,
+            marker,
+        )
+
+    # All Magic Mail rarities, including Rare, for statistics.
+    magic_rarities_in_cycle = {}
+    for item in stock or []:
+        if "magic mail" not in key(item.get("name")):
+            continue
+
+        rarity = (rarity_from_item(item) or "unknown").lower()
+        group = item.get("type")
+        if group not in SHOP_CYCLE_NAMES:
+            group = "gear"
+
+        magic_rarities_in_cycle.setdefault(rarity, group)
+
+    for rarity, group in magic_rarities_in_cycle.items():
+        marker = cycle_marker_for_shop(
+            current_shop_cycles,
+            group,
+            current_shop_fp,
+        )
+        _register_unique_seen(
+            day["magic_seen_cycles"],
+            day["magic_mail"],
+            rarity,
+            marker,
+        )
+
+    # Sell x2/x4.
+    sell_fp = current_shop_fp.get("sell")
+    for target_key, cur in current_snapshot.get("sell", {}).items():
+        if not cur.get("present"):
+            continue
+
+        multi = cur.get("multi")
+        if multi not in SELL_MULTIPLIERS:
+            continue
+
+        multi_key = str(int(float(multi)))
+        target_counts = day["sell"].setdefault(
+            target_key,
+            {"2": 0, "4": 0},
+        )
+        target_seen = day["sell_seen_rotations"].setdefault(
+            target_key,
+            {"2": [], "4": []},
+        )
+
+        marker = (
+            f"sell|{sell_fp}|{target_key}|x{multi_key}"
+            if sell_fp
+            else None
+        )
+
+        if marker and marker not in target_seen.setdefault(multi_key, []):
+            target_seen[multi_key].append(marker)
+            target_counts[multi_key] = int(
+                target_counts.get(multi_key, 0) or 0
+            ) + 1
+
+    return day_key
+
+
+def add_daily_alert_count(daily_stats, count):
+    if not count:
+        return
+
+    day = ensure_daily_day(daily_stats, thailand_date_str())
+    day["alerts_sent"] = int(day.get("alerts_sent", 0) or 0) + int(count)
+
+
+def format_daily_summary(day_key, day):
+    stock_counts = day.get("stock_occurrences", {}) or {}
+    magic_counts = day.get("magic_mail", {}) or {}
+    sell_counts = day.get("sell", {}) or {}
+
+    lines = [
+        f"📊 **GAG2 Daily Summary — {day_key}**",
+        "🕛 เวลาไทย 00:00–23:59",
+        "นับเป็น **รอบที่ตรวจพบจริง** ไม่ได้นับทุกการสแกน 2 นาที",
+        "",
+        "📦 **Stock**",
+    ]
+
+    for target_key, meta in EXACT_STOCK_TARGETS.items():
+        count = int(stock_counts.get(target_key, 0) or 0)
+        lines.append(
+            f"{meta['emoji']} {meta['label']}: **{count} รอบ**"
+        )
+
+    lines += ["", "✨ **Magic Mail**"]
+
+    rarity_order = [
+        "common",
+        "uncommon",
+        "epic",
+        "legendary",
+        "mythic",
+        "super",
+        "rare",
+        "unknown",
+    ]
+    shown = set()
+
+    for rarity in rarity_order:
+        count = int(magic_counts.get(rarity, 0) or 0)
+        if count <= 0 and rarity == "unknown":
+            continue
+
+        shown.add(rarity)
+        label = rarity.title()
+        suffix = " *(ไม่นำไปแจ้ง)*" if rarity == "rare" else ""
+        lines.append(f"• {label}: **{count} รอบ**{suffix}")
+
+    for rarity in sorted(set(magic_counts) - shown):
+        count = int(magic_counts.get(rarity, 0) or 0)
+        lines.append(f"• {rarity.title()}: **{count} รอบ**")
+
+    lines += ["", "💰 **Sell ×2 / ×4**"]
+
+    for target_key, meta in SELL_TARGETS.items():
+        cur = sell_counts.get(target_key, {}) or {}
+        x2 = int(cur.get("2", 0) or 0)
+        x4 = int(cur.get("4", 0) or 0)
+        lines.append(
+            f"{meta['emoji']} {meta['label']}: "
+            f"×2 **{x2} รอบ** · ×4 **{x4} รอบ**"
+        )
+
+    lines += [
+        "",
+        f"🔔 แจ้งเตือนเป้าหมายจริงทั้งหมด: **{int(day.get('alerts_sent', 0) or 0)} ครั้ง**",
+        "🧪 Manual Run / Health Check / Image Self-Test: **ไม่นับ**",
+    ]
+
+    return "\n".join(lines)
+
+
+def prune_daily_stats(daily_stats):
+    days = daily_stats.get("days", {})
+    if not isinstance(days, dict):
+        return
+
+    keys = sorted(days.keys())
+    if len(keys) <= DAILY_STATS_RETENTION_DAYS:
+        return
+
+    keep = set(keys[-DAILY_STATS_RETENTION_DAYS:])
+    for k in list(days):
+        if k not in keep:
+            days.pop(k, None)
+
+
+def maybe_send_daily_summary(daily_stats):
+    """
+    First successful automatic run after midnight Thailand sends
+    exactly one summary for yesterday.
+
+    If there is no collected previous-day data, stay silent instead of
+    sending a misleading zero summary.
+    """
+    yesterday = yesterday_thailand_date_str()
+
+    if daily_stats.get("last_summary_date") == yesterday:
+        return False
+
+    day = (daily_stats.get("days", {}) or {}).get(yesterday)
+
+    if not isinstance(day, dict):
+        daily_stats["last_summary_date"] = yesterday
+        prune_daily_stats(daily_stats)
+        return False
+
+    send_discord(format_daily_summary(yesterday, day))
+    daily_stats["last_summary_date"] = yesterday
+    prune_daily_stats(daily_stats)
+    return True
 
 
 
@@ -2375,6 +2690,7 @@ def semantic_state_view(state):
         "shop_fingerprints": state.get("shop_fingerprints", {}),
         "shop_cycles": state.get("shop_cycles", {}),
         "targets": targets,
+        "daily_stats": state.get("daily_stats", {}),
         "health": {
             "status": health.get("status"),
             "last_error_alert_at": health.get("last_error_alert_at"),
@@ -2454,12 +2770,13 @@ def main():
     old_health = old_state.get("health", {}) if isinstance(old_state, dict) else {}
 
     new_state = {
-        "version": "6.4.9",
+        "version": "6.5.0",
         "alert_logic_version": ALERT_LOGIC_VERSION,
         "updated_at": old_state.get("updated_at"),
         "shop_fingerprints": current_shop_fp,
         "shop_cycles": persistent_cycle_state(current_shop_cycles),
         "targets": current_snapshot,
+        "daily_stats": normalize_daily_stats(old_state),
         "health": {
             "status": "ok",
             # Preserve error metadata until a meaningful state write.
@@ -2474,7 +2791,7 @@ def main():
 
     print(f"Parsed stock: {len(stock)} | sell: {len(sell)}")
     print(f"Read attempts used: {attempts}")
-    print(f"Has v6.4.9 baseline: {has_baseline}")
+    print(f"Has v6.5.0 baseline: {has_baseline}")
     print(f"Alert rules self-test: PASS ({self_test['passed_classes']}/{self_test['total_classes']})")
     print(f"Current wanted conditions: {len(current_events)}")
     print(f"Alert logic migration required: {logic_migration}")
@@ -2488,8 +2805,31 @@ def main():
     )
     print(f"Trigger: event={EVENT_NAME or 'unknown'} source={TRIGGER_SOURCE or 'manual/default'}")
 
-    # Manual Run is now a health check AND a real target-alert test.
-    if EVENT_NAME == "workflow_dispatch" and TRIGGER_SOURCE != "cloudflare":
+    is_manual_run = (
+        EVENT_NAME == "workflow_dispatch"
+        and TRIGGER_SOURCE != "cloudflare"
+    )
+    is_automatic_run = not is_manual_run
+
+    daily_stats = new_state["daily_stats"]
+
+    if is_automatic_run:
+        summary_sent = maybe_send_daily_summary(daily_stats)
+        if summary_sent:
+            print("Daily Summary sent for previous Thailand date")
+
+        update_daily_occurrence_stats(
+            daily_stats,
+            stock,
+            sell,
+            current_snapshot,
+            current_shop_cycles,
+            current_shop_fp,
+        )
+
+    # Manual Run is a Health/Image/Current Alert test only.
+    # It does NOT affect Daily Statistics.
+    if is_manual_run:
         send_discord(
             format_health_message(
                 stock,
@@ -2513,7 +2853,7 @@ def main():
             print("Manual run: no current wanted event; health check only")
 
         smart_save_state(old_state, new_state, force=True)
-        print("Manual Health Check + current alerts sent; v6.4.9 state handled")
+        print("Manual Health Check + current alerts sent; v6.5.0 state handled")
         return
 
     # On first run or migration, alert currently-active targets instead of
@@ -2521,6 +2861,7 @@ def main():
     if logic_migration or not has_baseline:
         if current_events:
             send_event_alerts(current_events, attempts)
+            add_daily_alert_count(daily_stats, len(current_events))
             print(f"Bootstrap/migration sent {len(current_events)} current wanted event(s)")
         else:
             print("Bootstrap/migration: no current wanted event; silent")
@@ -2545,6 +2886,7 @@ def main():
 
     if events:
         send_event_alerts(events, attempts)
+        add_daily_alert_count(daily_stats, len(events))
         print(f"Sent {len(events)} wanted event(s)")
     else:
         print("No new wanted event; silent")
