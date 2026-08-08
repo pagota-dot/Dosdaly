@@ -1,5 +1,5 @@
 {
-  "alert_logic_version": "6.3-gag-timer-sync-v1",
+  "alert_logic_version": "6.4-cloudflare-ready-v1",
   "health": {
     "alert_rule_self_test": {
       "errors": [],
@@ -8,7 +8,7 @@
       "total_classes": 7
     },
     "attempts_used": 1,
-    "last_checked_at": "2026-08-07T23:32:47.563841+00:00",
+    "last_checked_at": "2026-08-08T00:37:00.179412+00:00",
     "last_diagnostics": [
       {
         "attempt": 1,
@@ -17,25 +17,25 @@
         "sell_targets": {
           "atlantic giant pumpkin": {
             "contexts_found": 3,
-            "multiplier": 0.83
+            "multiplier": 1.07
           },
           "maple mushroom": {
             "contexts_found": 3,
-            "multiplier": 0.89
+            "multiplier": 0.98
           }
         },
         "shop_timers": {
-          "crate": 139,
-          "gear": 139,
-          "seed": 139
+          "crate": 187,
+          "gear": 187,
+          "seed": 187
         },
         "stock_changed_during_sync": false,
-        "stock_count": 18,
-        "stock_min_timer_seconds": 139,
+        "stock_count": 26,
+        "stock_min_timer_seconds": 187,
         "stock_ok": true,
         "stock_sample_counts": [
-          18,
-          18
+          26,
+          26
         ],
         "stock_sync_samples": 2,
         "timer_available": true,
@@ -46,31 +46,55 @@
       }
     ],
     "last_error_alert_at": null,
-    "last_success_at": "2026-08-07T23:32:47.563844+00:00",
+    "last_success_at": "2026-08-08T00:37:00.179415+00:00",
     "sell_count": 2,
     "status": "ok",
-    "stock_count": 18,
+    "stock_count": 26,
     "timer_sync": {
       "changed_during_sync": false,
       "final_guard_reason": "timer-safe",
       "guard_log": [],
-      "min_timer_seconds": 139,
+      "min_timer_seconds": 187,
       "rollover_seen": false,
       "sample_counts": [
-        18,
-        18
+        26,
+        26
       ],
       "sample_fingerprints": [
-        "92b45cf880c228ce769d8b02e1eec0907519babe6877f6c1a5f4b67ce87629e1",
-        "92b45cf880c228ce769d8b02e1eec0907519babe6877f6c1a5f4b67ce87629e1"
+        "906ed54279a8ca66429e3d98bcc16a90e0f37420a5a7e3958920a3516d3415c8",
+        "906ed54279a8ca66429e3d98bcc16a90e0f37420a5a7e3958920a3516d3415c8"
       ],
       "samples": 2,
       "shop_timers": {
-        "crate": 139,
-        "gear": 139,
-        "seed": 139
+        "crate": 187,
+        "gear": 187,
+        "seed": 187
       },
       "stock": [
+        {
+          "name": "Bench Crate",
+          "qty": 2,
+          "rarity": "UNCOMMON",
+          "type": "crate"
+        },
+        {
+          "name": "Bridge Crate",
+          "qty": 3,
+          "rarity": "EPIC",
+          "type": "crate"
+        },
+        {
+          "name": "Fall Cosmetic Crate",
+          "qty": 2,
+          "rarity": "UNCOMMON",
+          "type": "crate"
+        },
+        {
+          "name": "Fall Structure Crate",
+          "qty": 2,
+          "rarity": "RARE",
+          "type": "crate"
+        },
         {
           "name": "Fence Crate",
           "qty": 2,
@@ -84,21 +108,21 @@
           "type": "crate"
         },
         {
-          "name": "Sign Crate",
+          "name": "Picture Frame Crate",
           "qty": 1,
           "rarity": "RARE",
           "type": "crate"
         },
         {
           "name": "Common Watering Can",
-          "qty": 3,
+          "qty": 4,
           "rarity": "COMMON",
           "type": "gear"
         },
         {
-          "name": "Invisibility Mushroom",
-          "qty": 1,
-          "rarity": "LEGENDARY",
+          "name": "Gnome",
+          "qty": 2,
+          "rarity": "EPIC",
           "type": "gear"
         },
         {
@@ -108,15 +132,15 @@
           "type": "gear"
         },
         {
-          "name": "Syrup Sprinkler",
-          "qty": 2,
+          "name": "Syrup Watering Can",
+          "qty": 3,
           "rarity": "COMMON",
           "type": "gear"
         },
         {
-          "name": "Syrup Watering Can",
-          "qty": 4,
-          "rarity": "COMMON",
+          "name": "Trowel",
+          "qty": 2,
+          "rarity": "RARE",
           "type": "gear"
         },
         {
@@ -127,8 +151,26 @@
         },
         {
           "name": "Bamboo",
-          "qty": 9,
+          "qty": 8,
           "rarity": "RARE",
+          "type": "seed"
+        },
+        {
+          "name": "Corn",
+          "qty": 1,
+          "rarity": "RARE",
+          "type": "seed"
+        },
+        {
+          "name": "Grape",
+          "qty": 1,
+          "rarity": "EPIC",
+          "type": "seed"
+        },
+        {
+          "name": "Green Bean",
+          "qty": 1,
+          "rarity": "EPIC",
           "type": "seed"
         },
         {
@@ -138,33 +180,39 @@
           "type": "seed"
         },
         {
-          "name": "Maple Bamboo",
-          "qty": 7,
+          "name": "Maple Corn",
+          "qty": 1,
           "rarity": "RARE",
           "type": "seed"
         },
         {
-          "name": "Maple Dragon Fruit",
-          "qty": 1,
-          "rarity": "LEGENDARY",
+          "name": "Maple Mushroom",
+          "qty": 2,
+          "rarity": "EPIC",
           "type": "seed"
         },
         {
-          "name": "Maple Sunflower",
+          "name": "Maple Pineapple",
           "qty": 1,
-          "rarity": "LEGENDARY",
+          "rarity": "RARE",
           "type": "seed"
         },
         {
-          "name": "Maple Tomato",
-          "qty": 3,
-          "rarity": "UNCOMMON",
+          "name": "Maple Pomegranate",
+          "qty": 1,
+          "rarity": "MYTHIC",
           "type": "seed"
         },
         {
           "name": "Maple Tulip",
-          "qty": 3,
+          "qty": 4,
           "rarity": "UNCOMMON",
+          "type": "seed"
+        },
+        {
+          "name": "Pineapple",
+          "qty": 1,
+          "rarity": "RARE",
           "type": "seed"
         },
         {
@@ -175,7 +223,7 @@
         },
         {
           "name": "Tulip",
-          "qty": 3,
+          "qty": 4,
           "rarity": "UNCOMMON",
           "type": "seed"
         }
@@ -184,17 +232,17 @@
       "timer_safe": true,
       "timer_source": "shop",
       "timers_used": {
-        "gear": 139,
-        "seed": 139
+        "gear": 187,
+        "seed": 187
       },
       "total_timer_wait_seconds": 6
     }
   },
   "shop_fingerprints": {
-    "crate": "a4142f7f68e991e38892bb29b5c576ff614b366f4e539c27994b36bb511354d5",
-    "gear": "aa8750e5c6e59298213af5f1da4512d39c7be7a9c9f5c92e2930051348603c62",
-    "seed": "7780540c7a6170808cb7a3fdeb3e20ce4650cdb3f9ac416e5a185a014e536793",
-    "sell": "02d7df16d4a8fc7521f825b117d9b1befde349dac8ec66ffc969a8090f01daaf",
+    "crate": "34e2b0aec64f28b8a22b3c4e85533d69167871688a1cda1cc7b58fe06210c41e",
+    "gear": "3a114e6d0dd6b088b90a3e1daca932496ce5921d18b228a30d46ee822ecd5d99",
+    "seed": "16d404e6ef26609ef5d1d04e0e0bcaa21b7c62963b7173ec28b965e3fee25abd",
+    "sell": "cd80e2879d89b49e974fd06aba20729853a18976f09c08232792a5bb46af396d",
     "unknown": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
   },
   "targets": {
@@ -202,12 +250,12 @@
     "sell": {
       "atlantic giant pumpkin": {
         "label": "Atlantic Giant Pumpkin",
-        "multi": 0.83,
+        "multi": 1.07,
         "present": true
       },
       "maple mushroom": {
         "label": "Maple Mushroom",
-        "multi": 0.89,
+        "multi": 0.98,
         "present": true
       }
     },
@@ -234,6 +282,6 @@
       }
     }
   },
-  "updated_at": "2026-08-07T23:32:47.563824+00:00",
-  "version": "6.3"
+  "updated_at": "2026-08-08T00:37:00.179394+00:00",
+  "version": "6.4"
 }
