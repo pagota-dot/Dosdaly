@@ -1,4 +1,4 @@
-name: GAG2 Reliability Discord Bot v6.4.1
+name: GAG2 Reliability Discord Bot v6.4.2
 
 on:
   workflow_dispatch:
@@ -46,7 +46,7 @@ jobs:
       - name: Save reliability state safely
         shell: bash
         run: |
-          if git diff --quiet -- state.json 2>/dev/null; then
+          if git diff --quiet -- state.json; then
             echo "State unchanged."
             exit 0
           fi
@@ -56,20 +56,33 @@ jobs:
           git config user.name "gag2-stock-bot"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
-          for attempt in 1 2 3 4; do
-            echo "Save state attempt $attempt/4"
+          for attempt in 1 2 3 4
+          do
+            echo "Save attempt $attempt/4"
 
-            git fetch --no-tags origin main
+            git fetch origin main
             git reset --hard origin/main
 
             cp /tmp/gag2-state.json state.json
             git add state.json
 
-            if git diff --cached --quiet; then
-              echo "Remote already contains this state."
+            if git diff --cached --quiet
+            then
+              echo "State already saved."
               exit 0
             fi
 
             git commit -m "chore: update cloudflare timer-sync state [skip ci]"
 
-            if
+            if git push origin HEAD:main
+            then
+              echo "State saved successfully."
+              exit 0
+            fi
+
+            echo "Push collision. Retrying..."
+            sleep 3
+          done
+
+          echo "Could not save state after 4 attempts."
+          exit 1
