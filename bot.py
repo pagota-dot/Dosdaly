@@ -1953,7 +1953,7 @@ def send_discord(content="", embeds=None):
     r = requests.post(
         WEBHOOK,
         json=payload,
-        headers={"User-Agent": "GAG2-Reliability-Discord-Bot/6.5.4"},
+        headers={"User-Agent": "GAG2-Reliability-Discord-Bot/6.5.3"},
         timeout=30,
     )
 
@@ -2095,7 +2095,7 @@ def find_sell_value(sell, target_key):
 def format_health_message(stock, sell, snapshot, attempts, recovered=False, self_test=None, source_sync=None, shop_cycles=None):
     lines = [
         "✅ **GAG2 Bot Health Check**",
-        "🛡️ Reliability v6.5.4 Discord Status Read-only + Daily Counters + Thumbnail + Per-Shop Cycle + Smart State + Block Detector + Timer-Sync",
+        "🛡️ Reliability v6.5.3 Quiet NO_TIMER + Daily Counters + Thumbnail + Per-Shop Cycle + Smart State + Block Detector + Timer-Sync",
         f"• Stock parser: **OK** ({len(stock)} รายการ)",
         f"• Sell parser: **OK** ({len(sell)} รายการ)",
         f"• อ่านสำเร็จในครั้งที่: **{attempts}/{MAX_READ_ATTEMPTS}**",
@@ -2346,7 +2346,7 @@ def handle_read_failure(old_state, result):
         )
 
         new_state["health"] = health
-        new_state.setdefault("version", "6.5.4")
+        new_state.setdefault("version", "6.5.3")
         save_state(new_state)
 
         if should_warn_now:
@@ -2399,7 +2399,7 @@ def handle_read_failure(old_state, result):
         )
 
         new_state["health"] = health
-        new_state.setdefault("version", "6.5.4")
+        new_state.setdefault("version", "6.5.3")
         save_state(new_state)
         print("Manual NO_TIMER Health message sent; automatic streak unchanged")
         return
@@ -2511,7 +2511,7 @@ def handle_read_failure(old_state, result):
     )
 
     new_state["health"] = health
-    new_state.setdefault("version", "6.5.4")
+    new_state.setdefault("version", "6.5.3")
     save_state(new_state)
 
 
@@ -2991,130 +2991,6 @@ def smart_save_state(old_state, new_state, force=False):
     return True
 
 
-
-def format_discord_status_message(
-    stock,
-    sell,
-    current_snapshot,
-    attempts,
-    self_test,
-    source_sync,
-    shop_cycles,
-    old_state,
-):
-    """
-    Compact read-only status for Discord slash command /bot.
-    This formatter does not mutate state.
-    """
-    timers = (source_sync or {}).get("shop_timers") or {}
-    timer_parts = []
-    for shop in ("seed", "gear", "crate"):
-        sec = timers.get(shop)
-        if sec is not None:
-            timer_parts.append(f"{shop} {format_mmss(sec)}")
-
-    cycle_parts = []
-    for shop in SHOP_CYCLE_NAMES:
-        c = (shop_cycles or {}).get(shop) or {}
-        cid = c.get("id")
-        if cid:
-            cycle_parts.append(f"{shop} #{cid}")
-
-    stock_hits = []
-    for target_key, cur in (current_snapshot.get("stock", {}) or {}).items():
-        if cur.get("present"):
-            meta = EXACT_STOCK_TARGETS.get(target_key, {})
-            stock_hits.append(meta.get("emoji", "📦") + " " + meta.get("label", target_key))
-
-    magic_hits = []
-    for _, cur in (current_snapshot.get("magic_mail", {}) or {}).items():
-        if cur:
-            label = cur.get("label") or cur.get("name")
-            if label:
-                magic_hits.append(label)
-
-    sell_parts = []
-    for target_key, meta in SELL_TARGETS.items():
-        cur = (current_snapshot.get("sell", {}) or {}).get(target_key, {})
-        if cur.get("present"):
-            m = cur.get("multi")
-            if m is not None:
-                bell = " 🔔" if m in SELL_MULTIPLIERS else ""
-                sell_parts.append(f"{meta['emoji']} {meta['label']} ×{float(m):.2f}{bell}")
-
-    daily = normalize_daily_stats(old_state)
-    day = ((daily.get("days") or {}).get(thailand_date_str()) or {})
-    alerts_today = int(day.get("alerts_sent", 0) or 0)
-
-    snapshot_ok = bool((source_sync or {}).get("multi_snapshot_stable"))
-    timer_ok = bool((source_sync or {}).get("timer_available")) and bool(
-        (source_sync or {}).get("timer_safe")
-    )
-
-    lines = [
-        "🤖 **GAG2 Monitor Status**",
-        "🟢 **ONLINE · READ-ONLY**",
-        f"📦 Stock **{len(stock)}** · 💰 Sell **{len(sell)}** · อ่านครั้งที่ **{attempts}/3**",
-        f"⏱ Timer: **{'OK' if timer_ok else 'CHECK'}**"
-        + (f" · {' · '.join(timer_parts)}" if timer_parts else ""),
-        f"📸 Snapshot: **{'STABLE' if snapshot_ok else 'UNSTABLE'}**",
-        f"🔄 Cycle: **{' · '.join(cycle_parts) if cycle_parts else 'ไม่ทราบ'}**",
-        f"✅ Rules: **{self_test.get('passed_classes',0)}/{self_test.get('total_classes',7)}**",
-        f"📊 Daily Stats: **ON** · Alert วันนี้ **{alerts_today}**",
-    ]
-
-    if stock_hits or magic_hits:
-        found = stock_hits + [f"✨ {x}" for x in magic_hits]
-        lines += ["", "🎯 ตอนนี้พบ: " + " · ".join(found[:6])]
-    else:
-        lines += ["", "🎯 Stock เป้าหมาย: **ยังไม่พบ**"]
-
-    if sell_parts:
-        lines.append("💰 " + " · ".join(sell_parts))
-
-    lines += [
-        "",
-        "🔒 `/bot` ไม่เพิ่มสถิติ · ไม่เปลี่ยน baseline · ไม่ส่ง Alert ซ้ำ",
-    ]
-
-    return "\n".join(lines)
-
-
-def format_discord_status_failure(result):
-    diagnostics = result.get("diagnostics", []) or []
-    last = diagnostics[-1] if diagnostics else {}
-
-    if last.get("access_block"):
-        code = last.get("status_code")
-        kind = last.get("block_kind") or "Access Block"
-        return (
-            "🤖 **GAG2 Monitor Status**\n"
-            "🟠 **READ-ONLY CHECK FAILED**\n"
-            f"🛡 ตรวจพบ **{kind}**"
-            + (f" (HTTP {code})" if code else "")
-            + "\n"
-            "ไม่ได้เปลี่ยน baseline/state และไม่ได้เพิ่มสถิติ"
-        )
-
-    stock_count = int(last.get("stock_count", 0) or 0)
-    sell_count = int(last.get("sell_count", 0) or 0)
-    timer = (
-        "NO_TIMER"
-        if not last.get("timer_available")
-        else ("SAFE" if last.get("timer_safe") else "UNSAFE")
-    )
-    snap = "STABLE" if last.get("multi_snapshot_stable") else "UNSTABLE"
-
-    return (
-        "🤖 **GAG2 Monitor Status**\n"
-        "🟠 **READ-ONLY CHECK ยังยืนยันข้อมูลไม่ได้**\n"
-        f"📦 Stock {stock_count} · 💰 Sell {sell_count}\n"
-        f"⏱ Timer **{timer}** · 📸 Snapshot **{snap}**\n"
-        "ไม่ได้เปลี่ยน baseline/state และไม่ได้เพิ่มสถิติ"
-    )
-
-
-
 def main():
     if not WEBHOOK:
         raise RuntimeError("Missing GitHub Actions secret: DISCORD_WEBHOOK")
@@ -3128,17 +3004,7 @@ def main():
     old_state = load_state()
     result = collect_live_data()
 
-    is_discord_status = (
-        EVENT_NAME == "workflow_dispatch"
-        and TRIGGER_SOURCE == "discord_status"
-    )
-
     if not result["ok"]:
-        if is_discord_status:
-            send_discord(format_discord_status_failure(result))
-            print("Discord /bot read-only failure status sent; state untouched")
-            return
-
         handle_read_failure(old_state, result)
         print("Health failure saved; no stock baseline was changed")
         return
@@ -3172,29 +3038,10 @@ def main():
     old_health_status = old_state.get("health", {}).get("status")
     recovered = old_health_status in {"error", "blocked"}
 
-    # Discord slash command /bot is strict READ-ONLY.
-    # It uses the live read above but never saves state, changes baseline,
-    # increments Daily Statistics, or emits current target alerts.
-    if is_discord_status:
-        send_discord(
-            format_discord_status_message(
-                stock,
-                sell,
-                current_snapshot,
-                attempts,
-                self_test,
-                result.get("source_sync") or {},
-                current_shop_cycles,
-                old_state,
-            )
-        )
-        print("Discord /bot read-only status sent; state untouched")
-        return
-
     old_health = old_state.get("health", {}) if isinstance(old_state, dict) else {}
 
     new_state = {
-        "version": "6.5.4",
+        "version": "6.5.3",
         "alert_logic_version": ALERT_LOGIC_VERSION,
         "updated_at": old_state.get("updated_at"),
         "shop_fingerprints": current_shop_fp,
@@ -3217,7 +3064,7 @@ def main():
 
     print(f"Parsed stock: {len(stock)} | sell: {len(sell)}")
     print(f"Read attempts used: {attempts}")
-    print(f"Has v6.5.4 baseline: {has_baseline}")
+    print(f"Has v6.5.3 baseline: {has_baseline}")
     print(f"Alert rules self-test: PASS ({self_test['passed_classes']}/{self_test['total_classes']})")
     print(f"Current wanted conditions: {len(current_events)}")
     print(f"Alert logic migration required: {logic_migration}")
@@ -3233,7 +3080,7 @@ def main():
 
     is_manual_run = (
         EVENT_NAME == "workflow_dispatch"
-        and TRIGGER_SOURCE not in {"cloudflare", "discord_status"}
+        and TRIGGER_SOURCE != "cloudflare"
     )
     is_automatic_run = not is_manual_run
 
@@ -3287,7 +3134,7 @@ def main():
             print("Manual run: no current wanted event; health check only")
 
         smart_save_state(old_state, new_state, force=True)
-        print("Manual Health Check + current alerts sent; v6.5.4 state handled")
+        print("Manual Health Check + current alerts sent; v6.5.3 state handled")
         return
 
     # On first run or migration, alert currently-active targets instead of
