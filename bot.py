@@ -3,6 +3,7 @@ import re
 import json
 import hashlib
 import time
+import copy
 from pathlib import Path
 from datetime import datetime, timezone, timedelta
 
@@ -47,6 +48,13 @@ MULTI_SNAPSHOT_CONFIRM_SECONDS = 8
 MULTI_SNAPSHOT_MAX_EXTRA_READS = 2
 MULTI_SNAPSHOT_REQUIRED_STABLE_PAIRS = 1
 MULTI_SNAPSHOT_MIN_COMPARE_ITEMS = 3
+
+# v6.4.8 Per-Shop Cycle ID
+# Build a stable source-cycle key from GAG2's own countdown.
+# The estimated next reset is rounded to a 30-second bucket so a few seconds
+# of page/render delay do not create fake cycles.
+SHOP_CYCLE_KEY_BUCKET_SECONDS = 30
+SHOP_CYCLE_NAMES = ("seed", "gear", "crate")
 
 MIN_STOCK_ITEMS = 3
 MIN_SELL_ITEMS = 1
@@ -511,6 +519,7 @@ def consecutive_snapshot_stability(samples):
 
 
 def stock_snapshot(driver):
+    captured_at_epoch = time.time()
     text = driver.find_element("tag name", "body").text
     assert_not_blocked(driver, text)
     stock = parse_stock(text)
@@ -522,8 +531,143 @@ def stock_snapshot(driver):
         "fingerprint": stable_hash(stock),
         "timers": timers,
         "shop_timers": shop_timers,
+        "captured_at_epoch": captured_at_epoch,
         "min_timer_seconds": min(timers) if timers else None,
     }
+
+
+
+def shop_cycle_key_from_timer(captured_at_epoch, remaining_seconds):
+    """
+    Estimate GAG2's next reset time from the source countdown:
+        capture_time + remaining
+    and round it to a small bucket to absorb render/network jitter.
+
+    Same source cycle => same key.
+    Next source cycle => key advances by roughly 300 seconds.
+    """
+    try:
+        captured_at_epoch = float(captured_at_epoch)
+        remaining_seconds = int(remaining_seconds)
+    except Exception:
+        return None
+
+    if captured_at_epoch <= 0 or remaining_seconds < 0:
+        return None
+
+    estimated_reset = captured_at_epoch + remaining_seconds
+    bucket = SHOP_CYCLE_KEY_BUCKET_SECONDS
+    rounded = int(round(estimated_reset / bucket) * bucket)
+    return str(rounded)
+
+
+def derive_shop_cycle_keys(source_sync, current_shop_fp):
+    """
+    Produce current cycle keys for Seed/Gear/Crate.
+
+    Primary evidence = GAG2 countdown.
+    Fallback = shop fingerprint when a labelled timer is unavailable.
+    """
+    timers = source_sync.get("shop_timers") or {}
+    captured_at = source_sync.get("captured_at_epoch")
+    result = {}
+
+    for shop in SHOP_CYCLE_NAMES:
+        timer = timers.get(shop)
+        timer_key = (
+            shop_cycle_key_from_timer(captured_at, timer)
+            if timer is not None
+            else None
+        )
+
+        if timer_key:
+            result[shop] = {
+                "key": f"timer:{timer_key}",
+                "source": "gag2-timer",
+                "remaining_seconds": int(timer),
+            }
+        else:
+            fp = current_shop_fp.get(shop)
+            result[shop] = {
+                "key": f"fp:{fp}" if fp else None,
+                "source": "fingerprint-fallback",
+                "remaining_seconds": None,
+            }
+
+    return result
+
+
+def update_shop_cycles(old_state, current_keys, current_shop_fp, source_sync):
+    """
+    Persistent per-shop cycle IDs.
+
+    Crucial migration rule:
+    - If old state has no cycle key yet, initialize without declaring a
+      'new cycle', so installing v6.4.8 does not itself generate alerts.
+
+    New-cycle evidence:
+    - GAG2-derived cycle key changed; OR
+    - fallback fingerprint changed when timer is unavailable; OR
+    - source-sync explicitly observed a timer rollover inside this job.
+    """
+    old_cycles = (
+        old_state.get("shop_cycles", {})
+        if isinstance(old_state, dict)
+        else {}
+    )
+    rollover_shops = {
+        x.get("shop")
+        for x in (source_sync.get("rollover_details") or [])
+        if x.get("shop")
+    }
+
+    out = {}
+
+    for shop in SHOP_CYCLE_NAMES:
+        old = old_cycles.get(shop, {})
+        old_id = int(old.get("id", 0) or 0)
+        old_key = old.get("key")
+        cur = current_keys.get(shop, {})
+        cur_key = cur.get("key")
+
+        # First time after upgrade: initialize, do not announce a new cycle.
+        initialized = bool(old_key)
+        changed = False
+
+        if initialized and cur_key and cur_key != old_key:
+            changed = True
+
+        if initialized and shop in rollover_shops:
+            changed = True
+
+        # If neither timer nor explicit rollover is available, fingerprint is
+        # a conservative fallback.
+        if (
+            initialized
+            and cur.get("source") == "fingerprint-fallback"
+            and old_state.get("shop_fingerprints", {}).get(shop)
+            != current_shop_fp.get(shop)
+        ):
+            changed = True
+
+        if old_id <= 0:
+            cycle_id = 1
+        else:
+            cycle_id = old_id + 1 if changed else old_id
+
+        out[shop] = {
+            "id": cycle_id,
+            "key": cur_key,
+            "source": cur.get("source"),
+            "remaining_seconds": cur.get("remaining_seconds"),
+            "changed": changed,
+        }
+
+    return out
+
+
+def shop_cycle_changed(shop_cycles, shop):
+    return bool((shop_cycles.get(shop) or {}).get("changed"))
 
 
 def timer_guard_for_snapshot(snapshot):
@@ -816,6 +960,7 @@ def read_source_synced_stock(driver):
         "timer_safe": timer_safe,
         "timer_source": final_source,
         "shop_timers": chosen.get("shop_timers") or {},
+        "captured_at_epoch": chosen.get("captured_at_epoch"),
         "timers_used": final_timers,
         "total_timer_wait_seconds": total_wait,
         "guard_log": guard_log,
@@ -1516,7 +1661,7 @@ def alert_rule_self_test():
     }
 
 
-def compare_target_events(old_state, current_snapshot, old_shop_fp, current_shop_fp):
+def compare_target_events(old_state, current_snapshot, old_shop_fp, current_shop_fp, current_shop_cycles):
     """
     Returns ONLY newly relevant alert events.
 
@@ -1546,11 +1691,17 @@ def compare_target_events(old_state, current_snapshot, old_shop_fp, current_shop
         prev = old_stock.get(target_key, {"present": False, "items": []})
         group = stock_group_for_target(target_key, cur)
         group_changed = current_shop_fp.get(group) != old_shop_fp.get(group)
+        cycle_changed = shop_cycle_changed(current_shop_cycles, group)
 
         cur_sig = stable_hash(cur.get("items", []))
         prev_sig = stable_hash(prev.get("items", []))
 
-        if (not prev.get("present")) or (cur_sig != prev_sig) or group_changed:
+        if (
+            (not prev.get("present"))
+            or (cur_sig != prev_sig)
+            or cycle_changed
+            or group_changed
+        ):
             meta = EXACT_STOCK_TARGETS[target_key]
             events.append(
                 {
@@ -1562,7 +1713,11 @@ def compare_target_events(old_state, current_snapshot, old_shop_fp, current_shop
                     "reason": (
                         "กลับเข้า Stock"
                         if not prev.get("present")
-                        else "รอบร้านเปลี่ยน/จำนวนเปลี่ยน"
+                        else (
+                            "รอบร้านใหม่"
+                            if cycle_changed
+                            else "รายการ/จำนวนเปลี่ยน"
+                        )
                     ),
                     "image_url": cur.get("image_url"),
                 }
@@ -1579,11 +1734,17 @@ def compare_target_events(old_state, current_snapshot, old_shop_fp, current_shop
 
         group = cur.get("type") if cur.get("type") in current_shop_fp else "gear"
         group_changed = current_shop_fp.get(group) != old_shop_fp.get(group)
+        cycle_changed = shop_cycle_changed(current_shop_cycles, group)
 
         cur_sig = stable_hash(cur)
         prev_sig = stable_hash(prev or {})
 
-        if (not prev) or (cur_sig != prev_sig) or group_changed:
+        if (
+            (not prev)
+            or (cur_sig != prev_sig)
+            or cycle_changed
+            or group_changed
+        ):
             events.append(
                 {
                     "kind": "stock",
@@ -1782,7 +1943,7 @@ def send_discord(content="", embeds=None):
     r = requests.post(
         WEBHOOK,
         json=payload,
-        headers={"User-Agent": "GAG2-Reliability-Discord-Bot/6.4.7"},
+        headers={"User-Agent": "GAG2-Reliability-Discord-Bot/6.4.8"},
         timeout=30,
     )
 
@@ -1865,7 +2026,7 @@ def build_event_embed(event, attempts):
         "description": "\n".join(desc_lines)[:4000],
         "color": color,
         "image": {"url": image_url},
-        "footer": {"text": f"Reliability v6.4.7 Multi-Snapshot Cycle Verify • attempts {attempts}"},
+        "footer": {"text": f"Reliability v6.4.8 Per-Shop Cycle + Smart State • attempts {attempts}"},
     }
     return embed
 
@@ -1923,10 +2084,10 @@ def find_sell_value(sell, target_key):
     return max(items, key=lambda x: float(x.get("multi", 0))).get("multi")
 
 
-def format_health_message(stock, sell, snapshot, attempts, recovered=False, self_test=None, source_sync=None):
+def format_health_message(stock, sell, snapshot, attempts, recovered=False, self_test=None, source_sync=None, shop_cycles=None):
     lines = [
         "✅ **GAG2 Bot Health Check**",
-        "🛡️ Reliability v6.4.7 Multi-Snapshot Cycle Verify + Block Detector + Timer-Sync",
+        "🛡️ Reliability v6.4.8 Per-Shop Cycle + Smart State + Block Detector + Timer-Sync",
         f"• Stock parser: **OK** ({len(stock)} รายการ)",
         f"• Sell parser: **OK** ({len(sell)} รายการ)",
         f"• อ่านสำเร็จในครั้งที่: **{attempts}/{MAX_READ_ATTEMPTS}**",
@@ -1958,6 +2119,20 @@ def format_health_message(stock, sell, snapshot, attempts, recovered=False, self
         lines.append(
             f"• Cycle confidence: **{source_sync.get('cycle_confidence', 'UNKNOWN')}**"
         )
+
+        if shop_cycles:
+            cycle_parts = []
+            for shop in SHOP_CYCLE_NAMES:
+                c = shop_cycles.get(shop) or {}
+                if c.get("id"):
+                    marker = "🆕" if c.get("changed") else ""
+                    cycle_parts.append(
+                        f"{shop} #{c.get('id')}{marker}"
+                    )
+            if cycle_parts:
+                lines.append(
+                    "• Shop Cycle IDs: **" + " · ".join(cycle_parts) + "**"
+                )
         first_final = source_sync.get("first_to_final_diff") or {}
         if first_final.get("total_changes", 0):
             lines.append(
@@ -2162,6 +2337,75 @@ def handle_read_failure(old_state, result):
     save_state(new_state)
 
 
+
+def persistent_cycle_state(shop_cycles):
+    """
+    Remove run-local fields so state.json changes only when a cycle identity
+    actually changes, not because countdown remaining seconds changed.
+    """
+    out = {}
+    for shop in SHOP_CYCLE_NAMES:
+        cur = shop_cycles.get(shop) or {}
+        out[shop] = {
+            "id": int(cur.get("id", 1) or 1),
+            "key": cur.get("key"),
+            "source": cur.get("source"),
+        }
+    return out
+
+
+def semantic_state_view(state):
+    """
+    Fields that affect future alert correctness.
+    Volatile timestamps/diagnostics/image presentation are intentionally excluded.
+    """
+    if not isinstance(state, dict):
+        return {}
+
+    health = state.get("health", {}) or {}
+
+    targets = copy.deepcopy(state.get("targets", {}))
+    for cur in (targets.get("stock", {}) or {}).values():
+        cur.pop("image_url", None)
+    for cur in (targets.get("magic_mail", {}) or {}).values():
+        cur.pop("image_url", None)
+    for cur in (targets.get("sell", {}) or {}).values():
+        cur.pop("image_url", None)
+
+    return {
+        "alert_logic_version": state.get("alert_logic_version"),
+        "shop_fingerprints": state.get("shop_fingerprints", {}),
+        "shop_cycles": state.get("shop_cycles", {}),
+        "targets": targets,
+        "health": {
+            "status": health.get("status"),
+            "last_error_alert_at": health.get("last_error_alert_at"),
+            "last_block_kind": health.get("last_block_kind"),
+            "last_block_status_code": health.get("last_block_status_code"),
+        },
+    }
+
+
+def smart_save_state(old_state, new_state, force=False):
+    """
+    Save only when future alert behavior could change.
+
+    Cloudflare still scans every 2 minutes.
+    This only reduces state.json commits.
+    """
+    changed = semantic_state_view(old_state) != semantic_state_view(new_state)
+
+    if not changed and not force:
+        print("Smart State Save: no semantic change; state.json unchanged")
+        return False
+
+    new_state = copy.deepcopy(new_state)
+    new_state["updated_at"] = iso_now()
+    save_state(new_state)
+    print("Smart State Save: semantic state changed; state.json updated")
+    return True
+
+
 def main():
     if not WEBHOOK:
         raise RuntimeError("Missing GitHub Actions secret: DISCORD_WEBHOOK")
@@ -2185,6 +2429,18 @@ def main():
     attempts = result["attempts"]
 
     current_shop_fp = shop_fingerprints(stock, sell)
+
+    current_cycle_keys = derive_shop_cycle_keys(
+        result.get("source_sync") or {},
+        current_shop_fp,
+    )
+    current_shop_cycles = update_shop_cycles(
+        old_state,
+        current_cycle_keys,
+        current_shop_fp,
+        result.get("source_sync") or {},
+    )
+
     current_snapshot = target_snapshot(
         stock,
         sell,
@@ -2197,23 +2453,21 @@ def main():
     old_health_status = old_state.get("health", {}).get("status")
     recovered = old_health_status in {"error", "blocked"}
 
+    old_health = old_state.get("health", {}) if isinstance(old_state, dict) else {}
+
     new_state = {
-        "version": "6.4.7",
+        "version": "6.4.8",
         "alert_logic_version": ALERT_LOGIC_VERSION,
-        "updated_at": iso_now(),
+        "updated_at": old_state.get("updated_at"),
         "shop_fingerprints": current_shop_fp,
+        "shop_cycles": persistent_cycle_state(current_shop_cycles),
         "targets": current_snapshot,
         "health": {
             "status": "ok",
-            "last_checked_at": iso_now(),
-            "last_success_at": iso_now(),
-            "stock_count": len(stock),
-            "sell_count": len(sell),
-            "attempts_used": attempts,
-            "alert_rule_self_test": self_test,
-            "timer_sync": result.get("source_sync"),
-            "last_diagnostics": result.get("diagnostics", []),
-            "last_error_alert_at": old_state.get("health", {}).get("last_error_alert_at"),
+            # Preserve error metadata until a meaningful state write.
+            "last_error_alert_at": old_health.get("last_error_alert_at"),
+            "last_block_kind": None,
+            "last_block_status_code": None,
         },
     }
 
@@ -2222,10 +2476,18 @@ def main():
 
     print(f"Parsed stock: {len(stock)} | sell: {len(sell)}")
     print(f"Read attempts used: {attempts}")
-    print(f"Has v6.4.7 baseline: {has_baseline}")
+    print(f"Has v6.4.8 baseline: {has_baseline}")
     print(f"Alert rules self-test: PASS ({self_test['passed_classes']}/{self_test['total_classes']})")
     print(f"Current wanted conditions: {len(current_events)}")
     print(f"Alert logic migration required: {logic_migration}")
+    print(
+        "Shop cycles: "
+        + " | ".join(
+            f"{shop}#{current_shop_cycles.get(shop, {}).get('id')}"
+            + (" NEW" if current_shop_cycles.get(shop, {}).get("changed") else "")
+            for shop in SHOP_CYCLE_NAMES
+        )
+    )
     print(f"Trigger: event={EVENT_NAME or 'unknown'} source={TRIGGER_SOURCE or 'manual/default'}")
 
     # Manual Run is now a health check AND a real target-alert test.
@@ -2239,6 +2501,7 @@ def main():
                 recovered=recovered,
                 self_test=self_test,
                 source_sync=result.get("source_sync"),
+                shop_cycles=current_shop_cycles,
             )
         )
 
@@ -2251,8 +2514,8 @@ def main():
         else:
             print("Manual run: no current wanted event; health check only")
 
-        save_state(new_state)
-        print("Manual Health Check + current alerts sent; v6.4.7 state saved")
+        smart_save_state(old_state, new_state, force=True)
+        print("Manual Health Check + current alerts sent; v6.4.8 state handled")
         return
 
     # On first run or migration, alert currently-active targets instead of
@@ -2264,7 +2527,7 @@ def main():
         else:
             print("Bootstrap/migration: no current wanted event; silent")
 
-        save_state(new_state)
+        smart_save_state(old_state, new_state, force=True)
         return
 
     events = compare_target_events(
@@ -2272,6 +2535,7 @@ def main():
         current_snapshot,
         old_shop_fp,
         current_shop_fp,
+        current_shop_cycles,
     )
 
     if recovered:
@@ -2287,7 +2551,7 @@ def main():
     else:
         print("No new wanted event; silent")
 
-    save_state(new_state)
+    smart_save_state(old_state, new_state)
 
 
 if __name__ == "__main__":
