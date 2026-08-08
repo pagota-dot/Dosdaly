@@ -39,6 +39,15 @@ GAG2_TIMER_SYNC_MAX_PASSES = 4
 GAG2_TIMER_SYNC_MAX_TOTAL_WAIT = 95
 GAG2_TIMER_TARGET_SHOPS = ("seed", "gear")
 
+# v6.4.7 Multi-Snapshot Cycle Verify
+# Compare the FULL rendered stock list, not only watched targets.
+# If two consecutive safe snapshots match, the page is considered settled.
+# If they differ, sample again until two consecutive snapshots agree.
+MULTI_SNAPSHOT_CONFIRM_SECONDS = 8
+MULTI_SNAPSHOT_MAX_EXTRA_READS = 2
+MULTI_SNAPSHOT_REQUIRED_STABLE_PAIRS = 1
+MULTI_SNAPSHOT_MIN_COMPARE_ITEMS = 3
+
 MIN_STOCK_ITEMS = 3
 MIN_SELL_ITEMS = 1
 HEALTH_ALERT_COOLDOWN_HOURS = 1
@@ -389,6 +398,118 @@ def extract_shop_timers(text):
     return result
 
 
+
+def canonical_stock_map(stock):
+    """
+    Full-page stock identity map used only for source freshness verification.
+    Identity = shop + normalized name + rarity; value = quantity.
+    """
+    out = {}
+    for item in stock or []:
+        typ = norm(item.get("type", "unknown")).lower() or "unknown"
+        name = key(item.get("name", ""))
+        rarity = norm(item.get("rarity", "")).upper()
+        if not name:
+            continue
+        ident = f"{typ}|{name}|{rarity}"
+        out[ident] = int(item.get("qty", 0))
+    return out
+
+
+def compare_stock_maps(old_stock, new_stock, limit=20):
+    """
+    Human-readable change summary across many stock items.
+    This is diagnostic only; notification rules are unchanged.
+    """
+    a = canonical_stock_map(old_stock)
+    b = canonical_stock_map(new_stock)
+
+    added = []
+    removed = []
+    changed = []
+
+    for ident in sorted(set(a) | set(b)):
+        av = a.get(ident)
+        bv = b.get(ident)
+
+        if av is None:
+            added.append({"id": ident, "qty": bv})
+        elif bv is None:
+            removed.append({"id": ident, "qty": av})
+        elif av != bv:
+            changed.append({"id": ident, "from": av, "to": bv})
+
+    total = len(added) + len(removed) + len(changed)
+
+    def short_ident(ident):
+        parts = ident.split("|", 2)
+        if len(parts) == 3:
+            typ, name, rarity = parts
+            label = name.title()
+            if rarity:
+                label += f" [{rarity}]"
+            return f"{typ}:{label}"
+        return ident
+
+    examples = []
+    for x in added[:6]:
+        examples.append(f"+ {short_ident(x['id'])} ×{x['qty']}")
+    for x in removed[:6]:
+        examples.append(f"- {short_ident(x['id'])} ×{x['qty']}")
+    for x in changed[:8]:
+        examples.append(
+            f"~ {short_ident(x['id'])} ×{x['from']}→×{x['to']}"
+        )
+
+    return {
+        "total_changes": total,
+        "added": len(added),
+        "removed": len(removed),
+        "qty_changed": len(changed),
+        "examples": examples[:limit],
+    }
+
+
+def snapshot_is_comparable(snapshot):
+    return len(snapshot.get("stock") or []) >= MULTI_SNAPSHOT_MIN_COMPARE_ITEMS
+
+
+def consecutive_snapshot_stability(samples):
+    """
+    Find whether the newest two FULL-stock snapshots are identical.
+    Matching is based on all parsed items/qty/rarity/shop, not only target items.
+    """
+    if len(samples) < 2:
+        return False, 0, None
+
+    stable_pairs = 0
+    last_diff = None
+
+    for i in range(1, len(samples)):
+        prev = samples[i - 1]
+        cur = samples[i]
+        same = (
+            snapshot_is_comparable(prev)
+            and snapshot_is_comparable(cur)
+            and prev.get("fingerprint") == cur.get("fingerprint")
+        )
+
+        if same:
+            stable_pairs += 1
+        else:
+            stable_pairs = 0
+            last_diff = compare_stock_maps(
+                prev.get("stock", []),
+                cur.get("stock", []),
+            )
+
+    return (
+        stable_pairs >= MULTI_SNAPSHOT_REQUIRED_STABLE_PAIRS,
+        stable_pairs,
+        last_diff,
+    )
+
+
 def stock_snapshot(driver):
     text = driver.find_element("tag name", "body").text
     assert_not_blocked(driver, text)
@@ -474,15 +595,17 @@ def timer_guard_for_snapshot(snapshot):
 
 def read_source_synced_stock(driver):
     """
-    v6.3 GAG2 Timer-Sync.
+    v6.4.7 GAG2 Timer-Sync + Multi-Snapshot Cycle Verify.
 
-    The GitHub clock no longer decides when Stock is safe.
-    The bot opens GAG2, reads the site's own countdown(s), waits through a
-    rollover / post-rollover stale window when necessary, refreshes, and then
-    confirms the rendered Stock again.
+    Evidence used together:
+      1) GAG2's own countdown timer
+      2) Full-stock fingerprint (all parsed names / qty / rarity / shop)
+      3) Two consecutive settled snapshots
 
-    This protects against the user's observed behavior where GAG2 may show the
-    previous Stock for ~10-20 seconds after the shop timer reaches zero.
+    Important:
+    - A new cycle is allowed to have the SAME stock as the previous cycle.
+      Timer rollover evidence + stable post-reset snapshots still make it valid.
+    - A snapshot immediately after 00:00 is NOT trusted by itself.
     """
     rendered_text(
         driver,
@@ -494,7 +617,10 @@ def read_source_synced_stock(driver):
     total_wait = 0
     guard_log = []
     rollover_seen = False
+    rollover_details = []
+    snapshot_diffs = []
 
+    # Phase A: obey GAG2 timer boundary / post-reset safety window.
     for pass_no in range(1, GAG2_TIMER_SYNC_MAX_PASSES + 1):
         current = samples[-1]
         wait_s, reason, timers_used, timer_source = timer_guard_for_snapshot(current)
@@ -508,6 +634,7 @@ def read_source_synced_stock(driver):
             guard_log.append(
                 {
                     "pass": pass_no,
+                    "phase": "timer-guard",
                     "wait_seconds": wait_s,
                     "reason": reason,
                     "timers": timers_used,
@@ -524,25 +651,120 @@ def read_source_synced_stock(driver):
             nxt = stock_snapshot(driver)
             after = nxt.get("shop_timers") or {}
 
-            # If a timer was low and is now much higher, GAG2 crossed a real rollover.
+            diff = compare_stock_maps(current.get("stock", []), nxt.get("stock", []))
+            snapshot_diffs.append(
+                {
+                    "from_sample": len(samples),
+                    "to_sample": len(samples) + 1,
+                    **diff,
+                }
+            )
+
+            # A real timer rollover can prove a new cycle even when the resulting
+            # stock happens to be identical to the old cycle.
             for shop in set(before) & set(after):
-                if before[shop] <= BOUNDARY_TIMER_THRESHOLD and after[shop] > before[shop] + 30:
+                if (
+                    before[shop] <= BOUNDARY_TIMER_THRESHOLD
+                    and after[shop] > before[shop] + 30
+                ):
                     rollover_seen = True
+                    rollover_details.append(
+                        {
+                            "shop": shop,
+                            "before_seconds": before[shop],
+                            "after_seconds": after[shop],
+                        }
+                    )
 
             samples.append(nxt)
             continue
 
-        # Once the timer says we're outside a dangerous boundary window,
-        # do one short confirmation read. This also catches a late React refresh.
+        # Mid-cycle / already-safe page: one initial spaced confirmation.
         if len(samples) == 1:
             time.sleep(SOURCE_SYNC_WAIT_SECONDS)
             total_wait += SOURCE_SYNC_WAIT_SECONDS
+
             driver.refresh()
             time.sleep(3)
-            samples.append(stock_snapshot(driver))
+            nxt = stock_snapshot(driver)
+
+            diff = compare_stock_maps(current.get("stock", []), nxt.get("stock", []))
+            snapshot_diffs.append(
+                {
+                    "from_sample": len(samples),
+                    "to_sample": len(samples) + 1,
+                    **diff,
+                }
+            )
+            samples.append(nxt)
             continue
 
         break
+
+    # Phase B: Full-stock stability verification.
+    # If the latest snapshots differ, keep sampling at intervals until TWO
+    # consecutive snapshots agree. This catches a late GAG2 frontend update.
+    multi_stable, stable_pairs, last_diff = consecutive_snapshot_stability(samples)
+    extra_reads = 0
+
+    while (
+        not multi_stable
+        and extra_reads < MULTI_SNAPSHOT_MAX_EXTRA_READS
+        and total_wait + MULTI_SNAPSHOT_CONFIRM_SECONDS
+        <= GAG2_TIMER_SYNC_MAX_TOTAL_WAIT
+    ):
+        prev = samples[-1]
+
+        time.sleep(MULTI_SNAPSHOT_CONFIRM_SECONDS)
+        total_wait += MULTI_SNAPSHOT_CONFIRM_SECONDS
+
+        driver.refresh()
+        time.sleep(3)
+        nxt = stock_snapshot(driver)
+
+        diff = compare_stock_maps(prev.get("stock", []), nxt.get("stock", []))
+        snapshot_diffs.append(
+            {
+                "from_sample": len(samples),
+                "to_sample": len(samples) + 1,
+                **diff,
+            }
+        )
+
+        guard_log.append(
+            {
+                "pass": len(guard_log) + 1,
+                "phase": "multi-snapshot",
+                "wait_seconds": MULTI_SNAPSHOT_CONFIRM_SECONDS,
+                "reason": (
+                    "Full Stock ยังเปลี่ยนอยู่ จึงอ่านยืนยันซ้ำ"
+                    if diff["total_changes"]
+                    else "Full Stock ตรงกัน ยืนยันว่าหน้านิ่ง"
+                ),
+                "changes": diff["total_changes"],
+            }
+        )
+
+        # Also detect timer rollover during confirmation.
+        before = prev.get("shop_timers") or {}
+        after = nxt.get("shop_timers") or {}
+        for shop in set(before) & set(after):
+            if (
+                before[shop] <= BOUNDARY_TIMER_THRESHOLD
+                and after[shop] > before[shop] + 30
+            ):
+                rollover_seen = True
+                rollover_details.append(
+                    {
+                        "shop": shop,
+                        "before_seconds": before[shop],
+                        "after_seconds": after[shop],
+                    }
+                )
+
+        samples.append(nxt)
+        extra_reads += 1
+        multi_stable, stable_pairs, last_diff = consecutive_snapshot_stability(samples)
 
     chosen = samples[-1]
     final_wait, final_reason, final_timers, final_source = timer_guard_for_snapshot(chosen)
@@ -550,19 +772,46 @@ def read_source_synced_stock(driver):
     timer_available = bool(chosen.get("shop_timers") or chosen.get("timers"))
     timer_safe = final_wait == 0
 
-    # If we exhausted our wait budget while GAG2 still says it is inside an unsafe
-    # rollover window, fail closed: don't overwrite baseline and don't alert stale data.
-    if not timer_safe and total_wait >= GAG2_TIMER_SYNC_MAX_TOTAL_WAIT:
-        timer_safe = False
+    # Full snapshot must be comparable and settled.
+    multi_snapshot_stable = (
+        multi_stable
+        and snapshot_is_comparable(chosen)
+    )
 
     fingerprints = [x["fingerprint"] for x in samples]
     changed = len(set(fingerprints)) > 1
+
+    # Cycle-confidence text for diagnostics / Discord Health Check.
+    if not timer_available:
+        cycle_confidence = "NO_TIMER"
+    elif not timer_safe:
+        cycle_confidence = "TIMER_UNSAFE"
+    elif not multi_snapshot_stable:
+        cycle_confidence = "SNAPSHOT_UNSTABLE"
+    elif rollover_seen:
+        cycle_confidence = "ROLLOVER_CONFIRMED_STABLE"
+    elif changed:
+        cycle_confidence = "CHANGED_THEN_STABLE"
+    else:
+        cycle_confidence = "MID_CYCLE_STABLE"
+
+    last_two_same = (
+        len(samples) >= 2
+        and samples[-1]["fingerprint"] == samples[-2]["fingerprint"]
+    )
+
+    # Compare first observed stock vs final accepted candidate.
+    first_to_final_diff = compare_stock_maps(
+        samples[0].get("stock", []),
+        chosen.get("stock", []),
+    )
 
     return {
         "stock": chosen["stock"],
         "samples": len(samples),
         "changed_during_sync": changed,
         "rollover_seen": rollover_seen,
+        "rollover_details": rollover_details,
         "timer_available": timer_available,
         "timer_safe": timer_safe,
         "timer_source": final_source,
@@ -574,8 +823,17 @@ def read_source_synced_stock(driver):
         "sample_counts": [len(x["stock"]) for x in samples],
         "sample_fingerprints": fingerprints,
         "final_guard_reason": final_reason,
-    }
 
+        # v6.4.7
+        "multi_snapshot_stable": multi_snapshot_stable,
+        "stable_pairs": stable_pairs,
+        "last_two_same": last_two_same,
+        "extra_confirm_reads": extra_reads,
+        "cycle_confidence": cycle_confidence,
+        "snapshot_diffs": snapshot_diffs,
+        "first_to_final_diff": first_to_final_diff,
+        "last_diff": last_diff,
+    }
 
 
 def _sell_contexts_for_target(driver, target_name):
@@ -1404,6 +1662,7 @@ def collect_live_data():
                 len(stock) >= MIN_STOCK_ITEMS
                 and stock_sync.get("timer_available")
                 and stock_sync.get("timer_safe")
+                and stock_sync.get("multi_snapshot_stable")
             )
 
             # We watch exactly two sell fruits. Requiring both proves the Sell reader
@@ -1427,6 +1686,12 @@ def collect_live_data():
                     "shop_timers": stock_sync.get("shop_timers"),
                     "timer_wait_seconds": stock_sync.get("total_timer_wait_seconds"),
                     "timer_guard_log": stock_sync.get("guard_log"),
+                    "multi_snapshot_stable": stock_sync.get("multi_snapshot_stable"),
+                    "stable_pairs": stock_sync.get("stable_pairs"),
+                    "cycle_confidence": stock_sync.get("cycle_confidence"),
+                    "snapshot_diffs": stock_sync.get("snapshot_diffs"),
+                    "first_to_final_diff": stock_sync.get("first_to_final_diff"),
+                    "rollover_seen": stock_sync.get("rollover_seen"),
                     "sell_targets": sell_diag,
                 }
             )
@@ -1517,7 +1782,7 @@ def send_discord(content="", embeds=None):
     r = requests.post(
         WEBHOOK,
         json=payload,
-        headers={"User-Agent": "GAG2-Reliability-Discord-Bot/6.4.5.1"},
+        headers={"User-Agent": "GAG2-Reliability-Discord-Bot/6.4.7"},
         timeout=30,
     )
 
@@ -1600,7 +1865,7 @@ def build_event_embed(event, attempts):
         "description": "\n".join(desc_lines)[:4000],
         "color": color,
         "image": {"url": image_url},
-        "footer": {"text": f"Reliability v6.4.5.1 Image Self-Test • attempts {attempts}"},
+        "footer": {"text": f"Reliability v6.4.7 Multi-Snapshot Cycle Verify • attempts {attempts}"},
     }
     return embed
 
@@ -1637,7 +1902,7 @@ def send_image_self_test():
     for embed in tests:
         url = embed.get("image", {}).get("url")
         if _is_reasonable_image_url(url):
-            embed["footer"] = {"text": "v6.4.5.1 Image Self-Test"}
+            embed["footer"] = {"text": "v6.4.7 Image Self-Test"}
             valid.append(embed)
 
     send_discord(
@@ -1661,12 +1926,13 @@ def find_sell_value(sell, target_key):
 def format_health_message(stock, sell, snapshot, attempts, recovered=False, self_test=None, source_sync=None):
     lines = [
         "✅ **GAG2 Bot Health Check**",
-        "🛡️ Reliability v6.4.5.1 Image Self-Test + Block Detector + Timer-Sync",
+        "🛡️ Reliability v6.4.7 Multi-Snapshot Cycle Verify + Block Detector + Timer-Sync",
         f"• Stock parser: **OK** ({len(stock)} รายการ)",
         f"• Sell parser: **OK** ({len(sell)} รายการ)",
         f"• อ่านสำเร็จในครั้งที่: **{attempts}/{MAX_READ_ATTEMPTS}**",
         "• Source-Sync: **ON**",
         "• GAG2 Timer-Sync: **ON** (อิง Countdown จากหน้า GAG2)",
+        "• Multi-Snapshot Verify: **ON** (เทียบ Full Stock หลายช่วง)",
         "• Sell reader: **Target DOM Probe**",
         "• Block detector: **ON** (403 / 429 / CAPTCHA / Access Denied)",
     ]
@@ -1685,6 +1951,26 @@ def format_health_message(stock, sell, snapshot, attempts, recovered=False, self
         lines.append(
             f"• Timer wait รอบนี้: **{int(source_sync.get('total_timer_wait_seconds', 0))}s**"
         )
+        lines.append(
+            f"• Snapshot: **{source_sync.get('samples', 0)} ครั้ง** · "
+            f"Stable: **{'YES' if source_sync.get('multi_snapshot_stable') else 'NO'}**"
+        )
+        lines.append(
+            f"• Cycle confidence: **{source_sync.get('cycle_confidence', 'UNKNOWN')}**"
+        )
+        first_final = source_sync.get("first_to_final_diff") or {}
+        if first_final.get("total_changes", 0):
+            lines.append(
+                "• Full Stock เปลี่ยนระหว่างตรวจ: "
+                f"**{first_final.get('total_changes', 0)} รายการ** "
+                f"(+{first_final.get('added', 0)} / "
+                f"-{first_final.get('removed', 0)} / "
+                f"qty {first_final.get('qty_changed', 0)})"
+            )
+        elif source_sync.get("rollover_seen"):
+            lines.append(
+                "• Timer ยืนยัน **รอบใหม่** แม้รายการ Stock จะบังเอิญเหมือนรอบก่อน"
+            )
 
     if self_test and self_test.get("ok"):
         lines.append(
@@ -1819,10 +2105,31 @@ def handle_read_failure(old_state, result):
                 if d.get("error"):
                     summary.append(f"ครั้ง {d['attempt']}: {d['error']}")
                 else:
+                    timer_state = (
+                        "NO TIMER"
+                        if not d.get("timer_available")
+                        else ("SAFE" if d.get("timer_safe") else "UNSAFE")
+                    )
+                    snap_state = (
+                        "STABLE"
+                        if d.get("multi_snapshot_stable")
+                        else "UNSTABLE"
+                    )
+                    confidence = d.get("cycle_confidence") or "UNKNOWN"
+
                     summary.append(
                         f"ครั้ง {d['attempt']}: Stock {d.get('stock_count',0)} / "
-                        f"Sell {d.get('sell_count',0)}"
+                        f"Sell {d.get('sell_count',0)} · "
+                        f"Timer {timer_state} · Snapshot {snap_state} · {confidence}"
                     )
+
+                    diff = d.get("first_to_final_diff") or {}
+                    if diff.get("total_changes", 0):
+                        summary.append(
+                            f"↳ เทียบ Full Stock เปลี่ยน {diff.get('total_changes',0)} รายการ "
+                            f"(+{diff.get('added',0)} / -{diff.get('removed',0)} / "
+                            f"qty {diff.get('qty_changed',0)})"
+                        )
 
             send_discord(
                 "\n".join(
@@ -1891,7 +2198,7 @@ def main():
     recovered = old_health_status in {"error", "blocked"}
 
     new_state = {
-        "version": "6.4.5.1",
+        "version": "6.4.7",
         "alert_logic_version": ALERT_LOGIC_VERSION,
         "updated_at": iso_now(),
         "shop_fingerprints": current_shop_fp,
@@ -1915,7 +2222,7 @@ def main():
 
     print(f"Parsed stock: {len(stock)} | sell: {len(sell)}")
     print(f"Read attempts used: {attempts}")
-    print(f"Has v6.4.5.1 baseline: {has_baseline}")
+    print(f"Has v6.4.7 baseline: {has_baseline}")
     print(f"Alert rules self-test: PASS ({self_test['passed_classes']}/{self_test['total_classes']})")
     print(f"Current wanted conditions: {len(current_events)}")
     print(f"Alert logic migration required: {logic_migration}")
@@ -1945,7 +2252,7 @@ def main():
             print("Manual run: no current wanted event; health check only")
 
         save_state(new_state)
-        print("Manual Health Check + current alerts sent; v6.4.5.1 state saved")
+        print("Manual Health Check + current alerts sent; v6.4.7 state saved")
         return
 
     # On first run or migration, alert currently-active targets instead of
