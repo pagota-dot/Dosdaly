@@ -1947,7 +1947,7 @@ def send_discord(content="", embeds=None):
     r = requests.post(
         WEBHOOK,
         json=payload,
-        headers={"User-Agent": "GAG2-Reliability-Discord-Bot/6.5.0"},
+        headers={"User-Agent": "GAG2-Reliability-Discord-Bot/6.5.1"},
         timeout=30,
     )
 
@@ -2065,7 +2065,7 @@ def send_image_self_test():
     for embed in tests:
         url = embed.get("thumbnail", {}).get("url")
         if _is_reasonable_image_url(url):
-            embed["footer"] = {"text": "v6.4.9 Thumbnail Self-Test"}
+            embed["footer"] = {"text": "v6.5.1 Thumbnail Self-Test"}
             valid.append(embed)
 
     send_discord(
@@ -2089,14 +2089,14 @@ def find_sell_value(sell, target_key):
 def format_health_message(stock, sell, snapshot, attempts, recovered=False, self_test=None, source_sync=None, shop_cycles=None):
     lines = [
         "✅ **GAG2 Bot Health Check**",
-        "🛡️ Reliability v6.5.0 Daily Statistics + Thumbnail + Per-Shop Cycle + Smart State + Block Detector + Timer-Sync",
+        "🛡️ Reliability v6.5.1 Daily Counters + Thumbnail + Per-Shop Cycle + Smart State + Block Detector + Timer-Sync",
         f"• Stock parser: **OK** ({len(stock)} รายการ)",
         f"• Sell parser: **OK** ({len(sell)} รายการ)",
         f"• อ่านสำเร็จในครั้งที่: **{attempts}/{MAX_READ_ATTEMPTS}**",
         "• Source-Sync: **ON**",
         "• GAG2 Timer-Sync: **ON** (อิง Countdown จากหน้า GAG2)",
         "• Multi-Snapshot Verify: **ON** (เทียบ Full Stock หลายช่วง)",
-        "• Daily Statistics: **ON** (เวลาไทย · นับต่อรอบ)",
+        "• Daily Statistics: **ON** (เวลาไทย · นับต่อรอบ · Manual ดูยอดได้)",
         "• Sell reader: **Target DOM Probe**",
         "• Block detector: **ON** (403 / 429 / CAPTCHA / Access Denied)",
     ]
@@ -2336,7 +2336,7 @@ def handle_read_failure(old_state, result):
     )
 
     new_state["health"] = health
-    new_state.setdefault("version", "6.5.0")
+    new_state.setdefault("version", "6.5.1")
     save_state(new_state)
 
 
@@ -2540,6 +2540,97 @@ def add_daily_alert_count(daily_stats, count):
 
     day = ensure_daily_day(daily_stats, thailand_date_str())
     day["alerts_sent"] = int(day.get("alerts_sent", 0) or 0) + int(count)
+
+
+
+def format_today_statistics_message(daily_stats):
+    """
+    Read-only Daily Statistics preview for Manual Health Check.
+    Manual Run must never mutate/increment counters.
+    """
+    today = thailand_date_str()
+    days = (
+        daily_stats.get("days", {})
+        if isinstance(daily_stats, dict)
+        else {}
+    )
+    day = days.get(today)
+
+    if not isinstance(day, dict):
+        day = empty_daily_day()
+
+    stock_counts = day.get("stock_occurrences", {}) or {}
+    magic_counts = day.get("magic_mail", {}) or {}
+    sell_counts = day.get("sell", {}) or {}
+
+    lines = [
+        f"📊 **Daily Statistics วันนี้ — {today}**",
+        "🕛 เวลาไทย · ยอดสะสมจากรอบอัตโนมัติ",
+        "",
+        "📦 **Stock**",
+    ]
+
+    for target_key, meta in EXACT_STOCK_TARGETS.items():
+        count = int(stock_counts.get(target_key, 0) or 0)
+        lines.append(
+            f"{meta['emoji']} {meta['label']}: **{count} รอบ**"
+        )
+
+    # Compact Magic Mail line. Show all configured/common rarities with
+    # nonzero values, plus Rare even when zero so its silent rule is clear.
+    rarity_order = [
+        "common",
+        "uncommon",
+        "epic",
+        "legendary",
+        "mythic",
+        "super",
+        "rare",
+        "unknown",
+    ]
+    magic_parts = []
+
+    for rarity in rarity_order:
+        count = int(magic_counts.get(rarity, 0) or 0)
+        if count > 0 or rarity == "rare":
+            label = rarity.title()
+            if rarity == "rare":
+                label += "🔕"
+            magic_parts.append(f"{label} {count}")
+
+    for rarity in sorted(set(magic_counts) - set(rarity_order)):
+        count = int(magic_counts.get(rarity, 0) or 0)
+        if count > 0:
+            magic_parts.append(f"{rarity.title()} {count}")
+
+    if not magic_parts:
+        magic_parts = ["ยังไม่พบ"]
+
+    lines += [
+        "",
+        "✨ **Magic Mail**",
+        "• " + " · ".join(magic_parts),
+        "",
+        "💰 **Sell ×2 / ×4**",
+    ]
+
+    for target_key, meta in SELL_TARGETS.items():
+        cur = sell_counts.get(target_key, {}) or {}
+        x2 = int(cur.get("2", 0) or 0)
+        x4 = int(cur.get("4", 0) or 0)
+        lines.append(
+            f"{meta['emoji']} {meta['label']}: "
+            f"×2 **{x2}** · ×4 **{x4}**"
+        )
+
+    lines += [
+        "",
+        f"🔔 Alert จริงวันนี้: **{int(day.get('alerts_sent', 0) or 0)} ครั้ง**",
+        "🧪 Manual / Health / Image Self-Test: **ไม่นับ**",
+    ]
+
+    return "\n".join(lines)
+
 
 
 def format_daily_summary(day_key, day):
@@ -2770,7 +2861,7 @@ def main():
     old_health = old_state.get("health", {}) if isinstance(old_state, dict) else {}
 
     new_state = {
-        "version": "6.5.0",
+        "version": "6.5.1",
         "alert_logic_version": ALERT_LOGIC_VERSION,
         "updated_at": old_state.get("updated_at"),
         "shop_fingerprints": current_shop_fp,
@@ -2791,7 +2882,7 @@ def main():
 
     print(f"Parsed stock: {len(stock)} | sell: {len(sell)}")
     print(f"Read attempts used: {attempts}")
-    print(f"Has v6.5.0 baseline: {has_baseline}")
+    print(f"Has v6.5.1 baseline: {has_baseline}")
     print(f"Alert rules self-test: PASS ({self_test['passed_classes']}/{self_test['total_classes']})")
     print(f"Current wanted conditions: {len(current_events)}")
     print(f"Alert logic migration required: {logic_migration}")
@@ -2843,6 +2934,12 @@ def main():
             )
         )
 
+        # Read-only preview: Manual Run never increments Daily Statistics.
+        send_discord(
+            format_today_statistics_message(daily_stats)
+        )
+        print("Manual Daily Statistics preview sent (read-only)")
+
         send_image_self_test()
         print("Manual image self-test sent")
 
@@ -2853,7 +2950,7 @@ def main():
             print("Manual run: no current wanted event; health check only")
 
         smart_save_state(old_state, new_state, force=True)
-        print("Manual Health Check + current alerts sent; v6.5.0 state handled")
+        print("Manual Health Check + current alerts sent; v6.5.1 state handled")
         return
 
     # On first run or migration, alert currently-active targets instead of
