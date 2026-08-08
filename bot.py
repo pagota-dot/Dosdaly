@@ -1953,7 +1953,7 @@ def send_discord(content="", embeds=None):
     r = requests.post(
         WEBHOOK,
         json=payload,
-        headers={"User-Agent": "GAG2-Reliability-Discord-Bot/6.5.5"},
+        headers={"User-Agent": "GAG2-Reliability-Discord-Bot/6.5.6"},
         timeout=30,
     )
 
@@ -2142,7 +2142,7 @@ def build_event_embed(event, attempts, daily_stats=None):
         "description": "\n".join(desc_lines)[:4000],
         "color": color,
         "thumbnail": {"url": image_url},
-        "footer": {"text": f"v6.5.5 Live Alert Counter • attempts {attempts}"},
+        "footer": {"text": f"v6.5.6 Live Alert Counter • attempts {attempts}"},
     }
     return embed
 
@@ -2203,7 +2203,7 @@ def find_sell_value(sell, target_key):
 def format_health_message(stock, sell, snapshot, attempts, recovered=False, self_test=None, source_sync=None, shop_cycles=None):
     lines = [
         "✅ **GAG2 Bot Health Check**",
-        "🛡️ Reliability v6.5.5 Live Alert Counter + Quiet NO_TIMER + Daily Stats + Thumbnail + Per-Shop Cycle + Smart State + Block Detector + Timer-Sync",
+        "🛡️ Reliability v6.5.6 Test Preview + Live Alert Counter + Quiet NO_TIMER + Daily Stats + Thumbnail + Per-Shop Cycle + Smart State + Block Detector + Timer-Sync",
         f"• Stock parser: **OK** ({len(stock)} รายการ)",
         f"• Sell parser: **OK** ({len(sell)} รายการ)",
         f"• อ่านสำเร็จในครั้งที่: **{attempts}/{MAX_READ_ATTEMPTS}**",
@@ -2454,7 +2454,7 @@ def handle_read_failure(old_state, result):
         )
 
         new_state["health"] = health
-        new_state.setdefault("version", "6.5.5")
+        new_state.setdefault("version", "6.5.6")
         save_state(new_state)
 
         if should_warn_now:
@@ -2507,7 +2507,7 @@ def handle_read_failure(old_state, result):
         )
 
         new_state["health"] = health
-        new_state.setdefault("version", "6.5.5")
+        new_state.setdefault("version", "6.5.6")
         save_state(new_state)
         print("Manual NO_TIMER Health message sent; automatic streak unchanged")
         return
@@ -2619,7 +2619,7 @@ def handle_read_failure(old_state, result):
     )
 
     new_state["health"] = health
-    new_state.setdefault("version", "6.5.5")
+    new_state.setdefault("version", "6.5.6")
     save_state(new_state)
 
 
@@ -3099,6 +3099,189 @@ def smart_save_state(old_state, new_state, force=False):
     return True
 
 
+
+def preview_daily_stats_for_event(base_daily_stats, event):
+    """
+    Clone current Daily Statistics and simulate ONE future occurrence
+    for display only. Nothing is saved.
+    """
+    stats = copy.deepcopy(base_daily_stats)
+    day = ensure_daily_day(stats, thailand_date_str())
+
+    kind = event.get("kind")
+    target_key = event.get("target_key")
+
+    if kind == "sell":
+        multi = event.get("multi")
+        if multi in SELL_MULTIPLIERS:
+            mk = str(int(float(multi)))
+            counts = day["sell"].setdefault(
+                target_key,
+                {"2": 0, "4": 0},
+            )
+            counts[mk] = int(counts.get(mk, 0) or 0) + 1
+
+    elif kind == "stock":
+        if "magic mail" in key(event.get("label", "")):
+            items = event.get("items") or []
+            rarity = "unknown"
+            if items:
+                rarity = (items[0].get("rarity") or "unknown").lower()
+            day["magic_mail"][rarity] = int(
+                day["magic_mail"].get(rarity, 0) or 0
+            ) + 1
+        else:
+            day["stock_occurrences"][target_key] = int(
+                day["stock_occurrences"].get(target_key, 0) or 0
+            ) + 1
+
+    return stats
+
+
+def build_test_preview_events():
+    events = []
+
+    # Exact Stock targets
+    stock_rarity = {
+        "atlantic giant pumpkin": "LEGENDARY",
+        "super syrup watering can": "SUPER",
+        "super syrup sprinkler": "SUPER",
+        "amber cranberry": "LEGENDARY",
+    }
+
+    for target_key, meta in EXACT_STOCK_TARGETS.items():
+        events.append(
+            {
+                "kind": "stock",
+                "target_key": target_key,
+                "label": meta["label"],
+                "emoji": meta["emoji"],
+                "items": [
+                    {
+                        "name": meta["label"],
+                        "qty": 1,
+                        "rarity": stock_rarity.get(target_key, "SUPER"),
+                        "type": (
+                            "seed"
+                            if target_key in {
+                                "atlantic giant pumpkin",
+                                "amber cranberry",
+                            }
+                            else "gear"
+                        ),
+                    }
+                ],
+                "reason": "🧪 TEST ONLY — จำลองของเข้า Stock",
+                "image_url": gag2_item_image_url(meta["label"]),
+            }
+        )
+
+    # Magic Mail preview (allowed rarity)
+    events.append(
+        {
+            "kind": "stock",
+            "target_key": "legendary magic mail|legendary|gear",
+            "label": "Legendary Magic Mail",
+            "emoji": "✨",
+            "items": [
+                {
+                    "name": "Legendary Magic Mail",
+                    "qty": 1,
+                    "rarity": "LEGENDARY",
+                    "type": "gear",
+                }
+            ],
+            "reason": "🧪 TEST ONLY — จำลอง Magic Mail เข้า Stock",
+            "image_url": gag2_item_image_url("Legendary Magic Mail"),
+        }
+    )
+
+    # Sell x2/x4 for both watched targets
+    for target_key, meta in SELL_TARGETS.items():
+        for multi in (2.0, 4.0):
+            events.append(
+                {
+                    "kind": "sell",
+                    "target_key": target_key,
+                    "label": meta["label"],
+                    "emoji": meta["emoji"],
+                    "multi": multi,
+                    "reason": f"🧪 TEST ONLY — จำลอง Sell เปลี่ยนเป็น ×{int(multi)}",
+                    "image_url": gag2_item_image_url(meta["label"]),
+                }
+            )
+
+    return events
+
+
+def build_test_preview_embed(event, base_daily_stats):
+    simulated_stats = preview_daily_stats_for_event(
+        base_daily_stats,
+        event,
+    )
+
+    embed = build_event_embed(
+        event,
+        attempts=1,
+        daily_stats=simulated_stats,
+    )
+
+    if not embed:
+        return None
+
+    embed = copy.deepcopy(embed)
+    embed["title"] = "🧪 TEST — " + embed.get("title", "")
+    embed["description"] = (
+        "**TEST PREVIEW — ไม่ใช่ Stock/Sell จริง**\n"
+        "**ไม่เพิ่มสถิติ · ไม่เปลี่ยน baseline · ไม่แก้ state.json**\n\n"
+        + embed.get("description", "")
+    )[:4000]
+    embed["footer"] = {
+        "text": "v6.5.6 Test Preview · READ-ONLY"
+    }
+    return embed
+
+
+def send_alert_test_preview(old_state):
+    """
+    TEST-ONLY visual preview.
+    No GAG2 read, no baseline/state write, no Daily Statistics mutation.
+    """
+    daily_stats = normalize_daily_stats(old_state)
+    events = build_test_preview_events()
+
+    stock_embeds = []
+    sell_embeds = []
+
+    for event in events:
+        embed = build_test_preview_embed(event, daily_stats)
+        if not embed:
+            continue
+
+        if event.get("kind") == "sell":
+            sell_embeds.append(embed)
+        else:
+            stock_embeds.append(embed)
+
+    send_discord(
+        "🧪 **GAG2 Alert Test Preview — Stock / Magic Mail**\n"
+        "ข้อความทั้งหมดด้านล่างเป็น **TEST ONLY** ไม่ใช่ของจริง",
+        stock_embeds,
+    )
+
+    send_discord(
+        "🧪 **GAG2 Alert Test Preview — Sell ×2 / ×4**\n"
+        "ตัวเลข `ครั้งที่` คือ **ถ้าเกิดของจริงตอนนี้ จะเป็นครั้งที่เท่าไร**",
+        sell_embeds,
+    )
+
+    print(
+        f"TEST PREVIEW sent: {len(stock_embeds)} stock/magic embeds + "
+        f"{len(sell_embeds)} sell embeds"
+    )
+
+
+
 def main():
     if not WEBHOOK:
         raise RuntimeError("Missing GitHub Actions secret: DISCORD_WEBHOOK")
@@ -3110,6 +3293,14 @@ def main():
         )
 
     old_state = load_state()
+
+    # Dedicated READ-ONLY preview mode.
+    # This returns before reading GAG2 and before any state save.
+    if TRIGGER_SOURCE == "test_preview":
+        send_alert_test_preview(old_state)
+        print("Test Preview complete; state.json untouched")
+        return
+
     result = collect_live_data()
 
     if not result["ok"]:
@@ -3149,7 +3340,7 @@ def main():
     old_health = old_state.get("health", {}) if isinstance(old_state, dict) else {}
 
     new_state = {
-        "version": "6.5.5",
+        "version": "6.5.6",
         "alert_logic_version": ALERT_LOGIC_VERSION,
         "updated_at": old_state.get("updated_at"),
         "shop_fingerprints": current_shop_fp,
@@ -3172,7 +3363,7 @@ def main():
 
     print(f"Parsed stock: {len(stock)} | sell: {len(sell)}")
     print(f"Read attempts used: {attempts}")
-    print(f"Has v6.5.5 baseline: {has_baseline}")
+    print(f"Has v6.5.6 baseline: {has_baseline}")
     print(f"Alert rules self-test: PASS ({self_test['passed_classes']}/{self_test['total_classes']})")
     print(f"Current wanted conditions: {len(current_events)}")
     print(f"Alert logic migration required: {logic_migration}")
@@ -3242,7 +3433,7 @@ def main():
             print("Manual run: no current wanted event; health check only")
 
         smart_save_state(old_state, new_state, force=True)
-        print("Manual Health Check + current alerts sent; v6.5.5 state handled")
+        print("Manual Health Check + current alerts sent; v6.5.6 state handled")
         return
 
     # On first run or migration, alert currently-active targets instead of
