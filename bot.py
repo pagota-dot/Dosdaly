@@ -1943,7 +1943,7 @@ def send_discord(content="", embeds=None):
     r = requests.post(
         WEBHOOK,
         json=payload,
-        headers={"User-Agent": "GAG2-Reliability-Discord-Bot/6.4.8"},
+        headers={"User-Agent": "GAG2-Reliability-Discord-Bot/6.4.9"},
         timeout=30,
     )
 
@@ -1995,8 +1995,6 @@ def format_single_event_message(event, attempts):
         lines.append(f"• Sell ×{float(event.get('multi', 0)):.0f}")
 
     lines.append(f"↳ {event['reason']}")
-    if event.get("image_url"):
-        lines.append("🖼️ แนบรูปจากหน้า GAG2")
     return "\n".join(lines)
 
 
@@ -2025,8 +2023,8 @@ def build_event_embed(event, attempts):
         "title": title[:250],
         "description": "\n".join(desc_lines)[:4000],
         "color": color,
-        "image": {"url": image_url},
-        "footer": {"text": f"Reliability v6.4.8 Per-Shop Cycle + Smart State • attempts {attempts}"},
+        "thumbnail": {"url": image_url},
+        "footer": {"text": f"v6.4.9 Thumbnail Alert • attempts {attempts}"},
     }
     return embed
 
@@ -2048,22 +2046,22 @@ def send_image_self_test():
         {
             "title": "🎃 TEST — Atlantic Giant Pumpkin",
             "description": "🧪 ทดสอบรูปเท่านั้น — **ไม่ใช่สต็อกจริง**",
-            "image": {"url": gag2_item_image_url("Atlantic Giant Pumpkin")},
+            "thumbnail": {"url": gag2_item_image_url("Atlantic Giant Pumpkin")},
             "color": 0x57F287,
         },
         {
             "title": "🍄 TEST — Maple Mushroom",
             "description": "🧪 ทดสอบรูปเท่านั้น — **ไม่ใช่ Sell จริง**",
-            "image": {"url": gag2_item_image_url("Maple Mushroom")},
+            "thumbnail": {"url": gag2_item_image_url("Maple Mushroom")},
             "color": 0xFEE75C,
         },
     ]
 
     valid = []
     for embed in tests:
-        url = embed.get("image", {}).get("url")
+        url = embed.get("thumbnail", {}).get("url")
         if _is_reasonable_image_url(url):
-            embed["footer"] = {"text": "v6.4.7 Image Self-Test"}
+            embed["footer"] = {"text": "v6.4.9 Thumbnail Self-Test"}
             valid.append(embed)
 
     send_discord(
@@ -2087,7 +2085,7 @@ def find_sell_value(sell, target_key):
 def format_health_message(stock, sell, snapshot, attempts, recovered=False, self_test=None, source_sync=None, shop_cycles=None):
     lines = [
         "✅ **GAG2 Bot Health Check**",
-        "🛡️ Reliability v6.4.8 Per-Shop Cycle + Smart State + Block Detector + Timer-Sync",
+        "🛡️ Reliability v6.4.9 Thumbnail Alert + Per-Shop Cycle + Smart State + Block Detector + Timer-Sync",
         f"• Stock parser: **OK** ({len(stock)} รายการ)",
         f"• Sell parser: **OK** ({len(sell)} รายการ)",
         f"• อ่านสำเร็จในครั้งที่: **{attempts}/{MAX_READ_ATTEMPTS}**",
@@ -2456,7 +2454,7 @@ def main():
     old_health = old_state.get("health", {}) if isinstance(old_state, dict) else {}
 
     new_state = {
-        "version": "6.4.8",
+        "version": "6.4.9",
         "alert_logic_version": ALERT_LOGIC_VERSION,
         "updated_at": old_state.get("updated_at"),
         "shop_fingerprints": current_shop_fp,
@@ -2476,7 +2474,7 @@ def main():
 
     print(f"Parsed stock: {len(stock)} | sell: {len(sell)}")
     print(f"Read attempts used: {attempts}")
-    print(f"Has v6.4.8 baseline: {has_baseline}")
+    print(f"Has v6.4.9 baseline: {has_baseline}")
     print(f"Alert rules self-test: PASS ({self_test['passed_classes']}/{self_test['total_classes']})")
     print(f"Current wanted conditions: {len(current_events)}")
     print(f"Alert logic migration required: {logic_migration}")
@@ -2515,7 +2513,7 @@ def main():
             print("Manual run: no current wanted event; health check only")
 
         smart_save_state(old_state, new_state, force=True)
-        print("Manual Health Check + current alerts sent; v6.4.8 state handled")
+        print("Manual Health Check + current alerts sent; v6.4.9 state handled")
         return
 
     # On first run or migration, alert currently-active targets instead of
