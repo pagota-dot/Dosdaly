@@ -1947,7 +1947,7 @@ def send_discord(content="", embeds=None):
     r = requests.post(
         WEBHOOK,
         json=payload,
-        headers={"User-Agent": "GAG2-Reliability-Discord-Bot/6.5.1"},
+        headers={"User-Agent": "GAG2-Reliability-Discord-Bot/6.5.2"},
         timeout=30,
     )
 
@@ -2089,14 +2089,14 @@ def find_sell_value(sell, target_key):
 def format_health_message(stock, sell, snapshot, attempts, recovered=False, self_test=None, source_sync=None, shop_cycles=None):
     lines = [
         "✅ **GAG2 Bot Health Check**",
-        "🛡️ Reliability v6.5.1 Daily Counters + Thumbnail + Per-Shop Cycle + Smart State + Block Detector + Timer-Sync",
+        "🛡️ Reliability v6.5.2 Compact Manual + Daily Counters + Thumbnail + Per-Shop Cycle + Smart State + Block Detector + Timer-Sync",
         f"• Stock parser: **OK** ({len(stock)} รายการ)",
         f"• Sell parser: **OK** ({len(sell)} รายการ)",
         f"• อ่านสำเร็จในครั้งที่: **{attempts}/{MAX_READ_ATTEMPTS}**",
         "• Source-Sync: **ON**",
         "• GAG2 Timer-Sync: **ON** (อิง Countdown จากหน้า GAG2)",
         "• Multi-Snapshot Verify: **ON** (เทียบ Full Stock หลายช่วง)",
-        "• Daily Statistics: **ON** (เวลาไทย · นับต่อรอบ · Manual ดูยอดได้)",
+        "• Daily Statistics: **ON** (เวลาไทย · นับต่อรอบ · Manual ดูยอดได้ · ไม่ส่ง Image Test)",
         "• Sell reader: **Target DOM Probe**",
         "• Block detector: **ON** (403 / 429 / CAPTCHA / Access Denied)",
     ]
@@ -2336,7 +2336,7 @@ def handle_read_failure(old_state, result):
     )
 
     new_state["health"] = health
-    new_state.setdefault("version", "6.5.1")
+    new_state.setdefault("version", "6.5.2")
     save_state(new_state)
 
 
@@ -2861,7 +2861,7 @@ def main():
     old_health = old_state.get("health", {}) if isinstance(old_state, dict) else {}
 
     new_state = {
-        "version": "6.5.1",
+        "version": "6.5.2",
         "alert_logic_version": ALERT_LOGIC_VERSION,
         "updated_at": old_state.get("updated_at"),
         "shop_fingerprints": current_shop_fp,
@@ -2882,7 +2882,7 @@ def main():
 
     print(f"Parsed stock: {len(stock)} | sell: {len(sell)}")
     print(f"Read attempts used: {attempts}")
-    print(f"Has v6.5.1 baseline: {has_baseline}")
+    print(f"Has v6.5.2 baseline: {has_baseline}")
     print(f"Alert rules self-test: PASS ({self_test['passed_classes']}/{self_test['total_classes']})")
     print(f"Current wanted conditions: {len(current_events)}")
     print(f"Alert logic migration required: {logic_migration}")
@@ -2940,7 +2940,10 @@ def main():
         )
         print("Manual Daily Statistics preview sent (read-only)")
 
-        send_image_self_test()
+        # v6.5.2:
+        # Do NOT send Pumpkin/Mushroom Image Self-Test on every Manual Run.
+        # Real Stock/Sell/Magic alerts still keep their thumbnail images.
+        print("Manual Image Self-Test skipped (real alert thumbnails remain enabled)")
         print("Manual image self-test sent")
 
         if current_events:
@@ -2950,7 +2953,7 @@ def main():
             print("Manual run: no current wanted event; health check only")
 
         smart_save_state(old_state, new_state, force=True)
-        print("Manual Health Check + current alerts sent; v6.5.1 state handled")
+        print("Manual Health Check + current alerts sent; v6.5.2 state handled")
         return
 
     # On first run or migration, alert currently-active targets instead of
