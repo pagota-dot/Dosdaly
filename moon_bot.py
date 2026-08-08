@@ -49,6 +49,12 @@ TARGET_MOONS = {
         "seed": "Rainbow Seed",
         "seed_emoji": "🌈",
     },
+    "mega": {
+        "label": "Mega Moon",
+        "emoji": "🌙",
+        "seed": "Mega Seed",
+        "seed_emoji": "💠",
+    },
 }
 
 
@@ -130,6 +136,8 @@ def canonical_moon_name(text):
         return "gold"
     if k in {"rainbowmoon", "rainbow moon"}:
         return "rainbow"
+    if k in {"megamoon", "mega moon"}:
+        return "mega"
     return None
 
 
@@ -385,7 +393,7 @@ def event_embed(event, level, remaining=None):
         "title": title,
         "description": description,
         "footer": {
-            "text": "GAG2 Moon Alert · Gold/Rainbow only"
+            "text": "GAG2 Moon Alert · Gold/Rainbow/Mega"
         },
     }
 

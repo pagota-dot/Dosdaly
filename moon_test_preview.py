@@ -54,6 +54,31 @@ TEST_CASES = [
             "**TEST ONLY — ไม่ใช่ Event จริง**"
         ),
     },
+    {
+        "title": "🧪 🔔 🌙 Mega Moon — เตรียมตัว",
+        "description": (
+            "⏳ จำลองเหลือประมาณ **12 นาที**\n"
+            "💠 มีโอกาสเกิด **Mega Seed**\n\n"
+            "**TEST ONLY — ไม่ใช่ Event จริง**"
+        ),
+    },
+    {
+        "title": "🧪 ⚠️ 🌙 Mega Moon — ใกล้เริ่มแล้ว",
+        "description": (
+            "⏳ จำลองเหลือประมาณ **5 นาที**\n"
+            "💠 เตรียมหา **Mega Seed**\n"
+            "แนะนำเปิดเกมและเตรียมเข้าเซิร์ฟเวอร์\n\n"
+            "**TEST ONLY — ไม่ใช่ Event จริง**"
+        ),
+    },
+    {
+        "title": "🧪 🚨 🌙 Mega Moon — เข้าเกมตอนนี้!",
+        "description": (
+            "⏳ จำลองเหลือประมาณ **45 วินาที**\n"
+            "💠 **Mega Seed** กำลังจะมีโอกาสเกิด\n\n"
+            "**TEST ONLY — ไม่ใช่ Event จริง**"
+        ),
+    },
 ]
 
 
@@ -94,7 +119,8 @@ def main():
 
     send_discord(
         "🧪 **GAG2 Moon Test Preview**\n"
-        "ทดสอบหน้าตาแจ้งเตือนเท่านั้น — **ไม่แตะระบบ Moon จริง**",
+        "ทดสอบหน้าตาแจ้งเตือนเท่านั้น — **ไม่แตะระบบ Moon จริง**\n"
+        "ครอบคลุม **Gold Moon / Rainbow Moon / Mega Moon**",
         embeds,
     )
 
