@@ -1,15 +1,16 @@
 import sys
+import os
 import types
 import importlib.util
 from pathlib import Path
 from datetime import datetime, timedelta, timezone
 
-BOT_FILENAME = "moon_bot(6).py"
+BOT_FILENAME = (os.environ.get("MOON_BOT_FILE") or "moon_bot.py").strip()
 
 def install_optional_dependency_stubs():
     """
     Offline logic tests do not open Chrome/Selenium.
-    Stub Selenium only when it is not installed, so moon_bot(6).py can be
+    Stub Selenium only when it is not installed, so moon_bot.py can be
     imported on a clean Windows/Python machine for pure parsing tests.
     """
     try:
@@ -55,7 +56,7 @@ def load_bot():
     path = here / BOT_FILENAME
     if not path.exists():
         print(f"[ERROR] ไม่พบไฟล์ {BOT_FILENAME}")
-        print("ให้นำ test_moon.py วางไว้โฟลเดอร์เดียวกับ moon_bot(6).py")
+        print("ให้นำ test_moon.py วางไว้โฟลเดอร์เดียวกับ moon_bot.py")
         input("\nกด Enter เพื่อปิด...")
         sys.exit(1)
 
@@ -89,7 +90,8 @@ def parse(page, when_epoch):
     return bot.parse_weather_page(page, when_epoch)
 
 print("=" * 72)
-print("GAG2 Moon Alert v6.1 - OFFLINE LOGIC TEST")
+print("GAG2 Moon Alert v6.4 - OFFLINE LOGIC + HARD MAX-2 TEST")
+print(f"Bot file under test: {BOT_FILENAME}")
 print("ไม่เปิดเว็บ / ไม่ยิง Discord / ไม่แก้ moon_state.json จริง")
 print("=" * 72)
 
@@ -381,13 +383,201 @@ ok(
     str(bot.clock_text_to_minutes("11:59 PM"))
 )
 
+
+# ---------------------------------------------------------------------
+# TEST 11: Game cycle constants = Day 7:30 + Sunset 0:30 + Night 2:00
+# ---------------------------------------------------------------------
+ok(
+    "Game cycle durations total 10 minutes",
+    bot.GAME_DAY_SECONDS == 450
+    and bot.GAME_SUNSET_SECONDS == 30
+    and bot.GAME_NIGHT_SECONDS == 120
+    and bot.GAME_CYCLE_SECONDS == 600,
+    (
+        f"day={getattr(bot, 'GAME_DAY_SECONDS', None)} "
+        f"sunset={getattr(bot, 'GAME_SUNSET_SECONDS', None)} "
+        f"night={getattr(bot, 'GAME_NIGHT_SECONDS', None)} "
+        f"cycle={getattr(bot, 'GAME_CYCLE_SECONDS', None)}"
+    )
+)
+
+# ---------------------------------------------------------------------
+# TEST 12: Dynamic 10-minute Moon grid - phase is learned, not hard-coded
+# ---------------------------------------------------------------------
+phase8_page = """
+No active weather
+Upcoming Moons
+Gold Moon
+5:28 AM
+2m 50s
+Bloodmoon
+5:38 AM
+12m 50s
+Rainbow Moon
+5:48 AM
+22m 50s
+Recently Seen
+"""
+# 05:25:10 + 2:50 = 05:28:00
+r_phase8 = parse(phase8_page, t0)
+cycle8 = r_phase8.get("game_cycle") or {}
+gold8 = next((e for e in r_phase8["upcoming"] if e["kind"] == "gold"), None)
+rainbow8 = next((e for e in r_phase8["upcoming"] if e["kind"] == "rainbow"), None)
+
+ok(
+    "10-minute Moon grid consensus detected dynamically",
+    cycle8.get("verified") is True
+    and cycle8.get("phase") == 8
+    and cycle8.get("consensus_count") == 3,
+    f"game_cycle={cycle8}"
+)
+ok(
+    "Target Moon rows pass verified 10-minute game cycle",
+    gold8 is not None
+    and rainbow8 is not None
+    and gold8.get("game_cycle_verified") is True
+    and rainbow8.get("game_cycle_verified") is True,
+    f"gold={gold8}, rainbow={rainbow8}, errors={r_phase8['parse_errors']}"
+)
+
+# ---------------------------------------------------------------------
+# TEST 13: One off-grid Moon row must be rejected when consensus is strong
+# ---------------------------------------------------------------------
+offgrid_page = """
+No active weather
+Upcoming Moons
+Gold Moon
+5:30 AM
+4m 50s
+Bloodmoon
+5:40 AM
+14m 50s
+Rainbow Moon
+5:50 AM
+24m 50s
+Mega Moon
+6:01 AM
+35m 50s
+Recently Seen
+"""
+r_off = parse(offgrid_page, t0)
+off_cycle = r_off.get("game_cycle") or {}
+mega_off = next((e for e in r_off["upcoming"] if e["kind"] == "mega"), None)
+
+ok(
+    "Strong game-cycle consensus survives one bad row",
+    off_cycle.get("verified") is True
+    and off_cycle.get("phase") == 0
+    and off_cycle.get("consensus_count") == 3
+    and off_cycle.get("sample_count") == 4,
+    f"game_cycle={off_cycle}"
+)
+ok(
+    "Off-grid Moon row rejected",
+    mega_off is None
+    and any("off 10-minute Night/Moon grid" in x for x in r_off["parse_errors"]),
+    f"upcoming={r_off['upcoming']}, errors={r_off['parse_errors']}"
+)
+
+# ---------------------------------------------------------------------
+# TEST 14: Discord embed identifies Night/Moon start and cycle verification
+# ---------------------------------------------------------------------
+embed_event = {
+    "kind": "gold",
+    "event_epoch": t0 + 290,
+    "clock_text": "5:30 AM",
+    "snapshot_verified": True,
+    "game_cycle_verified": True,
+}
+embed = bot.event_embed(embed_event, "ready", 290)
+footer_text = ((embed.get("footer") or {}).get("text") or "")
+desc_text = embed.get("description") or ""
+
+ok(
+    "Discord copy references Night / Moon start",
+    "Night / Moon" in desc_text,
+    f"description={desc_text}"
+)
+ok(
+    "Discord footer shows 10m Game Cycle verification",
+    "+10m Game Cycle" in footer_text,
+    f"footer={footer_text}"
+)
+
+
+# ---------------------------------------------------------------------
+# TEST 15: Late discovery (<30s) must NOT send a late Final
+# ---------------------------------------------------------------------
+late_epoch = t0
+late_dt = datetime.fromtimestamp(late_epoch, tz=timezone.utc)
+late_sent = []
+orig_utc_now = bot.utc_now
+orig_send_level = bot.send_level
+orig_sleep = bot.time.sleep
+try:
+    bot.utc_now = lambda: late_dt
+    bot.send_level = lambda event, level, remaining=None: late_sent.append((level, remaining))
+    bot.time.sleep = lambda *args, **kwargs: None
+
+    late_state = {
+        "events": {},
+        "last_final_by_kind": {},
+        "health": {"last_warning_epoch": 0},
+    }
+    late_event = {
+        "kind": "gold",
+        "remaining": 14,
+        "countdown_text": "14s",
+        "countdown_precise": True,
+        "clock_text": "5:25 AM",
+        "event_epoch": late_epoch + 14,
+        "event_key": "gold|2026-08-09|05:25",
+        "slot_id": "gold|2026-08-09|05:25",
+        "row_quality": "NAME_CLOCK_COUNTDOWN",
+        "snapshot_verified": True,
+        "game_cycle_verified": True,
+        "game_cycle_phase": 5,
+    }
+    bot.process_upcoming(late_state, {"upcoming": [late_event]})
+    ok(
+        "Late <30s discovery sends no Ready/Final",
+        late_sent == [],
+        f"sent={late_sent}, state={late_state}"
+    )
+finally:
+    bot.utc_now = orig_utc_now
+    bot.send_level = orig_send_level
+    bot.time.sleep = orig_sleep
+
+# ---------------------------------------------------------------------
+# TEST 16: Active Moon must NEVER create a third started alert
+# ---------------------------------------------------------------------
+active_sent = []
+orig_send_level = bot.send_level
+try:
+    bot.send_level = lambda event, level, remaining=None: active_sent.append((level, remaining))
+    active_state = {
+        "events": {},
+        "last_final_by_kind": {},
+        "health": {"last_warning_epoch": 0},
+    }
+    bot.process_active_fallback(active_state, {"active": "gold"})
+    ok(
+        "Active fallback suppressed (hard max 2 alerts)",
+        active_sent == [] and getattr(bot, "ACTIVE_FALLBACK_ENABLED", None) is False,
+        f"sent={active_sent}, enabled={getattr(bot, 'ACTIVE_FALLBACK_ENABLED', None)}"
+    )
+finally:
+    bot.send_level = orig_send_level
+
+
 print("\n" + "=" * 72)
 TOTAL = PASS + FAIL
 print(f"RESULT: {PASS}/{TOTAL} PASSED")
 if FAIL == 0:
     print("✅ Logic tests ผ่านทั้งหมด")
     print("   ระบบอ่านชื่อ/เวลา/Countdown, แยก Moon row, แยกหลาย slot,")
-    print("   ตรวจ 2 snapshots และ Frozen Anchor ผ่านชุดทดสอบนี้")
+    print("   ตรวจ 2 snapshots, Frozen Anchor, Game Cycle 10 นาที และ Hard Max-2 ผ่านชุดทดสอบนี้")
 else:
     print(f"❌ มี {FAIL} test(s) ไม่ผ่าน - อย่าเพิ่งถือว่าระบบพร้อม")
 print("=" * 72)
