@@ -8,10 +8,20 @@
       "total_classes": 7
     },
     "attempts_used": 1,
-    "last_checked_at": "2026-08-08T07:05:40.521218+00:00",
+    "last_checked_at": "2026-08-08T07:07:37.265613+00:00",
     "last_diagnostics": [
       {
         "attempt": 1,
+        "cycle_confidence": "MID_CYCLE_STABLE",
+        "first_to_final_diff": {
+          "added": 0,
+          "examples": [],
+          "qty_changed": 0,
+          "removed": 0,
+          "total_changes": 0
+        },
+        "multi_snapshot_stable": true,
+        "rollover_seen": false,
         "sell_count": 2,
         "sell_ok": true,
         "sell_targets": {
@@ -25,13 +35,25 @@
           }
         },
         "shop_timers": {
-          "crate": 267,
-          "gear": 267,
-          "seed": 267
+          "crate": 150,
+          "gear": 150,
+          "seed": 150
         },
+        "snapshot_diffs": [
+          {
+            "added": 0,
+            "examples": [],
+            "from_sample": 1,
+            "qty_changed": 0,
+            "removed": 0,
+            "to_sample": 2,
+            "total_changes": 0
+          }
+        ],
+        "stable_pairs": 1,
         "stock_changed_during_sync": false,
         "stock_count": 18,
-        "stock_min_timer_seconds": 267,
+        "stock_min_timer_seconds": 150,
         "stock_ok": true,
         "stock_sample_counts": [
           18,
@@ -39,44 +61,35 @@
         ],
         "stock_sync_samples": 2,
         "timer_available": true,
-        "timer_guard_log": [
-          {
-            "pass": 1,
-            "reason": "seed เพิ่งรีรอบ (279s เหลือ)",
-            "source": "shop",
-            "timers": {
-              "gear": 279,
-              "seed": 279
-            },
-            "wait_seconds": 9
-          }
-        ],
+        "timer_guard_log": [],
         "timer_safe": true,
         "timer_source": "shop",
-        "timer_wait_seconds": 9
+        "timer_wait_seconds": 6
       }
     ],
     "last_error_alert_at": "2026-08-08T05:10:16.580516+00:00",
-    "last_success_at": "2026-08-08T07:05:40.521221+00:00",
+    "last_success_at": "2026-08-08T07:07:37.265616+00:00",
     "sell_count": 2,
     "status": "ok",
     "stock_count": 18,
     "timer_sync": {
       "changed_during_sync": false,
+      "cycle_confidence": "MID_CYCLE_STABLE",
+      "extra_confirm_reads": 0,
       "final_guard_reason": "timer-safe",
-      "guard_log": [
-        {
-          "pass": 1,
-          "reason": "seed เพิ่งรีรอบ (279s เหลือ)",
-          "source": "shop",
-          "timers": {
-            "gear": 279,
-            "seed": 279
-          },
-          "wait_seconds": 9
-        }
-      ],
-      "min_timer_seconds": 267,
+      "first_to_final_diff": {
+        "added": 0,
+        "examples": [],
+        "qty_changed": 0,
+        "removed": 0,
+        "total_changes": 0
+      },
+      "guard_log": [],
+      "last_diff": null,
+      "last_two_same": true,
+      "min_timer_seconds": 150,
+      "multi_snapshot_stable": true,
+      "rollover_details": [],
       "rollover_seen": false,
       "sample_counts": [
         18,
@@ -88,10 +101,22 @@
       ],
       "samples": 2,
       "shop_timers": {
-        "crate": 267,
-        "gear": 267,
-        "seed": 267
+        "crate": 150,
+        "gear": 150,
+        "seed": 150
       },
+      "snapshot_diffs": [
+        {
+          "added": 0,
+          "examples": [],
+          "from_sample": 1,
+          "qty_changed": 0,
+          "removed": 0,
+          "to_sample": 2,
+          "total_changes": 0
+        }
+      ],
+      "stable_pairs": 1,
       "stock": [
         {
           "name": "Bench Crate",
@@ -206,10 +231,10 @@
       "timer_safe": true,
       "timer_source": "shop",
       "timers_used": {
-        "gear": 267,
-        "seed": 267
+        "gear": 150,
+        "seed": 150
       },
-      "total_timer_wait_seconds": 9
+      "total_timer_wait_seconds": 6
     }
   },
   "shop_fingerprints": {
@@ -262,6 +287,6 @@
       }
     }
   },
-  "updated_at": "2026-08-08T07:05:40.521204+00:00",
-  "version": "6.4.5.1"
+  "updated_at": "2026-08-08T07:07:37.265599+00:00",
+  "version": "6.4.7"
 }
