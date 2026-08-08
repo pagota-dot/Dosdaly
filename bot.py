@@ -56,6 +56,17 @@ MULTI_SNAPSHOT_MIN_COMPARE_ITEMS = 3
 SHOP_CYCLE_KEY_BUCKET_SECONDS = 30
 SHOP_CYCLE_NAMES = ("seed", "gear", "crate")
 
+# ADD-ON: Exact Stock Cycle Duplicate Guard
+# Not a cooldown: compares GAG2 source reset-cycle identity only.
+# Safety priority = never delay or suppress unclear real Stock.
+#
+# Clear duplicate jitter: same key or +30/+60/+90/+120 seconds.
+# Ambiguous 121..239 seconds: FAIL-OPEN (preserve old behavior).
+# Plausible real 5-minute cycle: ~300 seconds (+/- 60 seconds).
+STOCK_CYCLE_GUARD_REAL_CYCLE_SECONDS = 300
+STOCK_CYCLE_GUARD_REAL_CYCLE_TOLERANCE_SECONDS = 60
+STOCK_CYCLE_GUARD_MAX_CLEAR_JITTER_SECONDS = 120
+
 MIN_STOCK_ITEMS = 3
 MIN_SELL_ITEMS = 1
 HEALTH_ALERT_COOLDOWN_HOURS = 1
@@ -678,6 +689,251 @@ def update_shop_cycles(old_state, current_keys, current_shop_fp, source_sync):
 
 def shop_cycle_changed(shop_cycles, shop):
     return bool((shop_cycles.get(shop) or {}).get("changed"))
+
+
+# ---------------------------------------------------------------------
+# ADD-ON: Exact Stock Cycle Duplicate Guard
+# ---------------------------------------------------------------------
+def _stock_cycle_guard_items_signature(items):
+    normalized = []
+
+    for item in items or []:
+        normalized.append(
+            {
+                "name": key(item.get("name", "")),
+                "qty": int(item.get("qty", 0) or 0),
+                "rarity": norm(item.get("rarity", "")).upper(),
+                "type": norm(item.get("type", "")).lower(),
+            }
+        )
+
+    normalized.sort(
+        key=lambda x: (
+            x["type"],
+            x["name"],
+            x["rarity"],
+            x["qty"],
+        )
+    )
+    return stable_hash(normalized)
+
+
+def _stock_cycle_guard_timer_epoch(cycle):
+    """
+    Trust only the existing GAG2 timer-derived cycle key:
+      timer:<estimated-next-reset-epoch>
+    """
+    if not isinstance(cycle, dict):
+        return None
+
+    if cycle.get("source") != "gag2-timer":
+        return None
+
+    m = re.fullmatch(r"timer:(\d+)", str(cycle.get("key") or ""))
+    if not m:
+        return None
+
+    return int(m.group(1))
+
+
+def _stock_cycle_guard_rollover_seen(source_sync, shop):
+    """
+    Existing Timer-Sync rollover evidence is authoritative.
+    If the current run directly saw countdown cross zero, allow immediately.
+    """
+    for detail in (source_sync or {}).get("rollover_details") or []:
+        if detail.get("shop") == shop:
+            return True
+
+    return False
+
+
+def _stock_cycle_guard_cycle_relation(
+    old_cycle,
+    current_cycle,
+    source_sync,
+    shop,
+):
+    """
+    Return (relation, reset_key_delta_seconds).
+
+    relation:
+      explicit-rollover    = real new cycle, allow
+      same-cycle           = same source cycle
+      clear-jitter         = small impossible 5-minute reset-key shift
+      plausible-new-cycle  = ~5-minute source-cycle movement
+      unknown              = unclear => FAIL-OPEN
+    """
+    if _stock_cycle_guard_rollover_seen(source_sync, shop):
+        return "explicit-rollover", None
+
+    old_epoch = _stock_cycle_guard_timer_epoch(old_cycle)
+    cur_epoch = _stock_cycle_guard_timer_epoch(current_cycle)
+
+    if old_epoch is None or cur_epoch is None:
+        return "unknown", None
+
+    delta = cur_epoch - old_epoch
+
+    if delta == 0:
+        return "same-cycle", 0
+
+    # Backward/contradictory source data is never used to block an alert.
+    if delta < 0:
+        return "unknown", delta
+
+    # One or more real 5-minute cycles with generous 30s-bucket/source jitter.
+    cycles = max(
+        1,
+        int(round(delta / STOCK_CYCLE_GUARD_REAL_CYCLE_SECONDS)),
+    )
+    expected = cycles * STOCK_CYCLE_GUARD_REAL_CYCLE_SECONDS
+
+    if (
+        abs(delta - expected)
+        <= STOCK_CYCLE_GUARD_REAL_CYCLE_TOLERANCE_SECONDS
+    ):
+        return "plausible-new-cycle", delta
+
+    # Conservative duplicate suppression only.
+    # 121..239 seconds deliberately remains UNKNOWN / fail-open.
+    if 0 < delta <= STOCK_CYCLE_GUARD_MAX_CLEAR_JITTER_SECONDS:
+        return "clear-jitter", delta
+
+    return "unknown", delta
+
+
+def filter_exact_stock_cycle_duplicates(
+    events,
+    old_state,
+    current_shop_cycles,
+    source_sync=None,
+):
+    """
+    Final in-memory check before NORMAL automatic Discord alerts.
+
+    The existing bot remains authoritative and runs first.
+
+    Suppression is possible ONLY for Exact Stock when:
+      - target was already present;
+      - name/qty/rarity/shop value is unchanged; and
+      - trusted GAG2 timer evidence says same cycle or <=120s clear jitter.
+
+    Never suppress:
+      - absent -> present;
+      - qty/rarity/item changes;
+      - explicit Timer-Sync rollover;
+      - plausible real 5-minute cycle;
+      - missing/unclear timer evidence;
+      - Sell;
+      - Magic Mail.
+    """
+    accepted = []
+    diagnostics = []
+
+    old_state = old_state if isinstance(old_state, dict) else {}
+    old_targets = old_state.get("targets", {}) or {}
+    old_stock = old_targets.get("stock", {}) or {}
+    old_cycles = old_state.get("shop_cycles", {}) or {}
+
+    for event in events or []:
+        target_key = event.get("target_key")
+
+        # Sell, Magic Mail and other event classes are untouched.
+        if (
+            event.get("kind") != "stock"
+            or target_key not in EXACT_STOCK_TARGETS
+        ):
+            accepted.append(event)
+            continue
+
+        previous = old_stock.get(
+            target_key,
+            {"present": False, "items": []},
+        )
+
+        # Actual return to stock must alert immediately.
+        if not previous.get("present"):
+            accepted.append(event)
+            diagnostics.append(
+                {
+                    "action": "allow",
+                    "target": target_key,
+                    "reason": "absent-to-present",
+                    "cycle_delta_seconds": None,
+                }
+            )
+            continue
+
+        old_sig = _stock_cycle_guard_items_signature(
+            previous.get("items") or []
+        )
+        new_sig = _stock_cycle_guard_items_signature(
+            event.get("items") or []
+        )
+
+        # Any real watched value change must alert immediately.
+        if old_sig != new_sig:
+            accepted.append(event)
+            diagnostics.append(
+                {
+                    "action": "allow",
+                    "target": target_key,
+                    "reason": "target-value-changed",
+                    "cycle_delta_seconds": None,
+                }
+            )
+            continue
+
+        group = stock_group_for_target(
+            target_key,
+            {"items": event.get("items") or []},
+        )
+
+        if group not in {"seed", "gear"}:
+            accepted.append(event)
+            diagnostics.append(
+                {
+                    "action": "allow",
+                    "target": target_key,
+                    "reason": "unknown-shop-fail-open",
+                    "cycle_delta_seconds": None,
+                }
+            )
+            continue
+
+        relation, delta = _stock_cycle_guard_cycle_relation(
+            old_cycles.get(group) or {},
+            (current_shop_cycles or {}).get(group) or {},
+            source_sync or {},
+            group,
+        )
+
+        if relation in {"same-cycle", "clear-jitter"}:
+            diagnostics.append(
+                {
+                    "action": "suppress",
+                    "target": target_key,
+                    "shop": group,
+                    "reason": relation,
+                    "cycle_delta_seconds": delta,
+                }
+            )
+            continue
+
+        # Real new cycle OR unclear evidence => old behavior wins.
+        accepted.append(event)
+        diagnostics.append(
+            {
+                "action": "allow",
+                "target": target_key,
+                "shop": group,
+                "reason": relation,
+                "cycle_delta_seconds": delta,
+            }
+        )
+
+    return accepted, diagnostics
 
 
 def timer_guard_for_snapshot(snapshot):
@@ -3456,6 +3712,23 @@ def main():
         current_shop_fp,
         current_shop_cycles,
     )
+
+    # ADD-ON: final Exact Stock source-cycle duplicate check.
+    # No cooldown, no sleep, no extra GAG2 request and no new state field.
+    events, stock_cycle_guard_diagnostics = filter_exact_stock_cycle_duplicates(
+        events,
+        old_state,
+        current_shop_cycles,
+        source_sync=result.get("source_sync") or {},
+    )
+    for guard_info in stock_cycle_guard_diagnostics:
+        if guard_info.get("action") == "suppress":
+            print(
+                "Stock Cycle Guard SUPPRESSED: "
+                f"{guard_info.get('target')} "
+                f"reason={guard_info.get('reason')} "
+                f"delta={guard_info.get('cycle_delta_seconds')}s"
+            )
 
     if recovered:
         send_discord(
