@@ -1953,7 +1953,7 @@ def send_discord(content="", embeds=None):
     r = requests.post(
         WEBHOOK,
         json=payload,
-        headers={"User-Agent": "GAG2-Reliability-Discord-Bot/6.5.3"},
+        headers={"User-Agent": "GAG2-Reliability-Discord-Bot/6.5.5"},
         timeout=30,
     )
 
@@ -1961,6 +1961,112 @@ def send_discord(content="", embeds=None):
         raise RuntimeError(
             f"Discord webhook failed: HTTP {r.status_code} {r.text[:200]}"
         )
+
+
+
+def event_daily_counter(event, daily_stats):
+    """
+    Read today's already-collected statistics for one REAL alert event.
+
+    Automatic flow calls update_daily_occurrence_stats() BEFORE alerting,
+    so the current occurrence is already included in the number shown.
+
+    Manual Run can omit daily_stats to avoid presenting a test/current-event
+    message as a newly counted occurrence.
+    """
+    if not daily_stats or not isinstance(daily_stats, dict):
+        return None
+
+    day = ((daily_stats.get("days") or {}).get(thailand_date_str()) or {})
+    if not isinstance(day, dict):
+        return None
+
+    kind = event.get("kind")
+    target_key = event.get("target_key")
+
+    if kind == "sell":
+        multi = event.get("multi")
+        if multi not in SELL_MULTIPLIERS:
+            return None
+
+        counts = ((day.get("sell") or {}).get(target_key) or {})
+        x2 = int(counts.get("2", 0) or 0)
+        x4 = int(counts.get("4", 0) or 0)
+        current_key = str(int(float(multi)))
+        current = int(counts.get(current_key, 0) or 0)
+
+        return {
+            "kind": "sell",
+            "current": current,
+            "x2": x2,
+            "x4": x4,
+            "total": x2 + x4,
+        }
+
+    if kind == "stock":
+        # Magic Mail events use an identity target_key rather than one of
+        # EXACT_STOCK_TARGETS. Count them by rarity.
+        label_key = key(event.get("label", ""))
+        is_magic = "magic mail" in label_key
+
+        if is_magic:
+            items = event.get("items") or []
+            rarity = ""
+            if items:
+                rarity = (items[0].get("rarity") or "").strip().lower()
+
+            if not rarity:
+                # Fallback: infer rarity from label/name.
+                rarity = (rarity_from_item({"name": event.get("label", "")}) or "unknown").lower()
+
+            current = int((day.get("magic_mail") or {}).get(rarity, 0) or 0)
+
+            return {
+                "kind": "magic",
+                "rarity": rarity,
+                "current": current,
+            }
+
+        current = int(
+            (day.get("stock_occurrences") or {}).get(target_key, 0) or 0
+        )
+        return {
+            "kind": "stock",
+            "current": current,
+        }
+
+    return None
+
+
+def format_event_counter_lines(event, daily_stats):
+    counter = event_daily_counter(event, daily_stats)
+    if not counter:
+        return []
+
+    if counter["kind"] == "sell":
+        multi = int(float(event.get("multi", 0)))
+        return [
+            "",
+            "📊 **สถิติวันนี้**",
+            f"• Sell ×{multi}: **ครั้งที่ {counter['current']}**",
+            f"• ×2 ทั้งวัน: **{counter['x2']} ครั้ง** · ×4 ทั้งวัน: **{counter['x4']} ครั้ง**",
+            f"• รวมเข้าเงื่อนไขของชิ้นนี้: **{counter['total']} รอบ**",
+        ]
+
+    if counter["kind"] == "magic":
+        rarity = (counter.get("rarity") or "unknown").title()
+        return [
+            "",
+            "📊 **สถิติวันนี้**",
+            f"• {rarity} Magic Mail: **ครั้งที่ {counter['current']}**",
+        ]
+
+    return [
+        "",
+        "📊 **สถิติวันนี้**",
+        f"• พบ {event.get('label', 'เป้าหมายนี้')}: **ครั้งที่ {counter['current']}**",
+    ]
+
 
 
 def format_event_message(events, attempts):
@@ -1989,7 +2095,7 @@ def format_event_message(events, attempts):
     return "\n".join(lines)
 
 
-def format_single_event_message(event, attempts):
+def format_single_event_message(event, attempts, daily_stats=None):
     lines = [
         f"🚨 **{event['label']}**",
         f"🛡️ Reliability Mode · อ่านสำเร็จในครั้งที่ {attempts}",
@@ -2005,10 +2111,11 @@ def format_single_event_message(event, attempts):
         lines.append(f"• Sell ×{float(event.get('multi', 0)):.0f}")
 
     lines.append(f"↳ {event['reason']}")
+    lines.extend(format_event_counter_lines(event, daily_stats))
     return "\n".join(lines)
 
 
-def build_event_embed(event, attempts):
+def build_event_embed(event, attempts, daily_stats=None):
     image_url = event.get("image_url")
     if not _is_reasonable_image_url(image_url):
         return None
@@ -2028,21 +2135,22 @@ def build_event_embed(event, attempts):
         color = 0xFEE75C
 
     desc_lines.append(f"↳ {event['reason']}")
+    desc_lines.extend(format_event_counter_lines(event, daily_stats))
 
     embed = {
         "title": title[:250],
         "description": "\n".join(desc_lines)[:4000],
         "color": color,
         "thumbnail": {"url": image_url},
-        "footer": {"text": f"v6.5.0 Daily Statistics • attempts {attempts}"},
+        "footer": {"text": f"v6.5.5 Live Alert Counter • attempts {attempts}"},
     }
     return embed
 
 
-def send_event_alerts(events, attempts):
+def send_event_alerts(events, attempts, daily_stats=None):
     for event in events:
-        content = format_single_event_message(event, attempts)
-        embed = build_event_embed(event, attempts)
+        content = format_single_event_message(event, attempts, daily_stats)
+        embed = build_event_embed(event, attempts, daily_stats)
         send_discord(content, [embed] if embed else None)
 
 
@@ -2095,14 +2203,14 @@ def find_sell_value(sell, target_key):
 def format_health_message(stock, sell, snapshot, attempts, recovered=False, self_test=None, source_sync=None, shop_cycles=None):
     lines = [
         "✅ **GAG2 Bot Health Check**",
-        "🛡️ Reliability v6.5.3 Quiet NO_TIMER + Daily Counters + Thumbnail + Per-Shop Cycle + Smart State + Block Detector + Timer-Sync",
+        "🛡️ Reliability v6.5.5 Live Alert Counter + Quiet NO_TIMER + Daily Stats + Thumbnail + Per-Shop Cycle + Smart State + Block Detector + Timer-Sync",
         f"• Stock parser: **OK** ({len(stock)} รายการ)",
         f"• Sell parser: **OK** ({len(sell)} รายการ)",
         f"• อ่านสำเร็จในครั้งที่: **{attempts}/{MAX_READ_ATTEMPTS}**",
         "• Source-Sync: **ON**",
         "• GAG2 Timer-Sync: **ON** (อิง Countdown จากหน้า GAG2)",
         "• Multi-Snapshot Verify: **ON** (เทียบ Full Stock หลายช่วง)",
-        "• Daily Statistics: **ON** (เวลาไทย · นับต่อรอบ · Manual ดูยอดได้ · ไม่ส่ง Image Test)",
+        "• Daily Statistics: **ON** (นับต่อรอบ · Alert แสดงครั้งที่ทันที · Manual ดูยอดได้)",
         "• Sell reader: **Target DOM Probe**",
         "• Block detector: **ON** (403 / 429 / CAPTCHA / Access Denied)",
     ]
@@ -2346,7 +2454,7 @@ def handle_read_failure(old_state, result):
         )
 
         new_state["health"] = health
-        new_state.setdefault("version", "6.5.3")
+        new_state.setdefault("version", "6.5.5")
         save_state(new_state)
 
         if should_warn_now:
@@ -2399,7 +2507,7 @@ def handle_read_failure(old_state, result):
         )
 
         new_state["health"] = health
-        new_state.setdefault("version", "6.5.3")
+        new_state.setdefault("version", "6.5.5")
         save_state(new_state)
         print("Manual NO_TIMER Health message sent; automatic streak unchanged")
         return
@@ -2511,7 +2619,7 @@ def handle_read_failure(old_state, result):
     )
 
     new_state["health"] = health
-    new_state.setdefault("version", "6.5.3")
+    new_state.setdefault("version", "6.5.5")
     save_state(new_state)
 
 
@@ -3041,7 +3149,7 @@ def main():
     old_health = old_state.get("health", {}) if isinstance(old_state, dict) else {}
 
     new_state = {
-        "version": "6.5.3",
+        "version": "6.5.5",
         "alert_logic_version": ALERT_LOGIC_VERSION,
         "updated_at": old_state.get("updated_at"),
         "shop_fingerprints": current_shop_fp,
@@ -3064,7 +3172,7 @@ def main():
 
     print(f"Parsed stock: {len(stock)} | sell: {len(sell)}")
     print(f"Read attempts used: {attempts}")
-    print(f"Has v6.5.3 baseline: {has_baseline}")
+    print(f"Has v6.5.5 baseline: {has_baseline}")
     print(f"Alert rules self-test: PASS ({self_test['passed_classes']}/{self_test['total_classes']})")
     print(f"Current wanted conditions: {len(current_events)}")
     print(f"Alert logic migration required: {logic_migration}")
@@ -3134,14 +3242,14 @@ def main():
             print("Manual run: no current wanted event; health check only")
 
         smart_save_state(old_state, new_state, force=True)
-        print("Manual Health Check + current alerts sent; v6.5.3 state handled")
+        print("Manual Health Check + current alerts sent; v6.5.5 state handled")
         return
 
     # On first run or migration, alert currently-active targets instead of
     # silently swallowing them into baseline.
     if logic_migration or not has_baseline:
         if current_events:
-            send_event_alerts(current_events, attempts)
+            send_event_alerts(current_events, attempts, daily_stats)
             add_daily_alert_count(daily_stats, len(current_events))
             print(f"Bootstrap/migration sent {len(current_events)} current wanted event(s)")
         else:
@@ -3166,7 +3274,7 @@ def main():
         )
 
     if events:
-        send_event_alerts(events, attempts)
+        send_event_alerts(events, attempts, daily_stats)
         add_daily_alert_count(daily_stats, len(events))
         print(f"Sent {len(events)} wanted event(s)")
     else:
