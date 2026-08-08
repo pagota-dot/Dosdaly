@@ -8,7 +8,7 @@
       "total_classes": 7
     },
     "attempts_used": 1,
-    "last_checked_at": "2026-08-08T04:03:45.388932+00:00",
+    "last_checked_at": "2026-08-08T04:05:40.259361+00:00",
     "last_diagnostics": [
       {
         "attempt": 1,
@@ -25,50 +25,72 @@
           }
         },
         "shop_timers": {
-          "crate": 82,
-          "gear": 82,
-          "seed": 82
+          "crate": 267,
+          "gear": 267,
+          "seed": 267
         },
         "stock_changed_during_sync": false,
-        "stock_count": 15,
-        "stock_min_timer_seconds": 82,
+        "stock_count": 23,
+        "stock_min_timer_seconds": 267,
         "stock_ok": true,
         "stock_sample_counts": [
-          15,
-          15
+          23,
+          23
         ],
         "stock_sync_samples": 2,
         "timer_available": true,
-        "timer_guard_log": [],
+        "timer_guard_log": [
+          {
+            "pass": 1,
+            "reason": "seed เพิ่งรีรอบ (289s เหลือ)",
+            "source": "shop",
+            "timers": {
+              "gear": 289,
+              "seed": 289
+            },
+            "wait_seconds": 19
+          }
+        ],
         "timer_safe": true,
         "timer_source": "shop",
-        "timer_wait_seconds": 6
+        "timer_wait_seconds": 19
       }
     ],
     "last_error_alert_at": "2026-08-08T02:30:13.472783+00:00",
-    "last_success_at": "2026-08-08T04:03:45.388935+00:00",
+    "last_success_at": "2026-08-08T04:05:40.259364+00:00",
     "sell_count": 2,
     "status": "ok",
-    "stock_count": 15,
+    "stock_count": 23,
     "timer_sync": {
       "changed_during_sync": false,
       "final_guard_reason": "timer-safe",
-      "guard_log": [],
-      "min_timer_seconds": 82,
+      "guard_log": [
+        {
+          "pass": 1,
+          "reason": "seed เพิ่งรีรอบ (289s เหลือ)",
+          "source": "shop",
+          "timers": {
+            "gear": 289,
+            "seed": 289
+          },
+          "wait_seconds": 19
+        }
+      ],
+      "min_timer_seconds": 267,
       "rollover_seen": false,
       "sample_counts": [
-        15,
-        15
+        23,
+        23
       ],
       "sample_fingerprints": [
-        "869eb6c7e7fff656d028f6a01cf2cf33beaa70441d5fe4f9c4c6389699a412cf",
-        "869eb6c7e7fff656d028f6a01cf2cf33beaa70441d5fe4f9c4c6389699a412cf"
+        "f3f187ff07e241084730bfbe01a7da986d9d2b6b8274729294e8ab96e608f7b0",
+        "f3f187ff07e241084730bfbe01a7da986d9d2b6b8274729294e8ab96e608f7b0"
       ],
       "samples": 2,
       "shop_timers": {
-        "crate": 82,
-        "gear": 82,
-        "seed": 82
+        "crate": 267,
+        "gear": 267,
+        "seed": 267
       },
       "stock": [
         {
@@ -78,27 +100,33 @@
           "type": "crate"
         },
         {
+          "name": "Fall Cosmetic Crate",
+          "qty": 2,
+          "rarity": "UNCOMMON",
+          "type": "crate"
+        },
+        {
           "name": "Ladder Crate",
-          "qty": 2,
-          "rarity": "COMMON",
-          "type": "crate"
-        },
-        {
-          "name": "Lantern Crate",
-          "qty": 2,
-          "rarity": "UNCOMMON",
-          "type": "crate"
-        },
-        {
-          "name": "Light Crate",
           "qty": 1,
-          "rarity": "UNCOMMON",
+          "rarity": "COMMON",
           "type": "crate"
         },
         {
           "name": "Picture Frame Crate",
           "qty": 3,
           "rarity": "RARE",
+          "type": "crate"
+        },
+        {
+          "name": "Sign Crate",
+          "qty": 1,
+          "rarity": "RARE",
+          "type": "crate"
+        },
+        {
+          "name": "Spring Crate",
+          "qty": 3,
+          "rarity": "EPIC",
           "type": "crate"
         },
         {
@@ -109,13 +137,19 @@
         },
         {
           "name": "Common Watering Can",
-          "qty": 3,
+          "qty": 2,
+          "rarity": "COMMON",
+          "type": "gear"
+        },
+        {
+          "name": "Syrup Sprinkler",
+          "qty": 1,
           "rarity": "COMMON",
           "type": "gear"
         },
         {
           "name": "Syrup Watering Can",
-          "qty": 3,
+          "qty": 2,
           "rarity": "COMMON",
           "type": "gear"
         },
@@ -127,8 +161,20 @@
         },
         {
           "name": "Bamboo",
-          "qty": 7,
+          "qty": 11,
           "rarity": "RARE",
+          "type": "seed"
+        },
+        {
+          "name": "Cactus",
+          "qty": 2,
+          "rarity": "RARE",
+          "type": "seed"
+        },
+        {
+          "name": "Cherry",
+          "qty": 1,
+          "rarity": "LEGENDARY",
           "type": "seed"
         },
         {
@@ -138,9 +184,27 @@
           "type": "seed"
         },
         {
-          "name": "Maple Pineapple",
-          "qty": 2,
+          "name": "Maple Apple",
+          "qty": 1,
+          "rarity": "UNCOMMON",
+          "type": "seed"
+        },
+        {
+          "name": "Maple Bamboo",
+          "qty": 11,
           "rarity": "RARE",
+          "type": "seed"
+        },
+        {
+          "name": "Maple Corn",
+          "qty": 1,
+          "rarity": "RARE",
+          "type": "seed"
+        },
+        {
+          "name": "Maple Mushroom",
+          "qty": 4,
+          "rarity": "EPIC",
           "type": "seed"
         },
         {
@@ -156,8 +220,14 @@
           "type": "seed"
         },
         {
+          "name": "Tomato",
+          "qty": 3,
+          "rarity": "UNCOMMON",
+          "type": "seed"
+        },
+        {
           "name": "Tulip",
-          "qty": 4,
+          "qty": 3,
           "rarity": "UNCOMMON",
           "type": "seed"
         }
@@ -166,16 +236,16 @@
       "timer_safe": true,
       "timer_source": "shop",
       "timers_used": {
-        "gear": 82,
-        "seed": 82
+        "gear": 267,
+        "seed": 267
       },
-      "total_timer_wait_seconds": 6
+      "total_timer_wait_seconds": 19
     }
   },
   "shop_fingerprints": {
-    "crate": "48a44ec275b59d08d0c84c962ea4ce637552d0b9ee98d1196fe808c0cca07795",
-    "gear": "f189e72c6703336a41182f5b379bdf4678597fb199e688aa00a2a0db4ed650c7",
-    "seed": "ad1505066aef8c15f0ce0124af2bcca10209ff9329989214531eb58b14d08cd2",
+    "crate": "774a7292f4a1f76444f23de3c89724d43897fdd90531e4248e9a20351a1bbda0",
+    "gear": "678a46295f38e146ce623aea7c8d2ce6222c85346f26de303f0c5110b5eeb019",
+    "seed": "abaa27ce41c47f6aa0556079ca9c163375e1e68a151146e560f8b5e30ea7772a",
     "sell": "5b34813ff08cc75a5e9929d17c4e96d9e73a612280500d084790472776afbf6d",
     "unknown": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
   },
@@ -222,6 +292,6 @@
       }
     }
   },
-  "updated_at": "2026-08-08T04:03:45.388914+00:00",
+  "updated_at": "2026-08-08T04:05:40.259345+00:00",
   "version": "6.4.5.1"
 }
