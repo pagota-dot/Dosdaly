@@ -8,7 +8,7 @@
       "total_classes": 7
     },
     "attempts_used": 1,
-    "last_checked_at": "2026-08-08T05:53:42.949028+00:00",
+    "last_checked_at": "2026-08-08T05:55:40.016119+00:00",
     "last_diagnostics": [
       {
         "attempt": 1,
@@ -25,50 +25,72 @@
           }
         },
         "shop_timers": {
-          "crate": 84,
-          "gear": 84,
-          "seed": 84
+          "crate": 267,
+          "gear": 267,
+          "seed": 267
         },
         "stock_changed_during_sync": false,
-        "stock_count": 21,
-        "stock_min_timer_seconds": 84,
+        "stock_count": 22,
+        "stock_min_timer_seconds": 267,
         "stock_ok": true,
         "stock_sample_counts": [
-          21,
-          21
+          22,
+          22
         ],
         "stock_sync_samples": 2,
         "timer_available": true,
-        "timer_guard_log": [],
+        "timer_guard_log": [
+          {
+            "pass": 1,
+            "reason": "seed เพิ่งรีรอบ (283s เหลือ)",
+            "source": "shop",
+            "timers": {
+              "gear": 283,
+              "seed": 283
+            },
+            "wait_seconds": 13
+          }
+        ],
         "timer_safe": true,
         "timer_source": "shop",
-        "timer_wait_seconds": 6
+        "timer_wait_seconds": 13
       }
     ],
     "last_error_alert_at": "2026-08-08T05:10:16.580516+00:00",
-    "last_success_at": "2026-08-08T05:53:42.949031+00:00",
+    "last_success_at": "2026-08-08T05:55:40.016122+00:00",
     "sell_count": 2,
     "status": "ok",
-    "stock_count": 21,
+    "stock_count": 22,
     "timer_sync": {
       "changed_during_sync": false,
       "final_guard_reason": "timer-safe",
-      "guard_log": [],
-      "min_timer_seconds": 84,
+      "guard_log": [
+        {
+          "pass": 1,
+          "reason": "seed เพิ่งรีรอบ (283s เหลือ)",
+          "source": "shop",
+          "timers": {
+            "gear": 283,
+            "seed": 283
+          },
+          "wait_seconds": 13
+        }
+      ],
+      "min_timer_seconds": 267,
       "rollover_seen": false,
       "sample_counts": [
-        21,
-        21
+        22,
+        22
       ],
       "sample_fingerprints": [
-        "41e3d4a131947ed2217d8c0ce6b6adef12ad21c139e67f2ffc28ec9944a97158",
-        "41e3d4a131947ed2217d8c0ce6b6adef12ad21c139e67f2ffc28ec9944a97158"
+        "12edad4e9fdf5d743acb2744adf721b4e5c6dc6977ad5127e5ea1c6f4942c32c",
+        "12edad4e9fdf5d743acb2744adf721b4e5c6dc6977ad5127e5ea1c6f4942c32c"
       ],
       "samples": 2,
       "shop_timers": {
-        "crate": 84,
-        "gear": 84,
-        "seed": 84
+        "crate": 267,
+        "gear": 267,
+        "seed": 267
       },
       "stock": [
         {
@@ -79,8 +101,14 @@
         },
         {
           "name": "Bench Crate",
-          "qty": 1,
+          "qty": 2,
           "rarity": "UNCOMMON",
+          "type": "crate"
+        },
+        {
+          "name": "Bridge Crate",
+          "qty": 2,
+          "rarity": "EPIC",
           "type": "crate"
         },
         {
@@ -90,80 +118,74 @@
           "type": "crate"
         },
         {
-          "name": "Conveyor Crate",
-          "qty": 5,
-          "rarity": "EPIC",
-          "type": "crate"
-        },
-        {
-          "name": "Fall Cosmetic Crate",
-          "qty": 1,
-          "rarity": "UNCOMMON",
-          "type": "crate"
-        },
-        {
           "name": "Ladder Crate",
-          "qty": 2,
+          "qty": 1,
           "rarity": "COMMON",
           "type": "crate"
         },
         {
           "name": "Lantern Crate",
-          "qty": 3,
+          "qty": 1,
           "rarity": "UNCOMMON",
           "type": "crate"
         },
         {
-          "name": "Owner Door Crate",
-          "qty": 1,
-          "rarity": "LEGENDARY",
-          "type": "crate"
-        },
-        {
-          "name": "Roleplay Crate",
-          "qty": 2,
+          "name": "Sign Crate",
+          "qty": 3,
           "rarity": "RARE",
           "type": "crate"
         },
         {
-          "name": "Common Watering Can",
-          "qty": 5,
+          "name": "Common Sprinkler",
+          "qty": 2,
           "rarity": "COMMON",
           "type": "gear"
         },
         {
-          "name": "Gnome",
+          "name": "Common Watering Can",
+          "qty": 3,
+          "rarity": "COMMON",
+          "type": "gear"
+        },
+        {
+          "name": "Jump Mushroom",
+          "qty": 1,
+          "rarity": "RARE",
+          "type": "gear"
+        },
+        {
+          "name": "Shrink Mushroom",
           "qty": 3,
           "rarity": "EPIC",
           "type": "gear"
         },
         {
-          "name": "Harp",
+          "name": "Speed Mushroom",
           "qty": 2,
           "rarity": "RARE",
           "type": "gear"
         },
         {
-          "name": "Super Syrup Watering Can",
-          "qty": 1,
-          "rarity": "COMMON",
-          "type": "gear"
-        },
-        {
-          "name": "Syrup Sprinkler",
-          "qty": 2,
-          "rarity": "COMMON",
-          "type": "gear"
-        },
-        {
           "name": "Syrup Watering Can",
-          "qty": 5,
+          "qty": 3,
           "rarity": "COMMON",
           "type": "gear"
+        },
+        {
+          "name": "Bamboo",
+          "qty": 8,
+          "rarity": "RARE",
+          "type": "seed"
+        },
+        {
+          "name": "Cactus",
+          "qty": 2,
+          "rarity": "RARE",
+          "type": "seed"
         },
         {
           "name": "Maple Bamboo",
-          "qty": 11,
+          "qty": 10,
           "rarity": "RARE",
           "type": "seed"
         },
@@ -175,14 +197,20 @@
         },
         {
           "name": "Maple Tomato",
-          "qty": 2,
+          "qty": 3,
           "rarity": "UNCOMMON",
           "type": "seed"
         },
         {
           "name": "Maple Tulip",
-          "qty": 4,
+          "qty": 3,
           "rarity": "UNCOMMON",
+          "type": "seed"
+        },
+        {
+          "name": "Mushroom",
+          "qty": 4,
+          "rarity": "EPIC",
           "type": "seed"
         },
         {
@@ -202,16 +230,16 @@
       "timer_safe": true,
       "timer_source": "shop",
       "timers_used": {
-        "gear": 84,
-        "seed": 84
+        "gear": 267,
+        "seed": 267
       },
-      "total_timer_wait_seconds": 6
+      "total_timer_wait_seconds": 13
     }
   },
   "shop_fingerprints": {
-    "crate": "f76e62b0828808005f64d8b8ef698096c7d06b8fc56a9881e299e20240cfb839",
-    "gear": "cba5cb6154941f82a44eb561dc3f4aa2f2b5c8edc132fe67f55a62944cb188c3",
-    "seed": "624d0c4efbfb17906905cfe5ba8d47070015a909222a32e921689e14e8b2005b",
+    "crate": "0b003d9981cb8b835f12bb61493dc26a840aa661302d345dbdfab571981ff8ea",
+    "gear": "15a502f82061dc288ed8df672d5ddafb8c6dc2f1ba588709e5cd3d93ab2f57c4",
+    "seed": "dd0b3b80e9012dab80c4e357b005a374135d53dc0451d77689a58900b15e4943",
     "sell": "62e8c72102e69bd7473f0243e6b9d3311d7b1e1a222901ee8b9685963a2702e5",
     "unknown": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
   },
@@ -252,19 +280,12 @@
       },
       "super syrup watering can": {
         "image_url": "https://cdn.gag2.gg/items/super_syrup_watering_can.webp",
-        "items": [
-          {
-            "name": "Super Syrup Watering Can",
-            "qty": 1,
-            "rarity": "COMMON",
-            "type": "gear"
-          }
-        ],
+        "items": [],
         "label": "Super Syrup Watering Can",
-        "present": true
+        "present": false
       }
     }
   },
-  "updated_at": "2026-08-08T05:53:42.949011+00:00",
+  "updated_at": "2026-08-08T05:55:40.016104+00:00",
   "version": "6.4.5.1"
 }
