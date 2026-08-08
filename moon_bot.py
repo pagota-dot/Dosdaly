@@ -36,6 +36,17 @@ FINAL_MAX_ACCEPTABLE_SECONDS = 80
 # Active-event fallback suppression window.
 ACTIVE_RECENT_FINAL_SECONDS = 5 * 60
 
+# Freeze the predicted start time from the FIRST reliable <=5m alert.
+# Later GAG2 countdown changes must NOT move the final alert later.
+ANCHOR_LOGIC_VERSION = "v5-frozen-first-countdown"
+
+# If the first time we ever see the event is already very late,
+# don't send two messages almost on top of each other.
+FIRST_ALERT_MIN_REMAINING_SECONDS = 90
+
+# Match the same event even if GAG2's later prediction drifts.
+ANCHOR_MATCH_TOLERANCE_SECONDS = 10 * 60
+
 TARGET_MOONS = {
     "gold": {
         "label": "Gold Moon",
@@ -267,7 +278,8 @@ def parse_weather_page(text):
 def load_state():
     if not STATE_PATH.exists():
         return {
-            "version": 1,
+            "version": 2,
+            "logic_version": ANCHOR_LOGIC_VERSION,
             "events": {},
             "last_final_by_kind": {},
         }
@@ -280,9 +292,17 @@ def load_state():
     if not isinstance(raw, dict):
         raw = {}
 
-    raw.setdefault("version", 1)
+    raw.setdefault("version", 2)
     raw.setdefault("events", {})
     raw.setdefault("last_final_by_kind", {})
+
+    # One-time migration from the older moving-countdown logic.
+    # Clear only Moon event-cycle flags; keep the file itself and other state.
+    if raw.get("logic_version") != ANCHOR_LOGIC_VERSION:
+        raw["events"] = {}
+        raw["logic_version"] = ANCHOR_LOGIC_VERSION
+        raw["migrated_at"] = iso_now()
+
     return raw
 
 
@@ -300,7 +320,7 @@ def prune_state(state):
 
     for event_key in list(events):
         info = events.get(event_key) or {}
-        event_epoch = int(info.get("event_epoch", 0) or 0)
+        event_epoch = int(info.get("anchor_epoch", info.get("event_epoch", 0)) or 0)
 
         # Keep only a small useful window around events.
         if event_epoch and (
@@ -393,7 +413,7 @@ def event_embed(event, level, remaining=None):
         "title": title,
         "description": description,
         "footer": {
-            "text": "GAG2 Moon Alert · 5m / ~45s · Gold/Rainbow/Mega"
+            "text": "GAG2 Moon Alert · Frozen 5m Anchor → ~45s · Gold/Rainbow/Mega"
         },
     }
 
@@ -465,109 +485,197 @@ def mark_earlier_levels_skipped(event_state, level):
         event_state.setdefault("ready", True)
 
 
+
+def resolve_anchor_state(events_state, event):
+    """
+    Reuse the same Moon state even when a later GAG2 read moves the
+    predicted time / event_key. This prevents duplicate or delayed alerts.
+    """
+    kind = event.get("kind")
+    predicted_epoch = int(event.get("event_epoch", 0) or 0)
+
+    best_key = None
+    best_state = None
+    best_diff = None
+
+    for state_key, info in events_state.items():
+        if not isinstance(info, dict):
+            continue
+        if info.get("kind") != kind:
+            continue
+
+        anchor_epoch = int(
+            info.get("anchor_epoch", info.get("event_epoch", 0)) or 0
+        )
+        if not anchor_epoch:
+            continue
+
+        diff = abs(anchor_epoch - predicted_epoch)
+        if diff <= ANCHOR_MATCH_TOLERANCE_SECONDS:
+            if best_diff is None or diff < best_diff:
+                best_key = state_key
+                best_state = info
+                best_diff = diff
+
+    if best_state is not None:
+        return best_key, best_state
+
+    state_key = event["event_key"]
+    info = events_state.setdefault(
+        state_key,
+        {
+            "kind": kind,
+            "event_epoch": predicted_epoch,
+            "anchor_epoch": 0,
+            "ready": False,
+            "final": False,
+        },
+    )
+    return state_key, info
+
+
+def frozen_event_for_embed(event, anchor_epoch):
+    copied = dict(event)
+    copied["event_epoch"] = int(anchor_epoch)
+    copied["remaining"] = max(
+        0,
+        int(anchor_epoch) - int(utc_now().timestamp()),
+    )
+    return copied
+
+
 def process_upcoming(state, parsed):
     now_epoch = int(utc_now().timestamp())
     events_state = state.setdefault("events", {})
 
-    final_candidates = []
+    candidates = []
 
     for event in parsed.get("upcoming", []):
         remaining = int(event["remaining"])
 
-        # Ignore events too far away; we'll see them again on later 2-minute runs.
-        if remaining > PREPARE_THRESHOLD_SECONDS:
+        # We care only about the nearest 5-minute window.
+        if remaining > READY_THRESHOLD_SECONDS:
             continue
 
-        es = events_state.setdefault(
-            event["event_key"],
-            {
-                "kind": event["kind"],
-                "event_epoch": event["event_epoch"],
-                "prepare": False,
-                "ready": False,
-                "final": False,
-            },
-        )
+        state_key, es = resolve_anchor_state(events_state, event)
 
-        # Keep predicted epoch fresh as countdown gets more precise.
-        es["event_epoch"] = event["event_epoch"]
+        # Freeze the FIRST reliable prediction. Do not overwrite this later.
+        anchor_epoch = int(es.get("anchor_epoch", 0) or 0)
+        if not anchor_epoch:
+            anchor_epoch = now_epoch + remaining
+            es["anchor_epoch"] = anchor_epoch
+            es["event_epoch"] = anchor_epoch
+            es["first_seen_remaining"] = remaining
+            es["first_seen_at"] = iso_now()
 
-        # Alert #1: old reliable timing window, when the event is within 5 minutes.
-        if remaining <= FINAL_ARM_THRESHOLD_SECONDS:
-            if not es.get("final"):
-                final_candidates.append(event)
-            continue
+            print(
+                f"ANCHOR frozen: {event['kind']} "
+                f"remaining={remaining}s anchor_epoch={anchor_epoch}"
+            )
 
-        if remaining <= READY_THRESHOLD_SECONDS:
-            if not es.get("ready"):
-                send_level(event, "ready", remaining)
+        anchor_remaining = anchor_epoch - int(utc_now().timestamp())
+
+        # Alert #1: send once when there is enough useful lead time.
+        # If first discovery is already <=90s, skip this alert so Discord
+        # doesn't receive two messages back-to-back.
+        if not es.get("ready"):
+            if anchor_remaining > FIRST_ALERT_MIN_REMAINING_SECONDS:
+                first_event = frozen_event_for_embed(event, anchor_epoch)
+                send_level(first_event, "ready", anchor_remaining)
                 es["ready"] = True
                 es["prepare"] = True
+                es["ready_sent_at"] = iso_now()
+
                 print(
-                    f"5-MIN alert sent: {event['kind']} remaining={remaining}s"
-                )
-            continue
-
-    # Only one final wait at a time: nearest target moon wins.
-    if final_candidates:
-        final_candidates.sort(key=lambda e: e["remaining"])
-        event = final_candidates[0]
-        es = events_state[event["event_key"]]
-
-        remaining = int(event["remaining"])
-        wait_seconds = max(0, remaining - FINAL_TARGET_SECONDS)
-
-        if wait_seconds:
-            print(
-                f"Armed FINAL alert for {event['kind']}: "
-                f"sleep {wait_seconds}s to target ~{FINAL_TARGET_SECONDS}s before start"
-            )
-            time.sleep(wait_seconds)
-
-        # Refresh after the wait so we don't fire early if the source schedule changed.
-        refreshed = read_weather()
-        match = find_matching_event(refreshed, event)
-
-        if match is not None:
-            actual_remaining = int(match["remaining"])
-
-            if actual_remaining <= FINAL_MAX_ACCEPTABLE_SECONDS:
-                send_level(match, "final", actual_remaining)
-                es["final"] = True
-                es["final_sent_at"] = iso_now()
-                es["event_epoch"] = match["event_epoch"]
-                mark_earlier_levels_skipped(es, "final")
-                state.setdefault("last_final_by_kind", {})[
-                    event["kind"]
-                ] = {
-                    "sent_epoch": int(utc_now().timestamp()),
-                    "event_epoch": match["event_epoch"],
-                }
-                print(
-                    f"FINAL alert sent: {event['kind']} "
-                    f"remaining={actual_remaining}s"
+                    f"5-MIN alert sent from FROZEN anchor: "
+                    f"{event['kind']} remaining={anchor_remaining}s"
                 )
             else:
+                es["ready"] = True
+                es["prepare"] = True
+                es["ready_skipped_late"] = True
                 print(
-                    f"FINAL postponed: refreshed remaining={actual_remaining}s "
-                    f"> {FINAL_MAX_ACCEPTABLE_SECONDS}s"
+                    f"5-MIN alert skipped (first seen late): "
+                    f"{event['kind']} remaining={anchor_remaining}s"
                 )
-        else:
-            # If the target disappeared from upcoming, it may already be active.
-            active = refreshed.get("active")
-            if active == event["kind"]:
-                send_level(event, "active", 0)
-                es["final"] = True
-                es["active_fallback"] = True
-                state.setdefault("last_final_by_kind", {})[
-                    event["kind"]
-                ] = {
-                    "sent_epoch": int(utc_now().timestamp()),
-                    "event_epoch": event["event_epoch"],
+
+        if not es.get("final"):
+            candidates.append(
+                {
+                    "state_key": state_key,
+                    "event": event,
+                    "anchor_epoch": anchor_epoch,
+                    "anchor_remaining": anchor_remaining,
                 }
-                print(
-                    f"ACTIVE fallback sent for {event['kind']} after final wait"
-                )
+            )
+
+    if not candidates:
+        return
+
+    # Nearest anchored event wins. This same workflow run is responsible
+    # for the final alert, so we don't depend on the next 2-minute cron run.
+    candidates.sort(key=lambda x: x["anchor_remaining"])
+    candidate = candidates[0]
+
+    state_key = candidate["state_key"]
+    event = candidate["event"]
+    anchor_epoch = int(candidate["anchor_epoch"])
+    es = events_state[state_key]
+
+    anchor_remaining = anchor_epoch - int(utc_now().timestamp())
+
+    # If the frozen time has already passed, don't invent a "45s" alert.
+    # Active fallback below can still report a genuinely active event.
+    if anchor_remaining <= 0:
+        print(
+            f"FROZEN anchor already passed for {event['kind']}; "
+            "waiting for active fallback"
+        )
+        return
+
+    wait_seconds = max(0, anchor_remaining - FINAL_TARGET_SECONDS)
+
+    if wait_seconds:
+        print(
+            f"FROZEN FINAL armed: {event['kind']} "
+            f"sleep={wait_seconds}s target=~{FINAL_TARGET_SECONDS}s"
+        )
+        time.sleep(wait_seconds)
+
+    # IMPORTANT: Do NOT replace the frozen anchor with a later GAG2
+    # countdown. This was the cause of the late-final-alert problem.
+    actual_by_anchor = max(
+        0,
+        anchor_epoch - int(utc_now().timestamp()),
+    )
+
+    if actual_by_anchor <= 0:
+        print(
+            f"FINAL missed frozen start for {event['kind']}; "
+            "active fallback will handle it"
+        )
+        return
+
+    final_event = frozen_event_for_embed(event, anchor_epoch)
+    send_level(final_event, "final", actual_by_anchor)
+
+    es["final"] = True
+    es["final_sent_at"] = iso_now()
+    es["final_remaining_by_anchor"] = actual_by_anchor
+    es["event_epoch"] = anchor_epoch
+    mark_earlier_levels_skipped(es, "final")
+
+    state.setdefault("last_final_by_kind", {})[
+        event["kind"]
+    ] = {
+        "sent_epoch": int(utc_now().timestamp()),
+        "event_epoch": anchor_epoch,
+    }
+
+    print(
+        f"FROZEN FINAL sent: {event['kind']} "
+        f"remaining={actual_by_anchor}s"
+    )
 
 
 def process_active_fallback(state, parsed):
@@ -613,7 +721,7 @@ def main():
         "Weather parsed: "
         f"active={parsed.get('active')} "
         f"upcoming_targets={len(parsed.get('upcoming', []))} "
-        f"attempt={parsed.get('attempt')}"
+        f"attempt={parsed.get('attempt')} logic={ANCHOR_LOGIC_VERSION}"
     )
 
     process_upcoming(state, parsed)
