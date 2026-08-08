@@ -42,7 +42,7 @@ GAG2_TIMER_TARGET_SHOPS = ("seed", "gear")
 MIN_STOCK_ITEMS = 3
 MIN_SELL_ITEMS = 1
 HEALTH_ALERT_COOLDOWN_HOURS = 1
-ALERT_LOGIC_VERSION = "6.4-cloudflare-ready-v1"
+ALERT_LOGIC_VERSION = "6.4.4-image-alert-v1"
 
 # Exact GAG2 targets
 EXACT_STOCK_TARGETS = {
@@ -736,6 +736,101 @@ def read_sell_targets(driver):
     return results, diagnostics
 
 
+def _is_reasonable_image_url(url):
+    url = norm(url)
+    if not url:
+        return False
+    if url.startswith("data:"):
+        return False
+    return url.startswith("http://") or url.startswith("https://")
+
+
+def _image_probe(driver, targets):
+    script = r"""
+    const targets = (arguments[0] || []).map(x => String(x || '').trim().toLowerCase()).filter(Boolean);
+    const out = {};
+    for (const t of targets) out[t] = [];
+
+    function norm(s) {
+      return String(s || '').replace(/\s+/g, ' ').trim().toLowerCase();
+    }
+
+    function push(target, src) {
+      if (!src) return;
+      if (!/^https?:/i.test(src)) return;
+      if (!out[target].includes(src)) out[target].push(src);
+    }
+
+    const nodes = Array.from(document.querySelectorAll('body *'));
+    for (const el of nodes) {
+      const own = norm(el.innerText || el.textContent || '');
+      if (!own || own.length > 400) continue;
+
+      for (const target of targets) {
+        if (!(own === target || own.includes(target))) continue;
+
+        let p = el;
+        for (let depth = 0; depth < 7 && p; depth++, p = p.parentElement) {
+          const scopeText = norm(p.innerText || p.textContent || '');
+          if (!scopeText || scopeText.length > 1600) continue;
+
+          const imgs = Array.from(p.querySelectorAll('img'));
+          for (const img of imgs) {
+            const src = img.currentSrc || img.src || img.getAttribute('src') || img.getAttribute('data-src');
+            push(target, src);
+          }
+
+          if (out[target].length) break;
+        }
+      }
+    }
+
+    return out;
+    """
+
+    try:
+        raw = driver.execute_script(script, targets) or {}
+    except Exception:
+        raw = {}
+
+    cleaned = {}
+    for t in targets:
+        values = []
+        for url in raw.get(t, []) or []:
+            if _is_reasonable_image_url(url) and url not in values:
+                values.append(url)
+        cleaned[t] = values
+    return cleaned
+
+
+def read_stock_target_images(driver):
+    targets = list(EXACT_STOCK_TARGETS.keys()) + [
+        'magic mail',
+        'legendary magic mail',
+        'epic magic mail',
+        'mythic magic mail',
+        'super magic mail',
+        'common magic mail',
+        'uncommon magic mail',
+    ]
+    probed = _image_probe(driver, targets)
+    result = {}
+    for t, urls in probed.items():
+        if urls:
+            result[t] = urls[0]
+    return result
+
+
+def read_sell_target_images(driver):
+    targets = list(SELL_TARGETS.keys())
+    probed = _image_probe(driver, targets)
+    result = {}
+    for t, urls in probed.items():
+        if urls:
+            result[t] = urls[0]
+    return result
+
+
 def parse_stock(text):
     lines = [norm(x) for x in text.splitlines() if norm(x)]
     out = []
@@ -904,7 +999,7 @@ def shop_fingerprints(stock, sell):
     return result
 
 
-def target_snapshot(stock, sell):
+def target_snapshot(stock, sell, stock_image_map=None, sell_image_map=None):
     """
     Store current state for every target, including states that do NOT trigger.
     This lets us distinguish:
@@ -913,6 +1008,9 @@ def target_snapshot(stock, sell):
       x2 -> x4
       target disappears -> later returns
     """
+    stock_image_map = stock_image_map or {}
+    sell_image_map = sell_image_map or {}
+
     snapshot = {
         "stock": {},
         "magic_mail": {},
@@ -937,12 +1035,14 @@ def target_snapshot(stock, sell):
                 "present": True,
                 "items": matches,
                 "label": meta["label"],
+                "image_url": stock_image_map.get(target_key),
             }
         else:
             snapshot["stock"][target_key] = {
                 "present": False,
                 "items": [],
                 "label": meta["label"],
+                "image_url": stock_image_map.get(target_key),
             }
 
     # Magic Mail variants: every rarity except Rare.
@@ -956,6 +1056,10 @@ def target_snapshot(stock, sell):
             "rarity": rarity.upper() if rarity != "unknown" else "",
             "qty": int(item.get("qty", 0)),
             "type": item.get("type", "gear"),
+            "image_url": (
+                stock_image_map.get(key(item.get("name", "")))
+                or stock_image_map.get("magic mail")
+            ),
         }
 
     # Sell: store actual current multiplier even if it is x1/x3/etc.
@@ -968,12 +1072,14 @@ def target_snapshot(stock, sell):
                 "present": True,
                 "multi": float(item.get("multi", 0)),
                 "label": meta["label"],
+                "image_url": sell_image_map.get(target_key),
             }
         else:
             snapshot["sell"][target_key] = {
                 "present": False,
                 "multi": None,
                 "label": meta["label"],
+                "image_url": sell_image_map.get(target_key),
             }
 
     return snapshot
@@ -1015,6 +1121,7 @@ def current_active_events(current_snapshot):
                 "emoji": meta["emoji"],
                 "items": cur.get("items", []),
                 "reason": "ตอนนี้อยู่ใน Stock",
+                "image_url": cur.get("image_url"),
             }
         )
 
@@ -1037,6 +1144,7 @@ def current_active_events(current_snapshot):
                     }
                 ],
                 "reason": "Magic Mail ที่ต้องการอยู่ใน Stock",
+                "image_url": cur.get("image_url"),
             }
         )
 
@@ -1055,6 +1163,7 @@ def current_active_events(current_snapshot):
                 "emoji": meta["emoji"],
                 "multi": float(multi),
                 "reason": f"ตอนนี้ Sell ×{float(multi):.0f} เข้าเงื่อนไข",
+                "image_url": cur.get("image_url"),
             }
         )
 
@@ -1170,6 +1279,7 @@ def compare_target_events(old_state, current_snapshot, old_shop_fp, current_shop
                         if not prev.get("present")
                         else "รอบร้านเปลี่ยน/จำนวนเปลี่ยน"
                     ),
+                    "image_url": cur.get("image_url"),
                 }
             )
 
@@ -1204,6 +1314,7 @@ def compare_target_events(old_state, current_snapshot, old_shop_fp, current_shop
                         }
                     ],
                     "reason": "Magic Mail ที่ต้องการอยู่ใน Stock",
+                    "image_url": cur.get("image_url"),
                 }
             )
 
@@ -1237,6 +1348,7 @@ def compare_target_events(old_state, current_snapshot, old_shop_fp, current_shop
                         if prev.get("multi") != current_multi
                         else "Sell รอบใหม่ยังเข้าเงื่อนไข"
                     ),
+                    "image_url": cur.get("image_url"),
                 }
             )
 
@@ -1253,8 +1365,10 @@ def collect_live_data():
 
             stock_sync = read_source_synced_stock(driver)
             stock = stock_sync["stock"]
+            stock_image_map = read_stock_target_images(driver)
 
             sell, sell_diag = read_sell_targets(driver)
+            sell_image_map = read_sell_target_images(driver)
 
             stock_ok = (
                 len(stock) >= MIN_STOCK_ITEMS
@@ -1295,6 +1409,8 @@ def collect_live_data():
                     "sell": sell,
                     "diagnostics": diagnostics,
                     "source_sync": stock_sync,
+                    "stock_image_map": stock_image_map,
+                    "sell_image_map": sell_image_map,
                 }
 
         except GAG2AccessBlocked as e:
@@ -1336,6 +1452,8 @@ def collect_live_data():
         "sell": [],
         "diagnostics": diagnostics,
         "source_sync": None,
+        "stock_image_map": {},
+        "sell_image_map": {},
     }
 
 
@@ -1354,14 +1472,22 @@ def save_state(state):
     )
 
 
-def send_discord(content):
+def send_discord(content="", embeds=None):
     if not WEBHOOK_RE.fullmatch(WEBHOOK):
         raise RuntimeError("DISCORD_WEBHOOK secret is missing or invalid")
 
+    payload = {"allowed_mentions": {"parse": []}}
+    if content:
+        payload["content"] = content[:1950]
+    if embeds:
+        payload["embeds"] = embeds[:10]
+    if not payload.get("content") and not payload.get("embeds"):
+        raise RuntimeError("send_discord called with no content and no embeds")
+
     r = requests.post(
         WEBHOOK,
-        json={"content": content[:1950]},
-        headers={"User-Agent": "GAG2-Reliability-Discord-Bot/6.4.3"},
+        json=payload,
+        headers={"User-Agent": "GAG2-Reliability-Discord-Bot/6.4.4"},
         timeout=30,
     )
 
@@ -1397,6 +1523,65 @@ def format_event_message(events, attempts):
     return "\n".join(lines)
 
 
+def format_single_event_message(event, attempts):
+    lines = [
+        f"🚨 **{event['label']}**",
+        f"🛡️ Reliability Mode · อ่านสำเร็จในครั้งที่ {attempts}",
+    ]
+
+    if event["kind"] == "stock":
+        for item in event.get("items", []):
+            rarity = f" · {item.get('rarity')}" if item.get("rarity") else ""
+            lines.append(
+                f"• {item.get('name', event['label'])} ×{item.get('qty', 0)}{rarity}"
+            )
+    elif event["kind"] == "sell":
+        lines.append(f"• Sell ×{float(event.get('multi', 0)):.0f}")
+
+    lines.append(f"↳ {event['reason']}")
+    if event.get("image_url"):
+        lines.append("🖼️ แนบรูปจากหน้า GAG2")
+    return "\n".join(lines)
+
+
+def build_event_embed(event, attempts):
+    image_url = event.get("image_url")
+    if not _is_reasonable_image_url(image_url):
+        return None
+
+    if event["kind"] == "stock":
+        title = f"{event['emoji']} {event['label']} เข้า Stock!"
+        desc_lines = []
+        for item in event.get("items", []):
+            rarity = f" · {item.get('rarity')}" if item.get("rarity") else ""
+            desc_lines.append(
+                f"• {item.get('name', event['label'])} ×{item.get('qty', 0)}{rarity}"
+            )
+        color = 0x57F287
+    else:
+        title = f"{event['emoji']} {event['label']} Sell ×{float(event.get('multi', 0)):.0f}"
+        desc_lines = [f"• เข้าเงื่อนไข Sell ×{float(event.get('multi', 0)):.0f}"]
+        color = 0xFEE75C
+
+    desc_lines.append(f"↳ {event['reason']}")
+
+    embed = {
+        "title": title[:250],
+        "description": "\n".join(desc_lines)[:4000],
+        "color": color,
+        "image": {"url": image_url},
+        "footer": {"text": f"Reliability v6.4.4 Image Alert • attempts {attempts}"},
+    }
+    return embed
+
+
+def send_event_alerts(events, attempts):
+    for event in events:
+        content = format_single_event_message(event, attempts)
+        embed = build_event_embed(event, attempts)
+        send_discord(content, [embed] if embed else None)
+
+
 def find_exact_stock(stock, target_key):
     return [x for x in stock if key(x.get("name")) == target_key]
 
@@ -1411,7 +1596,7 @@ def find_sell_value(sell, target_key):
 def format_health_message(stock, sell, snapshot, attempts, recovered=False, self_test=None, source_sync=None):
     lines = [
         "✅ **GAG2 Bot Health Check**",
-        "🛡️ Reliability v6.4.3 Block Detector + Timer-Sync",
+        "🛡️ Reliability v6.4.4 Image Alert + Block Detector + Timer-Sync",
         f"• Stock parser: **OK** ({len(stock)} รายการ)",
         f"• Sell parser: **OK** ({len(sell)} รายการ)",
         f"• อ่านสำเร็จในครั้งที่: **{attempts}/{MAX_READ_ATTEMPTS}**",
@@ -1601,7 +1786,7 @@ def handle_read_failure(old_state, result):
     )
 
     new_state["health"] = health
-    new_state.setdefault("version", "6.4.3")
+    new_state.setdefault("version", "6.4.4")
     save_state(new_state)
 
 
@@ -1628,7 +1813,12 @@ def main():
     attempts = result["attempts"]
 
     current_shop_fp = shop_fingerprints(stock, sell)
-    current_snapshot = target_snapshot(stock, sell)
+    current_snapshot = target_snapshot(
+        stock,
+        sell,
+        result.get("stock_image_map"),
+        result.get("sell_image_map"),
+    )
     current_events = current_active_events(current_snapshot)
 
     old_shop_fp = old_state.get("shop_fingerprints", {})
@@ -1636,7 +1826,7 @@ def main():
     recovered = old_health_status in {"error", "blocked"}
 
     new_state = {
-        "version": "6.4.3",
+        "version": "6.4.4",
         "alert_logic_version": ALERT_LOGIC_VERSION,
         "updated_at": iso_now(),
         "shop_fingerprints": current_shop_fp,
@@ -1660,7 +1850,7 @@ def main():
 
     print(f"Parsed stock: {len(stock)} | sell: {len(sell)}")
     print(f"Read attempts used: {attempts}")
-    print(f"Has v6.4.3 baseline: {has_baseline}")
+    print(f"Has v6.4.4 baseline: {has_baseline}")
     print(f"Alert rules self-test: PASS ({self_test['passed_classes']}/{self_test['total_classes']})")
     print(f"Current wanted conditions: {len(current_events)}")
     print(f"Alert logic migration required: {logic_migration}")
@@ -1681,20 +1871,20 @@ def main():
         )
 
         if current_events:
-            send_discord(format_event_message(current_events, attempts))
+            send_event_alerts(current_events, attempts)
             print(f"Manual run sent {len(current_events)} current wanted event(s)")
         else:
             print("Manual run: no current wanted event; health check only")
 
         save_state(new_state)
-        print("Manual Health Check + current alerts sent; v6.4.3 state saved")
+        print("Manual Health Check + current alerts sent; v6.4.4 state saved")
         return
 
     # On first run or migration, alert currently-active targets instead of
     # silently swallowing them into baseline.
     if logic_migration or not has_baseline:
         if current_events:
-            send_discord(format_event_message(current_events, attempts))
+            send_event_alerts(current_events, attempts)
             print(f"Bootstrap/migration sent {len(current_events)} current wanted event(s)")
         else:
             print("Bootstrap/migration: no current wanted event; silent")
@@ -1717,7 +1907,7 @@ def main():
         )
 
     if events:
-        send_discord(format_event_message(events, attempts))
+        send_event_alerts(events, attempts)
         print(f"Sent {len(events)} wanted event(s)")
     else:
         print("No new wanted event; silent")
