@@ -1,24 +1,36 @@
-name: GAG2 Alert Test Preview
+name: GAG2 Reliability Discord Bot v6.5.6
 
 on:
   workflow_dispatch:
+    inputs:
+      trigger_source:
+        description: Who triggered this run
+        required: false
+        default: manual
+        type: string
 
 permissions:
-  contents: read
+  contents: write
+
+concurrency:
+  group: gag2-reliability-cloudflare
+  cancel-in-progress: false
 
 jobs:
-  preview:
+  check-stock:
     runs-on: ubuntu-24.04
-    timeout-minutes: 3
+    timeout-minutes: 5
 
     env:
       DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
       GITHUB_EVENT_NAME: ${{ github.event_name }}
-      TRIGGER_SOURCE: test_preview
+      TRIGGER_SOURCE: ${{ inputs.trigger_source }}
 
     steps:
       - name: Checkout
         uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
 
       - name: Set up Python
         uses: actions/setup-python@v7
@@ -28,5 +40,49 @@ jobs:
       - name: Install dependencies
         run: pip install --disable-pip-version-check -r requirements.txt
 
-      - name: Send TEST alert previews
+      - name: GAG2 check and Discord notification
         run: python bot.py
+
+      - name: Save reliability state safely
+        shell: bash
+        run: |
+          if git diff --quiet -- state.json; then
+            echo "State unchanged."
+            exit 0
+          fi
+
+          cp state.json /tmp/gag2-state.json
+
+          git config user.name "gag2-stock-bot"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          for attempt in 1 2 3 4
+          do
+            echo "Save attempt $attempt/4"
+
+            git fetch origin main
+            git reset --hard origin/main
+
+            cp /tmp/gag2-state.json state.json
+            git add state.json
+
+            if git diff --cached --quiet
+            then
+              echo "State already saved."
+              exit 0
+            fi
+
+            git commit -m "chore: update gag2 state [skip ci]"
+
+            if git push origin HEAD:main
+            then
+              echo "State saved successfully."
+              exit 0
+            fi
+
+            echo "Push collision. Retrying..."
+            sleep 3
+          done
+
+          echo "Could not save state after 4 attempts."
+          exit 1
