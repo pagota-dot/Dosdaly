@@ -289,7 +289,7 @@ accepted, _ = bot.filter_exact_stock_cycle_duplicates(
 result("Magic Mail untouched", accepted == [magic_event])
 
 # -------------------------------------------------------------------------
-# v6.5.7 observability/UI regression tests.
+# v6.5.8 observability/rarity UI regression tests.
 # These run AFTER the old guard suite and do not open GAG2 or Discord.
 # -------------------------------------------------------------------------
 
@@ -297,6 +297,11 @@ result(
     "Alert logic version remains frozen (no migration alert)",
     bot.ALERT_LOGIC_VERSION == "6.4.4-image-alert-v1",
     bot.ALERT_LOGIC_VERSION,
+)
+result(
+    "Display release is v6.5.8",
+    bot.BOT_DISPLAY_VERSION == "6.5.8",
+    bot.BOT_DISPLAY_VERSION,
 )
 
 # Source hashes prove that all alert-producing and source-cycle functions are
@@ -374,8 +379,9 @@ timing_value = next(
     if x["name"] == "⏱️ เวลาและความล่าช้า"
 )
 result(
-    "Compact Stock Embed has one-card fields and 45s delay",
-    stock_embed.get("color") == 0x57F287
+    "Compact Common Stock Embed has rarity border and 45s delay",
+    stock_embed.get("color") == bot.RARITY_UI_STYLES["common"]["color"]
+    and "COMMON" in stock_embed.get("title", "")
     and "เข้า Stock" in stock_embed.get("title", "")
     and "📌 สถานะ" in field_names
     and "🔄 รอบร้าน" in field_names
@@ -390,9 +396,34 @@ magic_ui_event = {
 }
 magic_embed = bot.build_event_embed(magic_ui_event, attempts=1)
 result(
-    "Magic Mail uses distinct purple Embed",
-    magic_embed.get("color") == 0x9B59B6,
+    "Legendary Magic Mail uses Legendary gold border",
+    magic_embed.get("color") == bot.RARITY_UI_STYLES["legendary"]["color"]
+    and "LEGENDARY" in magic_embed.get("title", ""),
     str(magic_embed.get("color")),
+)
+
+super_ui_event = {
+    "kind": "stock",
+    "target_key": "super syrup sprinkler",
+    "label": "Super Syrup Sprinkler",
+    "emoji": "💦",
+    "items": [
+        {
+            "name": "Super Syrup Sprinkler",
+            "qty": 1,
+            "rarity": "SUPER",
+            "type": "gear",
+        }
+    ],
+    "reason": "รอบร้านใหม่",
+}
+super_embed = bot.build_event_embed(super_ui_event, attempts=1)
+result(
+    "Super Stock uses rainbow badge and Super border",
+    super_embed.get("color") == bot.RARITY_UI_STYLES["super"]["color"]
+    and "🌈 SUPER" in super_embed.get("title", "")
+    and "🟥🟧🟨🟩🟦🟪" in super_embed.get("description", ""),
+    str(super_embed),
 )
 
 sell_ui_event = {
@@ -405,10 +436,48 @@ sell_ui_event = {
 }
 sell_embed = bot.build_event_embed(sell_ui_event, attempts=3)
 result(
-    "Sell Embed uses gold compact title",
-    sell_embed.get("color") == 0xFEE75C
-    and "SELL ×2" in sell_embed.get("title", ""),
+    "SELL ×2 uses dedicated neon teal border",
+    sell_embed.get("color") == bot.SELL_MULTIPLIER_UI_STYLES[2]["color"]
+    and "SELL BOOST ×2" in sell_embed.get("title", ""),
     str(sell_embed),
+)
+
+sell_x4_event = {**sell_ui_event, "multi": 4.0, "reason": "Sell เปลี่ยนเป็น ×4"}
+sell_x4_embed = bot.build_event_embed(sell_x4_event, attempts=3)
+result(
+    "SELL ×4 uses dedicated neon orange border",
+    sell_x4_embed.get("color") == bot.SELL_MULTIPLIER_UI_STYLES[4]["color"]
+    and "SELL BOOST ×4" in sell_x4_embed.get("title", ""),
+    str(sell_x4_embed),
+)
+
+rarity_colors = {
+    style["color"] for style in bot.RARITY_UI_STYLES.values()
+}
+sell_colors = {
+    style["color"] for style in bot.SELL_MULTIPLIER_UI_STYLES.values()
+}
+result(
+    "Sell border palette is separate from every Stock rarity color",
+    rarity_colors.isdisjoint(sell_colors),
+    f"rarity={rarity_colors} sell={sell_colors}",
+)
+
+catalog_ok = bot.KNOWN_TARGET_RARITIES == {
+    "atlantic giant pumpkin": "LEGENDARY",
+    "super syrup watering can": "SUPER",
+    "super syrup sprinkler": "SUPER",
+    "amber cranberry": "SUPER",
+    "maple mushroom": "EPIC",
+}
+preview_amber = next(
+    event for event in bot.build_test_preview_events()
+    if event.get("target_key") == "amber cranberry"
+)
+result(
+    "GAG2 target rarity catalog and Amber preview are current",
+    catalog_ok and bot.event_rarity(preview_amber) == "super",
+    str(bot.KNOWN_TARGET_RARITIES),
 )
 
 # Real alert path: exactly one request and no repeated plain content.

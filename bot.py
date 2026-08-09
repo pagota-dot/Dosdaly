@@ -81,10 +81,55 @@ ALERT_LOGIC_VERSION = "6.4.4-image-alert-v1"
 # Presentation/observability release only.  ALERT_LOGIC_VERSION intentionally
 # stays unchanged so installing this file cannot trigger a logic migration or
 # replace the existing stock baseline.
-BOT_DISPLAY_VERSION = "6.5.7"
+BOT_DISPLAY_VERSION = "6.5.8"
 ROUND_LEDGER_VERSION = 1
 ROUND_LEDGER_RETENTION_DAYS = 14
 ROUND_LEDGER_MAX_ENTRIES = 300
+
+# Discord supports one solid accent color per Embed.  Stock/Magic alerts use
+# the rarity reported by GAG2, while Sell uses a deliberately separate palette
+# so the multiplier is recognizable from the border alone.
+RARITY_UI_STYLES = {
+    "common": {"color": 0xA0A0A0, "badge": "⚪ COMMON", "bar": ""},
+    "uncommon": {"color": 0x3BA55D, "badge": "🟢 UNCOMMON", "bar": ""},
+    "rare": {"color": 0x3498DB, "badge": "🔵 RARE", "bar": ""},
+    "epic": {"color": 0x9B59B6, "badge": "🟣 EPIC", "bar": ""},
+    "legendary": {"color": 0xF1C40F, "badge": "🟡 LEGENDARY", "bar": ""},
+    "mythic": {"color": 0xE74C3C, "badge": "🔴 MYTHIC", "bar": ""},
+    "super": {
+        "color": 0xFF4FD8,
+        "badge": "🌈 SUPER",
+        "bar": "🟥🟧🟨🟩🟦🟪",
+    },
+}
+UNKNOWN_RARITY_UI_STYLE = {
+    "color": 0x57F287,
+    "badge": "📦 STOCK",
+    "bar": "",
+}
+
+SELL_MULTIPLIER_UI_STYLES = {
+    2: {
+        "color": 0x00F5D4,
+        "badge": "📈 SELL BOOST ×2",
+    },
+    4: {
+        "color": 0xFF6B00,
+        "badge": "🚀 SELL BOOST ×4",
+    },
+}
+
+# GAG2/Grow A Garden 2 catalog fallback.  Live Stock/Magic events still
+# prefer the rarity parsed from the current GAG2 page.  Sell rows do not carry
+# rarity, so their item grade is available for labels/audit only; the border
+# always follows ×2/×4 above.
+KNOWN_TARGET_RARITIES = {
+    "atlantic giant pumpkin": "LEGENDARY",
+    "super syrup watering can": "SUPER",
+    "super syrup sprinkler": "SUPER",
+    "amber cranberry": "SUPER",
+    "maple mushroom": "EPIC",
+}
 
 # v6.5.0 Daily Statistics
 THAILAND_TZ = timezone(timedelta(hours=7))
@@ -2399,6 +2444,45 @@ def is_magic_mail_event(event):
     )
 
 
+def event_rarity(event):
+    """Resolve rarity for UI only; never participates in alert selection."""
+    for item in event.get("items") or []:
+        rarity = norm(item.get("rarity", "")).lower()
+        if rarity in RARITY_UI_STYLES:
+            return rarity
+
+        inferred = norm(rarity_from_item(item) or "").lower()
+        if inferred in RARITY_UI_STYLES:
+            return inferred
+
+    target_key = key(event.get("target_key", ""))
+    label_key = key(event.get("label", ""))
+    known = (
+        KNOWN_TARGET_RARITIES.get(target_key)
+        or KNOWN_TARGET_RARITIES.get(label_key)
+    )
+    known = norm(known).lower()
+    return known if known in RARITY_UI_STYLES else "unknown"
+
+
+def rarity_ui_style(event):
+    return RARITY_UI_STYLES.get(
+        event_rarity(event),
+        UNKNOWN_RARITY_UI_STYLE,
+    )
+
+
+def sell_multiplier_ui_style(event):
+    try:
+        multi = int(float(event.get("multi", 0) or 0))
+    except (TypeError, ValueError):
+        multi = 0
+    return SELL_MULTIPLIER_UI_STYLES.get(
+        multi,
+        {"color": 0x00F5D4, "badge": f"📈 SELL BOOST ×{multi or '?'}"},
+    )
+
+
 def event_shop(event):
     """Presentation-only shop label; never used to decide an alert."""
     if event.get("kind") == "sell":
@@ -2619,18 +2703,23 @@ def build_event_embed(event, attempts, daily_stats=None, context=None):
     context.setdefault("detected_epoch", time.time())
     context.setdefault("alert_sent_epoch", time.time())
 
+    rarity_bar = ""
     if event.get("kind") == "sell":
+        ui_style = sell_multiplier_ui_style(event)
         title = (
-            f"{event.get('emoji', '💰')} {event.get('label', 'Sell')} "
-            f"— SELL ×{float(event.get('multi', 0)):.0f}"
+            f"{ui_style['badge']} — "
+            f"{event.get('emoji', '💰')} {event.get('label', 'Sell')}"
         )
-        color = 0xFEE75C
-    elif is_magic_mail_event(event):
-        title = f"{event.get('emoji', '✨')} {event.get('label', 'Magic Mail')} — เข้า Stock"
-        color = 0x9B59B6
+        color = ui_style["color"]
     else:
-        title = f"{event.get('emoji', '📦')} {event.get('label', 'Stock')} — เข้า Stock"
-        color = 0x57F287
+        ui_style = rarity_ui_style(event)
+        title = (
+            f"{ui_style['badge']} • "
+            f"{event.get('emoji', '📦')} {event.get('label', 'Stock')} "
+            "— เข้า Stock"
+        )
+        color = ui_style["color"]
+        rarity_bar = ui_style.get("bar") or ""
 
     fields = [
         {
@@ -2670,9 +2759,16 @@ def build_event_embed(event, attempts, daily_stats=None, context=None):
         ]
     )
 
+    description_lines = []
+    if rarity_bar:
+        description_lines.append(rarity_bar)
+    description_lines.append(
+        f"↳ {event.get('reason', 'เข้าเงื่อนไขแจ้งเตือน')}"
+    )
+
     embed = {
         "title": title[:250],
-        "description": f"↳ {event.get('reason', 'เข้าเงื่อนไขแจ้งเตือน')}"[:4000],
+        "description": "\n".join(description_lines)[:4000],
         "color": color,
         "fields": fields,
         "footer": {
@@ -4023,7 +4119,7 @@ def build_test_preview_events():
         "atlantic giant pumpkin": "LEGENDARY",
         "super syrup watering can": "SUPER",
         "super syrup sprinkler": "SUPER",
-        "amber cranberry": "LEGENDARY",
+        "amber cranberry": "SUPER",
     }
 
     for target_key, meta in EXACT_STOCK_TARGETS.items():
