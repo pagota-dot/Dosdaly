@@ -78,6 +78,14 @@ HEALTH_ALERT_COOLDOWN_HOURS = 1
 NO_TIMER_WARNING_AFTER_CLOUDFLARE_ROUNDS = 3
 ALERT_LOGIC_VERSION = "6.4.4-image-alert-v1"
 
+# Presentation/observability release only.  ALERT_LOGIC_VERSION intentionally
+# stays unchanged so installing this file cannot trigger a logic migration or
+# replace the existing stock baseline.
+BOT_DISPLAY_VERSION = "6.5.7"
+ROUND_LEDGER_VERSION = 1
+ROUND_LEDGER_RETENTION_DAYS = 14
+ROUND_LEDGER_MAX_ENTRIES = 300
+
 # v6.5.0 Daily Statistics
 THAILAND_TZ = timezone(timedelta(hours=7))
 DAILY_STATS_RETENTION_DAYS = 4
@@ -2206,17 +2214,30 @@ def send_discord(content="", embeds=None):
     if not payload.get("content") and not payload.get("embeds"):
         raise RuntimeError("send_discord called with no content and no embeds")
 
+    request_epoch = time.time()
+    request_started = time.monotonic()
     r = requests.post(
         WEBHOOK,
         json=payload,
-        headers={"User-Agent": "GAG2-Reliability-Discord-Bot/6.5.6"},
+        headers={"User-Agent": f"GAG2-Reliability-Discord-Bot/{BOT_DISPLAY_VERSION}"},
         timeout=30,
     )
+    completed_epoch = time.time()
+    delivery_ms = max(0, int(round((time.monotonic() - request_started) * 1000)))
 
     if r.status_code not in (200, 204):
         raise RuntimeError(
             f"Discord webhook failed: HTTP {r.status_code} {r.text[:200]}"
         )
+
+    # Existing callers can ignore this.  Alert delivery uses it only for the
+    # audit ledger; it never participates in alert eligibility.
+    return {
+        "request_epoch": request_epoch,
+        "completed_epoch": completed_epoch,
+        "delivery_ms": delivery_ms,
+        "status_code": r.status_code,
+    }
 
 
 
@@ -2371,43 +2392,640 @@ def format_single_event_message(event, attempts, daily_stats=None):
     return "\n".join(lines)
 
 
-def build_event_embed(event, attempts, daily_stats=None):
-    image_url = event.get("image_url")
-    if not _is_reasonable_image_url(image_url):
+def is_magic_mail_event(event):
+    return (
+        event.get("kind") == "stock"
+        and "magic mail" in key(event.get("label", ""))
+    )
+
+
+def event_shop(event):
+    """Presentation-only shop label; never used to decide an alert."""
+    if event.get("kind") == "sell":
+        return "sell"
+
+    items = event.get("items") or []
+    if items:
+        shop = norm(items[0].get("type", "")).lower()
+        if shop in SHOP_CYCLE_NAMES:
+            return shop
+
+    return stock_group_for_target(
+        event.get("target_key"),
+        {"items": items},
+    )
+
+
+def _safe_epoch(value, fallback=None):
+    try:
+        epoch = float(value)
+    except (TypeError, ValueError):
+        return fallback
+    return epoch if epoch > 0 else fallback
+
+
+def _trusted_cycle_reset_epoch(cycle):
+    """
+    Convert the existing timer key (estimated NEXT reset) to the start of the
+    current five-minute shop round.  This is display/audit data only.
+    """
+    next_reset_epoch = _stock_cycle_guard_timer_epoch(cycle)
+    if next_reset_epoch is None:
+        return None
+    return next_reset_epoch - GAG2_FREQUENT_CYCLE_SECONDS
+
+
+def _round_id_for_event(event, shop, cycle, detected_epoch, current_shop_fp):
+    when = datetime.fromtimestamp(
+        detected_epoch,
+        THAILAND_TZ,
+    ).strftime("%Y%m%d-%H%M")
+
+    if event.get("kind") == "sell":
+        rotation = str((current_shop_fp or {}).get("sell") or "")[:8]
+        rotation = rotation or when
+        multi = int(float(event.get("multi", 0) or 0))
+        return f"SELL-{rotation}-X{multi}"
+
+    cycle_id = int((cycle or {}).get("id", 0) or 0)
+    cycle_token = f"C{cycle_id}" if cycle_id else when
+    return f"STOCK-{str(shop or 'UNKNOWN').upper()}-{cycle_token}"
+
+
+def build_event_observability_context(
+    event,
+    current_shop_cycles=None,
+    source_sync=None,
+    current_shop_fp=None,
+):
+    """
+    Build display/audit metadata after the existing alert logic has returned
+    its final event.  None of these values feed back into alert selection.
+    """
+    source_sync = source_sync or {}
+    current_shop_cycles = current_shop_cycles or {}
+    current_shop_fp = current_shop_fp or {}
+
+    now_epoch = time.time()
+    detected_epoch = _safe_epoch(
+        source_sync.get("captured_at_epoch"),
+        now_epoch,
+    )
+    shop = event_shop(event)
+    cycle = copy.deepcopy(current_shop_cycles.get(shop) or {})
+    reset_epoch = _trusted_cycle_reset_epoch(cycle)
+
+    return {
+        "shop": shop,
+        "cycle_id": cycle.get("id"),
+        "cycle_key": cycle.get("key"),
+        "cycle_source": cycle.get("source"),
+        "cycle_reset_epoch": reset_epoch,
+        "detected_epoch": detected_epoch,
+        "round_id": _round_id_for_event(
+            event,
+            shop,
+            cycle,
+            detected_epoch,
+            current_shop_fp,
+        ),
+        "snapshot_samples": int(source_sync.get("samples", 0) or 0),
+        "snapshot_stable": bool(source_sync.get("multi_snapshot_stable")),
+        "cycle_confidence": source_sync.get("cycle_confidence"),
+        "timer_wait_seconds": int(
+            source_sync.get("total_timer_wait_seconds", 0) or 0
+        ),
+    }
+
+
+def build_event_observability_contexts(
+    events,
+    current_shop_cycles=None,
+    source_sync=None,
+    current_shop_fp=None,
+):
+    """Best-effort wrapper: telemetry failure cannot block a real alert."""
+    contexts = []
+    for event in events or []:
+        try:
+            context = build_event_observability_context(
+                event,
+                current_shop_cycles=current_shop_cycles,
+                source_sync=source_sync,
+                current_shop_fp=current_shop_fp,
+            )
+        except Exception as exc:
+            print(
+                "Observability context skipped: "
+                f"{type(exc).__name__}: {str(exc)[:160]}"
+            )
+            context = {}
+        contexts.append(context)
+    return contexts
+
+
+def _format_thai_clock(epoch):
+    epoch = _safe_epoch(epoch)
+    if epoch is None:
+        return "—"
+    return datetime.fromtimestamp(epoch, THAILAND_TZ).strftime("%H:%M:%S")
+
+
+def _compact_counter_text(event, daily_stats):
+    counter = event_daily_counter(event, daily_stats)
+    if not counter:
         return None
 
-    if event["kind"] == "stock":
-        title = f"{event['emoji']} {event['label']} เข้า Stock!"
-        desc_lines = []
-        for item in event.get("items", []):
-            rarity = f" · {item.get('rarity')}" if item.get("rarity") else ""
-            desc_lines.append(
-                f"• {item.get('name', event['label'])} ×{item.get('qty', 0)}{rarity}"
-            )
-        color = 0x57F287
-    else:
-        title = f"{event['emoji']} {event['label']} Sell ×{float(event.get('multi', 0)):.0f}"
-        desc_lines = [f"• เข้าเงื่อนไข Sell ×{float(event.get('multi', 0)):.0f}"]
-        color = 0xFEE75C
+    if counter["kind"] == "sell":
+        multi = int(float(event.get("multi", 0)))
+        return (
+            f"ครั้งที่ **{counter['current']}** ของ ×{multi} • "
+            f"×2: **{counter['x2']}** • ×4: **{counter['x4']}** • "
+            f"รวม: **{counter['total']}**"
+        )
 
-    desc_lines.append(f"↳ {event['reason']}")
-    desc_lines.extend(format_event_counter_lines(event, daily_stats))
+    if counter["kind"] == "magic":
+        rarity = (counter.get("rarity") or "unknown").title()
+        return f"{rarity} Magic Mail • ครั้งที่ **{counter['current']}**"
+
+    return f"พบเป้าหมายนี้ • ครั้งที่ **{counter['current']}**"
+
+
+def _compact_status_text(event):
+    if event.get("kind") == "sell":
+        return f"Sell **×{float(event.get('multi', 0)):.0f}**"
+
+    parts = []
+    for item in event.get("items", []):
+        rarity = f" • {item.get('rarity')}" if item.get("rarity") else ""
+        parts.append(
+            f"{item.get('name', event.get('label', 'รายการ'))} "
+            f"**×{int(item.get('qty', 0) or 0)}**{rarity}"
+        )
+    return "\n".join(parts) or "อยู่ใน Stock"
+
+
+def _compact_round_text(context):
+    shop_labels = {
+        "seed": "Seed Shop",
+        "gear": "Gear Shop",
+        "crate": "Crate Shop",
+        "sell": "Sell Rotation",
+    }
+    shop = context.get("shop")
+    text = shop_labels.get(shop, str(shop or "Unknown Shop").title())
+    cycle_id = context.get("cycle_id")
+    if cycle_id:
+        text += f" • Cycle **#{cycle_id}**"
+    if context.get("round_id"):
+        text += f"\n`{context['round_id']}`"
+    return text
+
+
+def _compact_timing_text(context):
+    detected_epoch = _safe_epoch(context.get("detected_epoch"))
+    sent_epoch = _safe_epoch(context.get("alert_sent_epoch"), time.time())
+    reset_epoch = _safe_epoch(context.get("cycle_reset_epoch"))
+
+    parts = [
+        f"พบ **{_format_thai_clock(detected_epoch)}**",
+        f"ส่ง **{_format_thai_clock(sent_epoch)}**",
+    ]
+    if reset_epoch is not None:
+        delay = max(0, int(round(sent_epoch - reset_epoch)))
+        parts.insert(0, f"รีเซ็ต ~**{_format_thai_clock(reset_epoch)}**")
+        parts.append(f"หลังรีเซ็ต **{delay}s**")
+    return " • ".join(parts)
+
+
+def _compact_evidence_text(context):
+    parts = []
+    samples = int(context.get("snapshot_samples", 0) or 0)
+    if samples:
+        stable = "Stable" if context.get("snapshot_stable") else "Unstable"
+        parts.append(f"{samples} snapshots • {stable}")
+    if context.get("cycle_confidence"):
+        parts.append(str(context["cycle_confidence"]))
+    wait_seconds = int(context.get("timer_wait_seconds", 0) or 0)
+    if wait_seconds:
+        parts.append(f"Timer wait {wait_seconds}s")
+    return " • ".join(parts) or "ใช้ผลยืนยันจากระบบเดิม"
+
+
+def build_event_embed(event, attempts, daily_stats=None, context=None):
+    """Compact single-card UI.  Event eligibility is already final here."""
+    context = copy.deepcopy(context or {})
+    context.setdefault("shop", event_shop(event))
+    context.setdefault("detected_epoch", time.time())
+    context.setdefault("alert_sent_epoch", time.time())
+
+    if event.get("kind") == "sell":
+        title = (
+            f"{event.get('emoji', '💰')} {event.get('label', 'Sell')} "
+            f"— SELL ×{float(event.get('multi', 0)):.0f}"
+        )
+        color = 0xFEE75C
+    elif is_magic_mail_event(event):
+        title = f"{event.get('emoji', '✨')} {event.get('label', 'Magic Mail')} — เข้า Stock"
+        color = 0x9B59B6
+    else:
+        title = f"{event.get('emoji', '📦')} {event.get('label', 'Stock')} — เข้า Stock"
+        color = 0x57F287
+
+    fields = [
+        {
+            "name": "📌 สถานะ",
+            "value": _compact_status_text(event)[:1024],
+            "inline": False,
+        },
+    ]
+
+    counter_text = _compact_counter_text(event, daily_stats)
+    if counter_text:
+        fields.append(
+            {
+                "name": "📊 สถิติวันนี้",
+                "value": counter_text[:1024],
+                "inline": False,
+            }
+        )
+
+    fields.extend(
+        [
+            {
+                "name": "🔄 รอบร้าน",
+                "value": _compact_round_text(context)[:1024],
+                "inline": False,
+            },
+            {
+                "name": "⏱️ เวลาและความล่าช้า",
+                "value": _compact_timing_text(context)[:1024],
+                "inline": False,
+            },
+            {
+                "name": "🧪 หลักฐานยืนยัน",
+                "value": _compact_evidence_text(context)[:1024],
+                "inline": False,
+            },
+        ]
+    )
 
     embed = {
         "title": title[:250],
-        "description": "\n".join(desc_lines)[:4000],
+        "description": f"↳ {event.get('reason', 'เข้าเงื่อนไขแจ้งเตือน')}"[:4000],
         "color": color,
-        "thumbnail": {"url": image_url},
-        "footer": {"text": f"v6.5.6 Live Alert Counter • attempts {attempts}"},
+        "fields": fields,
+        "footer": {
+            "text": (
+                f"Stock Bot v{BOT_DISPLAY_VERSION} • "
+                f"อ่านสำเร็จครั้งที่ {attempts} • FINAL decision"
+            )[:2048]
+        },
+        "timestamp": datetime.fromtimestamp(
+            _safe_epoch(context.get("alert_sent_epoch"), time.time()),
+            timezone.utc,
+        ).isoformat(),
     }
+
+    image_url = event.get("image_url")
+    if _is_reasonable_image_url(image_url):
+        embed["thumbnail"] = {"url": image_url}
+
     return embed
 
 
-def send_event_alerts(events, attempts, daily_stats=None):
-    for event in events:
-        content = format_single_event_message(event, attempts, daily_stats)
-        embed = build_event_embed(event, attempts, daily_stats)
-        send_discord(content, [embed] if embed else None)
+def send_event_alerts(
+    events,
+    attempts,
+    daily_stats=None,
+    alert_contexts=None,
+):
+    """
+    Send exactly one Discord request per event.
+
+    Compact Embed construction is best-effort.  If formatting fails before a
+    network request is made, fall back to the proven legacy plain message.
+    A network failure is still raised (no blind second send / duplicate risk).
+    """
+    deliveries = []
+    alert_contexts = alert_contexts or []
+
+    for index, event in enumerate(events or []):
+        context = copy.deepcopy(
+            alert_contexts[index]
+            if index < len(alert_contexts)
+            else {}
+        )
+        context.setdefault("detected_epoch", time.time())
+        context["alert_sent_epoch"] = time.time()
+
+        try:
+            embed = build_event_embed(
+                event,
+                attempts,
+                daily_stats,
+                context=context,
+            )
+        except Exception as exc:
+            print(
+                "Compact Embed failed; using legacy plain fallback: "
+                f"{type(exc).__name__}: {str(exc)[:160]}"
+            )
+            embed = None
+
+        if embed:
+            discord_result = send_discord("", [embed])
+            ui_mode = "compact-embed"
+        else:
+            legacy_content = format_single_event_message(
+                event,
+                attempts,
+                daily_stats,
+            )
+            discord_result = send_discord(legacy_content)
+            ui_mode = "legacy-plain-fallback"
+
+        deliveries.append(
+            {
+                "event": copy.deepcopy(event),
+                "context": context,
+                "discord": discord_result or {},
+                "ui_mode": ui_mode,
+            }
+        )
+
+    return deliveries
+
+
+def empty_round_ledger():
+    return {
+        "version": ROUND_LEDGER_VERSION,
+        "retention_days": ROUND_LEDGER_RETENTION_DAYS,
+        "max_entries": ROUND_LEDGER_MAX_ENTRIES,
+        "entries": [],
+    }
+
+
+def prune_round_ledger(ledger, now_epoch=None):
+    entries = ledger.get("entries")
+    if not isinstance(entries, list):
+        ledger["entries"] = []
+        return ledger
+
+    now_epoch = _safe_epoch(now_epoch, time.time())
+    cutoff = now_epoch - (ROUND_LEDGER_RETENTION_DAYS * 86400)
+    retained = []
+
+    for entry in entries:
+        if not isinstance(entry, dict):
+            continue
+        recorded_epoch = _safe_epoch(entry.get("recorded_epoch"))
+        if recorded_epoch is None or recorded_epoch >= cutoff:
+            retained.append(entry)
+
+    ledger["entries"] = retained[-ROUND_LEDGER_MAX_ENTRIES:]
+    ledger["version"] = ROUND_LEDGER_VERSION
+    ledger["retention_days"] = ROUND_LEDGER_RETENTION_DAYS
+    ledger["max_entries"] = ROUND_LEDGER_MAX_ENTRIES
+    return ledger
+
+
+def normalize_round_ledger(old_state):
+    raw = copy.deepcopy(
+        old_state.get("round_ledger", {})
+        if isinstance(old_state, dict)
+        else {}
+    )
+    if not isinstance(raw, dict):
+        raw = {}
+
+    ledger = empty_round_ledger()
+    if isinstance(raw.get("entries"), list):
+        ledger["entries"] = [
+            entry for entry in raw["entries"]
+            if isinstance(entry, dict)
+        ]
+    return prune_round_ledger(ledger)
+
+
+def append_round_ledger_entry(ledger, entry):
+    if not isinstance(ledger, dict) or not isinstance(entry, dict):
+        return False
+
+    entries = ledger.setdefault("entries", [])
+    if not isinstance(entries, list):
+        entries = []
+        ledger["entries"] = entries
+
+    entry = copy.deepcopy(entry)
+    entry_id = entry.get("entry_id")
+    if entry_id and any(x.get("entry_id") == entry_id for x in entries):
+        return False
+
+    entries.append(entry)
+    prune_round_ledger(ledger)
+    return True
+
+
+def _ledger_items(event):
+    return [
+        {
+            "name": item.get("name"),
+            "qty": int(item.get("qty", 0) or 0),
+            "rarity": item.get("rarity"),
+            "type": item.get("type"),
+        }
+        for item in (event.get("items") or [])
+        if isinstance(item, dict)
+    ]
+
+
+def record_alert_deliveries_safe(state, deliveries):
+    """
+    Append successful sends to the audit ledger.  Errors are deliberately
+    swallowed because observability must never turn a successful alert into a
+    failed job or modify alert selection.
+    """
+    try:
+        ledger = normalize_round_ledger(state)
+        added = 0
+
+        for delivery in deliveries or []:
+            event = delivery.get("event") or {}
+            context = delivery.get("context") or {}
+            discord = delivery.get("discord") or {}
+
+            detected_epoch = _safe_epoch(context.get("detected_epoch"))
+            sent_epoch = _safe_epoch(context.get("alert_sent_epoch"))
+            completed_epoch = _safe_epoch(
+                discord.get("completed_epoch"),
+                sent_epoch,
+            )
+            reset_epoch = _safe_epoch(context.get("cycle_reset_epoch"))
+
+            event_signature = {
+                "kind": event.get("kind"),
+                "target_key": event.get("target_key"),
+                "items": _ledger_items(event),
+                "multi": event.get("multi"),
+                "reason": event.get("reason"),
+            }
+            entry_id = "ALERT-" + stable_hash(
+                {
+                    "round_id": context.get("round_id"),
+                    "event": event_signature,
+                    "completed_epoch": completed_epoch,
+                }
+            )[:16]
+
+            entry = {
+                "entry_id": entry_id,
+                "round_id": context.get("round_id"),
+                "status": "alert_sent",
+                "kind": event.get("kind"),
+                "target_key": event.get("target_key"),
+                "label": event.get("label"),
+                "shop": context.get("shop"),
+                "cycle_id": context.get("cycle_id"),
+                "cycle_key": context.get("cycle_key"),
+                "cycle_source": context.get("cycle_source"),
+                "reason": event.get("reason"),
+                "multi": event.get("multi"),
+                "items": _ledger_items(event),
+                "recorded_epoch": completed_epoch or time.time(),
+                "recorded_at": datetime.fromtimestamp(
+                    completed_epoch or time.time(),
+                    timezone.utc,
+                ).isoformat(),
+                "timeline": {
+                    "cycle_reset_epoch": reset_epoch,
+                    "detected_epoch": detected_epoch,
+                    "alert_sent_epoch": sent_epoch,
+                    "discord_completed_epoch": completed_epoch,
+                    "detected_to_send_ms": (
+                        max(0, int(round((sent_epoch - detected_epoch) * 1000)))
+                        if detected_epoch is not None and sent_epoch is not None
+                        else None
+                    ),
+                    "cycle_to_send_seconds": (
+                        max(0, int(round(sent_epoch - reset_epoch)))
+                        if reset_epoch is not None and sent_epoch is not None
+                        else None
+                    ),
+                    "discord_delivery_ms": int(
+                        discord.get("delivery_ms", 0) or 0
+                    ),
+                },
+                "evidence": {
+                    "snapshot_samples": context.get("snapshot_samples"),
+                    "snapshot_stable": context.get("snapshot_stable"),
+                    "cycle_confidence": context.get("cycle_confidence"),
+                    "timer_wait_seconds": context.get("timer_wait_seconds"),
+                },
+                "ui_mode": delivery.get("ui_mode"),
+            }
+            if append_round_ledger_entry(ledger, entry):
+                added += 1
+
+        state["round_ledger"] = ledger
+        if added:
+            print(f"Round Ledger: recorded {added} sent alert(s)")
+        return added
+    except Exception as exc:
+        print(
+            "Round Ledger write skipped (alert already sent): "
+            f"{type(exc).__name__}: {str(exc)[:160]}"
+        )
+        return 0
+
+
+def record_guard_diagnostics_safe(
+    state,
+    diagnostics,
+    current_shop_cycles=None,
+    source_sync=None,
+    current_shop_fp=None,
+):
+    """Record only final duplicate suppressions; never alter guard results."""
+    try:
+        ledger = normalize_round_ledger(state)
+        source_sync = source_sync or {}
+        current_shop_cycles = current_shop_cycles or {}
+        detected_epoch = _safe_epoch(
+            source_sync.get("captured_at_epoch"),
+            time.time(),
+        )
+        added = 0
+
+        for info in diagnostics or []:
+            if info.get("action") != "suppress":
+                continue
+
+            target_key = info.get("target")
+            meta = EXACT_STOCK_TARGETS.get(target_key) or {}
+            shop = info.get("shop") or "unknown"
+            cycle = current_shop_cycles.get(shop) or {}
+            event = {
+                "kind": "stock",
+                "target_key": target_key,
+                "label": meta.get("label", target_key),
+                "items": [{"type": shop}],
+            }
+            round_id = _round_id_for_event(
+                event,
+                shop,
+                cycle,
+                detected_epoch,
+                current_shop_fp or {},
+            )
+            entry_id = "SUPPRESS-" + stable_hash(
+                {
+                    "round_id": round_id,
+                    "target_key": target_key,
+                    "reason": info.get("reason"),
+                    "delta": info.get("cycle_delta_seconds"),
+                }
+            )[:16]
+
+            entry = {
+                "entry_id": entry_id,
+                "round_id": round_id,
+                "status": "suppressed_duplicate",
+                "kind": "stock",
+                "target_key": target_key,
+                "label": meta.get("label", target_key),
+                "shop": shop,
+                "cycle_id": cycle.get("id"),
+                "cycle_key": cycle.get("key"),
+                "cycle_source": cycle.get("source"),
+                "reason": info.get("reason"),
+                "cycle_delta_seconds": info.get("cycle_delta_seconds"),
+                "recorded_epoch": detected_epoch,
+                "recorded_at": datetime.fromtimestamp(
+                    detected_epoch,
+                    timezone.utc,
+                ).isoformat(),
+                "evidence": {
+                    "snapshot_samples": int(source_sync.get("samples", 0) or 0),
+                    "snapshot_stable": bool(
+                        source_sync.get("multi_snapshot_stable")
+                    ),
+                    "cycle_confidence": source_sync.get("cycle_confidence"),
+                },
+            }
+            if append_round_ledger_entry(ledger, entry):
+                added += 1
+
+        state["round_ledger"] = ledger
+        if added:
+            print(f"Round Ledger: recorded {added} duplicate suppression(s)")
+        return added
+    except Exception as exc:
+        print(
+            "Round Ledger guard record skipped: "
+            f"{type(exc).__name__}: {str(exc)[:160]}"
+        )
+        return 0
 
 
 
@@ -2459,7 +3077,7 @@ def find_sell_value(sell, target_key):
 def format_health_message(stock, sell, snapshot, attempts, recovered=False, self_test=None, source_sync=None, shop_cycles=None):
     lines = [
         "✅ **GAG2 Bot Health Check**",
-        "🛡️ Reliability v6.5.6 Test Preview + Live Alert Counter + Quiet NO_TIMER + Daily Stats + Thumbnail + Per-Shop Cycle + Smart State + Block Detector + Timer-Sync",
+        f"🛡️ Reliability v{BOT_DISPLAY_VERSION} + Compact Embed + Round Ledger + Latency + Quiet NO_TIMER + Daily Stats + Per-Shop Cycle + Smart State + Block Detector + Timer-Sync",
         f"• Stock parser: **OK** ({len(stock)} รายการ)",
         f"• Sell parser: **OK** ({len(sell)} รายการ)",
         f"• อ่านสำเร็จในครั้งที่: **{attempts}/{MAX_READ_ATTEMPTS}**",
@@ -2710,7 +3328,7 @@ def handle_read_failure(old_state, result):
         )
 
         new_state["health"] = health
-        new_state.setdefault("version", "6.5.6")
+        new_state.setdefault("version", BOT_DISPLAY_VERSION)
         save_state(new_state)
 
         if should_warn_now:
@@ -2763,7 +3381,7 @@ def handle_read_failure(old_state, result):
         )
 
         new_state["health"] = health
-        new_state.setdefault("version", "6.5.6")
+        new_state.setdefault("version", BOT_DISPLAY_VERSION)
         save_state(new_state)
         print("Manual NO_TIMER Health message sent; automatic streak unchanged")
         return
@@ -2875,7 +3493,7 @@ def handle_read_failure(old_state, result):
     )
 
     new_state["health"] = health
-    new_state.setdefault("version", "6.5.6")
+    new_state.setdefault("version", BOT_DISPLAY_VERSION)
     save_state(new_state)
 
 
@@ -3320,6 +3938,9 @@ def semantic_state_view(state):
         "shop_cycles": state.get("shop_cycles", {}),
         "targets": targets,
         "daily_stats": state.get("daily_stats", {}),
+        # Audit-only state.  Including it here persists new ledger entries;
+        # it is never read by compare_target_events or the cycle guard.
+        "round_ledger": state.get("round_ledger", {}),
         "health": {
             "status": health.get("status"),
             "last_error_alert_at": health.get("last_error_alert_at"),
@@ -3493,7 +4114,7 @@ def build_test_preview_embed(event, base_daily_stats):
         + embed.get("description", "")
     )[:4000]
     embed["footer"] = {
-        "text": "v6.5.6 Test Preview · READ-ONLY"
+        "text": f"v{BOT_DISPLAY_VERSION} Test Preview · READ-ONLY"
     }
     return embed
 
@@ -3596,13 +4217,14 @@ def main():
     old_health = old_state.get("health", {}) if isinstance(old_state, dict) else {}
 
     new_state = {
-        "version": "6.5.6",
+        "version": BOT_DISPLAY_VERSION,
         "alert_logic_version": ALERT_LOGIC_VERSION,
         "updated_at": old_state.get("updated_at"),
         "shop_fingerprints": current_shop_fp,
         "shop_cycles": persistent_cycle_state(current_shop_cycles),
         "targets": current_snapshot,
         "daily_stats": normalize_daily_stats(old_state),
+        "round_ledger": normalize_round_ledger(old_state),
         "health": {
             "status": "ok",
             # Preserve error metadata until a meaningful state write.
@@ -3619,7 +4241,7 @@ def main():
 
     print(f"Parsed stock: {len(stock)} | sell: {len(sell)}")
     print(f"Read attempts used: {attempts}")
-    print(f"Has v6.5.6 baseline: {has_baseline}")
+    print(f"Has existing baseline: {has_baseline}")
     print(f"Alert rules self-test: PASS ({self_test['passed_classes']}/{self_test['total_classes']})")
     print(f"Current wanted conditions: {len(current_events)}")
     print(f"Alert logic migration required: {logic_migration}")
@@ -3683,20 +4305,45 @@ def main():
         print("Manual Image Self-Test skipped (real alert thumbnails remain enabled)")
 
         if current_events:
-            send_event_alerts(current_events, attempts)
+            alert_contexts = build_event_observability_contexts(
+                current_events,
+                current_shop_cycles=current_shop_cycles,
+                source_sync=result.get("source_sync") or {},
+                current_shop_fp=current_shop_fp,
+            )
+            send_event_alerts(
+                current_events,
+                attempts,
+                alert_contexts=alert_contexts,
+            )
             print(f"Manual run sent {len(current_events)} current wanted event(s)")
         else:
             print("Manual run: no current wanted event; health check only")
 
         smart_save_state(old_state, new_state, force=True)
-        print("Manual Health Check + current alerts sent; v6.5.6 state handled")
+        print(
+            "Manual Health Check + current alerts sent; "
+            f"v{BOT_DISPLAY_VERSION} state handled"
+        )
         return
 
     # On first run or migration, alert currently-active targets instead of
     # silently swallowing them into baseline.
     if logic_migration or not has_baseline:
         if current_events:
-            send_event_alerts(current_events, attempts, daily_stats)
+            alert_contexts = build_event_observability_contexts(
+                current_events,
+                current_shop_cycles=current_shop_cycles,
+                source_sync=result.get("source_sync") or {},
+                current_shop_fp=current_shop_fp,
+            )
+            deliveries = send_event_alerts(
+                current_events,
+                attempts,
+                daily_stats,
+                alert_contexts=alert_contexts,
+            )
+            record_alert_deliveries_safe(new_state, deliveries)
             add_daily_alert_count(daily_stats, len(current_events))
             print(f"Bootstrap/migration sent {len(current_events)} current wanted event(s)")
         else:
@@ -3730,6 +4377,14 @@ def main():
                 f"delta={guard_info.get('cycle_delta_seconds')}s"
             )
 
+    record_guard_diagnostics_safe(
+        new_state,
+        stock_cycle_guard_diagnostics,
+        current_shop_cycles=current_shop_cycles,
+        source_sync=result.get("source_sync") or {},
+        current_shop_fp=current_shop_fp,
+    )
+
     if recovered:
         send_discord(
             "🟢 **GAG2 Bot recovered**\n"
@@ -3738,7 +4393,19 @@ def main():
         )
 
     if events:
-        send_event_alerts(events, attempts, daily_stats)
+        alert_contexts = build_event_observability_contexts(
+            events,
+            current_shop_cycles=current_shop_cycles,
+            source_sync=result.get("source_sync") or {},
+            current_shop_fp=current_shop_fp,
+        )
+        deliveries = send_event_alerts(
+            events,
+            attempts,
+            daily_stats,
+            alert_contexts=alert_contexts,
+        )
+        record_alert_deliveries_safe(new_state, deliveries)
         add_daily_alert_count(daily_stats, len(events))
         print(f"Sent {len(events)} wanted event(s)")
     else:
