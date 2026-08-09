@@ -1,7 +1,7 @@
 {
   "_integrity": {
     "schema": "gag2-stock-state-sha256-v1",
-    "sha256": "b759e791fcf09a3cbabba78897cb388d5d4b992d0d6d8d192bedcaf6b7e89b63"
+    "sha256": "47b17893e1e853f9effe14a53e2ed7af80c9cefcdd339eb3e41b818b9b410dbc"
   },
   "alert_logic_version": "6.4.4-image-alert-v1",
   "daily_stats": {
@@ -174,8 +174,14 @@
       },
       "2026-08-10": {
         "alerts_sent": 2,
-        "magic_mail": {},
-        "magic_seen_cycles": {},
+        "magic_mail": {
+          "rare": 1
+        },
+        "magic_seen_cycles": {
+          "rare": [
+            "gear|timer:1786298400"
+          ]
+        },
         "sell": {
           "maple mushroom": {
             "2": 1,
@@ -1077,25 +1083,25 @@
   },
   "shop_cycles": {
     "crate": {
-      "id": 413,
-      "key": "timer:1786298100",
+      "id": 414,
+      "key": "timer:1786298400",
       "source": "gag2-timer"
     },
     "gear": {
-      "id": 413,
-      "key": "timer:1786298100",
+      "id": 414,
+      "key": "timer:1786298400",
       "source": "gag2-timer"
     },
     "seed": {
-      "id": 413,
-      "key": "timer:1786298100",
+      "id": 414,
+      "key": "timer:1786298400",
       "source": "gag2-timer"
     }
   },
   "shop_fingerprints": {
-    "crate": "90b77f8c9d2ab43c92d4b77104231018f67cb144ef7c469545d255669d3df2cb",
-    "gear": "f59f538b2e232277405a775de52207f21b036a6ff105463aa2c0746b024fe8c5",
-    "seed": "c3a456494a8e5ca94cec214626c8aacc09987392416777594e3c23a213526de3",
+    "crate": "d20a1b760bd6b2a4f6e726810e64bfd3ab81ca4b8457a1610682c84930a1265a",
+    "gear": "5443db24d7c471115dfef0eb2312190513e99443390445ef70faaa4c9b6f16b6",
+    "seed": "7b2b98e1bdfe4e5da263e1dcf9270d3f3029df3782f070e902792d38b9016c26",
     "sell": "892d821085c358fc89d4080719304bde7a46a8c25c621c181bf04835fa6796fb",
     "unknown": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
   },
@@ -1142,6 +1148,6 @@
       }
     }
   },
-  "updated_at": "2026-08-09T17:50:39.936939+00:00",
+  "updated_at": "2026-08-09T17:55:39.837304+00:00",
   "version": "6.5.10"
 }
