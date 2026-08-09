@@ -1,0 +1,59 @@
+name: Run Combined GAG2 Safety Tests
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - bot.py
+      - moon_bot.py
+      - test_stock_cycle_guard.py
+      - test_moon.py
+      - test_cross_bot_ui.py
+      - .github/workflows/stock_logic_test.yml
+      - .github/workflows/gag2-moon.yml
+      - .github/workflows/moon_logic_test.yml
+      - .github/workflows/cross_bot_ui_test.yml
+  pull_request:
+    paths:
+      - bot.py
+      - moon_bot.py
+      - test_stock_cycle_guard.py
+      - test_moon.py
+      - test_cross_bot_ui.py
+      - .github/workflows/stock_logic_test.yml
+      - .github/workflows/gag2-moon.yml
+      - .github/workflows/moon_logic_test.yml
+      - .github/workflows/cross_bot_ui_test.yml
+
+permissions:
+  contents: read
+
+jobs:
+  combined-safety-test:
+    name: Stock + Moon Combined Safety Test
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Compile every bot and offline test
+        run: >-
+          python -m py_compile
+          bot.py moon_bot.py
+          test_stock_cycle_guard.py test_moon.py test_cross_bot_ui.py
+
+      - name: Run Stock safety tests
+        run: python test_stock_cycle_guard.py
+
+      - name: Run Moon FINAL-only tests
+        run: python test_moon.py
+
+      - name: Run Cross-Bot UI and isolation tests
+        run: python test_cross_bot_ui.py

@@ -1,4 +1,4 @@
-name: GAG2 Moon Alert v5 Frozen Anchor
+name: GAG2 Moon FINAL Alert v7.0.4
 
 on:
   workflow_dispatch:
@@ -22,7 +22,16 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v6
         with:
+          # A queued workflow_dispatch otherwise checks out the old dispatch
+          # SHA and can miss the FINAL status pushed by the preceding run.
+          ref: main
           fetch-depth: 0
+
+      - name: Sync latest FINAL ledger before scan
+        shell: bash
+        run: |
+          git fetch origin main
+          git reset --hard origin/main
 
       - name: Set up Python
         uses: actions/setup-python@v7
@@ -32,7 +41,7 @@ jobs:
       - name: Install dependencies
         run: pip install --disable-pip-version-check -r requirements.txt
 
-      - name: Check Gold Rainbow Mega Moon
+      - name: Check Gold/Rainbow/Mega Moon FINAL
         run: python moon_bot.py
 
       - name: Save moon state safely
