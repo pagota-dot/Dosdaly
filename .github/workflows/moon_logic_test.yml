@@ -2,6 +2,11 @@ name: Moon Logic Test
 
 on:
   workflow_dispatch:
+  push:
+    paths:
+      - "moon_bot.py"
+      - "test_moon.py"
+      - ".github/workflows/moon_logic_test.yml"
 
 permissions:
   contents: read
@@ -24,42 +29,22 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: Install required packages
+      - name: Verify required files
         run: |
-          python -m pip install --upgrade pip
-          pip install requests selenium
-
-      - name: Verify exact files
-        shell: bash
-        run: |
-          echo "Moon bot file: ${MOON_BOT_FILE}"
-          test -f "${MOON_BOT_FILE}" || (echo "ERROR: ${MOON_BOT_FILE} not found" && exit 1)
+          echo "Checking required files..."
+          test -f "$MOON_BOT_FILE" || (echo "ERROR: $MOON_BOT_FILE not found" && exit 1)
           test -f "test_moon.py" || (echo "ERROR: test_moon.py not found" && exit 1)
-          echo "Files OK."
+          grep -q 'BOT_FILENAME = "moon_bot.py"' test_moon.py || (echo "ERROR: test_moon.py targets the wrong bot file" && exit 1)
 
-      - name: Verify tester configuration
-        run: |
-          python - <<'PY'
-          from pathlib import Path
+          if grep -En 'moon_bot\([0-9]+\)\.py' test_moon.py .github/workflows/moon_logic_test.yml; then
+            echo "ERROR: stale numbered Moon bot filename found"
+            exit 1
+          fi
 
-          text = Path("test_moon.py").read_text(encoding="utf-8")
+          echo "Required files found."
 
-          required = [
-              "MOON_BOT_FILE",
-              '"moon_bot.py"',
-              "HARD MAX-2 TEST",
-              "Active fallback suppressed (hard max 2 alerts)",
-          ]
-
-          missing = [item for item in required if item not in text]
-          if missing:
-              raise SystemExit(
-                  f"ERROR: stale/wrong test_moon.py; missing markers: {missing}"
-              )
-
-          print("Tester configuration OK: moon_bot.py / v6.4 hard-max-2")
-          PY
+      - name: Compile Moon bot
+        run: python -m py_compile "$MOON_BOT_FILE"
 
       - name: Run Moon logic tests
-        run: |
-          printf '\n' | python test_moon.py
+        run: python test_moon.py
