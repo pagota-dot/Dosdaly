@@ -21,39 +21,26 @@ THAILAND_TZ = timezone(timedelta(hours=7))
 MAX_READ_ATTEMPTS = 3
 RETRY_WAIT_SECONDS = 3
 
-# Alert windows
-PREPARE_THRESHOLD_SECONDS = 5 * 60
-READY_THRESHOLD_SECONDS = 5 * 60
-FINAL_ARM_THRESHOLD_SECONDS = 3 * 60
+# FINAL-only mode: track a verified Moon once it enters this window, then keep
+# the first reliable start prediction frozen until the one FINAL alert is sent.
+FINAL_TRACK_THRESHOLD_SECONDS = 5 * 60
 
 # Aim to notify this long before the predicted event start.
 FINAL_TARGET_SECONDS = 45
-# If a workflow wakes up too close to the event (for example because another
-# workflow instance already handled the proper ~45s alert), skip sending a
-# duplicate late final. This keeps Discord to at most 2 alerts per event.
-FINAL_SEND_MIN_REMAINING_SECONDS = 30
 
 # If a refreshed countdown after waiting is still above this,
 # the schedule likely shifted; do not fire too early.
 FINAL_MAX_ACCEPTABLE_SECONDS = 80
 
-# Active-event fallback suppression window.
-ACTIVE_RECENT_FINAL_SECONDS = 5 * 60
-
-# Hard policy: a Moon event may create at most two user-facing alerts:
-# 1) Ready alert (<=5m, if discovered early enough)
-# 2) Final alert (~45s before Night/Moon start)
-# Never send an additional "started/active" event alert.
-MAX_EVENT_ALERTS = 2
-ACTIVE_FALLBACK_ENABLED = False
-
 # Freeze the predicted start time from the FIRST reliable <=5m alert.
 # Later GAG2 countdown changes must NOT move the final alert later.
-ANCHOR_LOGIC_VERSION = "v6.4-hard-max-two-alerts"
+ANCHOR_LOGIC_VERSION = "v7.0-final-only-round-ledger"
+BOT_DISPLAY_VERSION = "v7.0.1"
 
-# If the first time we ever see the event is already very late,
-# don't send two messages almost on top of each other.
-FIRST_ALERT_MIN_REMAINING_SECONDS = 90
+# Persistent audit trail. This lives inside moon_state.json, so the workflow's
+# existing state commit/retry protection also protects the ledger.
+ROUND_LEDGER_RETENTION_SECONDS = 14 * 24 * 60 * 60
+ROUND_LEDGER_MAX_ENTRIES = 200
 
 # Match the same event even if GAG2's later prediction drifts.
 # Same moon type can appear only ~10 minutes apart on GAG2.
@@ -85,18 +72,21 @@ TARGET_MOONS = {
         "emoji": "🌕",
         "seed": "Golden Seed",
         "seed_emoji": "🌟",
+        "color": 0xF1C40F,
     },
     "rainbow": {
         "label": "Rainbow Moon",
         "emoji": "🌈",
         "seed": "Rainbow Seed",
         "seed_emoji": "🌈",
+        "color": 0x9B59B6,
     },
     "mega": {
         "label": "Mega Moon",
         "emoji": "🌙",
         "seed": "Mega Seed",
         "seed_emoji": "💠",
+        "color": 0x3498DB,
     },
 }
 
@@ -635,10 +625,12 @@ def verify_snapshots(first, second, elapsed_seconds):
 def load_state():
     if not STATE_PATH.exists():
         return {
-            "version": 2,
+            "version": 3,
             "logic_version": ANCHOR_LOGIC_VERSION,
+            "notification_mode": "final-only",
             "events": {},
-            "last_final_by_kind": {},
+            "round_ledger": {},
+            "metrics": {},
             "health": {"last_warning_epoch": 0},
         }
 
@@ -650,10 +642,21 @@ def load_state():
     if not isinstance(raw, dict):
         raw = {}
 
-    raw.setdefault("version", 2)
+    raw["version"] = 3
+    raw["notification_mode"] = "final-only"
     raw.setdefault("events", {})
-    raw.setdefault("last_final_by_kind", {})
+    raw.setdefault("round_ledger", {})
+    raw.setdefault("metrics", {})
     raw.setdefault("health", {"last_warning_epoch": 0})
+
+    if not isinstance(raw["events"], dict):
+        raw["events"] = {}
+    if not isinstance(raw["round_ledger"], dict):
+        raw["round_ledger"] = {}
+
+    # This key belonged to the removed "Event started" fallback. Keeping it
+    # would be misleading in FINAL-only mode, so discard it during migration.
+    raw.pop("last_final_by_kind", None)
 
     # One-time migration from the older moving-countdown logic.
     # Clear only Moon event-cycle flags; keep the file itself and other state.
@@ -688,6 +691,140 @@ def prune_state(state):
         ):
             events.pop(event_key, None)
 
+    ledger = state.setdefault("round_ledger", {})
+    for round_id in list(ledger):
+        record = ledger.get(round_id) or {}
+        anchor_epoch = int(record.get("anchor_epoch", 0) or 0)
+        if anchor_epoch and anchor_epoch < now - ROUND_LEDGER_RETENTION_SECONDS:
+            ledger.pop(round_id, None)
+
+    if len(ledger) > ROUND_LEDGER_MAX_ENTRIES:
+        oldest_first = sorted(
+            ledger,
+            key=lambda rid: int((ledger.get(rid) or {}).get("anchor_epoch", 0) or 0),
+        )
+        for round_id in oldest_first[:-ROUND_LEDGER_MAX_ENTRIES]:
+            ledger.pop(round_id, None)
+
+    rebuild_round_metrics(state)
+
+
+def iso_at(epoch):
+    return datetime.fromtimestamp(
+        int(epoch),
+        tz=timezone.utc,
+    ).isoformat()
+
+
+def build_round_id(kind, anchor_epoch):
+    local = datetime.fromtimestamp(
+        int(anchor_epoch),
+        tz=timezone.utc,
+    ).astimezone(THAILAND_TZ)
+    return f"MOON-{str(kind).upper()}-{local.strftime('%Y%m%d-%H%M%S')}"
+
+
+def verification_details(event):
+    signals = ["Name", "Time", "Countdown"]
+    if event.get("snapshot_verified"):
+        signals.append("2 Snapshots")
+    if event.get("game_cycle_verified"):
+        signals.append("10m Cycle")
+
+    return {
+        "score": len(signals),
+        "maximum": 5,
+        "signals": signals,
+        "text": " + ".join(signals),
+    }
+
+
+def append_ledger_timeline(record, action, epoch, **details):
+    timeline = record.setdefault("timeline", [])
+    if any(item.get("action") == action for item in timeline):
+        return
+
+    entry = {
+        "action": action,
+        "epoch": int(epoch),
+        "at": iso_at(epoch),
+    }
+    entry.update(details)
+    timeline.append(entry)
+
+
+def ensure_round_ledger(state, event_state, event, anchor_epoch, seen_epoch):
+    round_id = event_state.get("round_id") or build_round_id(
+        event.get("kind"),
+        anchor_epoch,
+    )
+    event_state["round_id"] = round_id
+
+    ledger = state.setdefault("round_ledger", {})
+    record = ledger.setdefault(
+        round_id,
+        {
+            "round_id": round_id,
+            "kind": event.get("kind"),
+            "label": TARGET_MOONS[event["kind"]]["label"],
+            "status": "tracking",
+            "slot_id": event.get("slot_id"),
+            "clock_text": event.get("clock_text"),
+            "anchor_epoch": int(anchor_epoch),
+            "event_time_th": event_time_th(anchor_epoch),
+            "first_seen_epoch": int(seen_epoch),
+            "first_seen_at": iso_at(seen_epoch),
+            "detection_lead_seconds": max(0, int(anchor_epoch) - int(seen_epoch)),
+            "final_target_epoch": int(anchor_epoch) - FINAL_TARGET_SECONDS,
+            "final_target_at": iso_at(int(anchor_epoch) - FINAL_TARGET_SECONDS),
+            "verification": verification_details(event),
+            "timeline": [],
+        },
+    )
+
+    append_ledger_timeline(
+        record,
+        "detected",
+        seen_epoch,
+        lead_seconds=max(0, int(anchor_epoch) - int(seen_epoch)),
+    )
+    return round_id, record
+
+
+def mark_round_missed(state, event_state, reason, missed_epoch):
+    round_id = event_state.get("round_id")
+    record = (state.setdefault("round_ledger", {})).get(round_id)
+    if not record:
+        return
+
+    record["status"] = "final_missed"
+    record["miss_reason"] = reason
+    record["missed_epoch"] = int(missed_epoch)
+    record["missed_at"] = iso_at(missed_epoch)
+    append_ledger_timeline(record, "final_missed", missed_epoch, reason=reason)
+
+
+def rebuild_round_metrics(state):
+    records = list((state.get("round_ledger") or {}).values())
+    sent = [r for r in records if r.get("status") == "final_sent"]
+    missed = [r for r in records if r.get("status") == "final_missed"]
+    offsets = [
+        int(r["final_target_delay_seconds"])
+        for r in sent
+        if r.get("final_target_delay_seconds") is not None
+    ]
+
+    state["metrics"] = {
+        "tracked_rounds": len(records),
+        "final_sent": len(sent),
+        "final_missed": len(missed),
+        "average_final_target_delay_seconds": (
+            round(sum(offsets) / len(offsets), 2) if offsets else None
+        ),
+        "maximum_final_target_delay_seconds": max(offsets) if offsets else None,
+        "updated_at": iso_now(),
+    }
+
 
 def send_discord(content, embeds=None):
     if not WEBHOOK:
@@ -700,12 +837,21 @@ def send_discord(content, embeds=None):
     if embeds:
         payload["embeds"] = embeds
 
+    request_epoch = int(utc_now().timestamp())
+    request_started = time.monotonic()
     response = requests.post(WEBHOOK, json=payload, timeout=20)
+    delivery_ms = int((time.monotonic() - request_started) * 1000)
     if response.status_code not in (200, 204):
         raise RuntimeError(
             f"Discord webhook failed {response.status_code}: "
             f"{response.text[:300]}"
         )
+
+    return {
+        "request_epoch": request_epoch,
+        "completed_epoch": int(utc_now().timestamp()),
+        "delivery_ms": delivery_ms,
+    }
 
 
 def format_seconds(seconds):
@@ -730,67 +876,114 @@ def event_time_th(event_epoch):
     return dt.strftime("%H:%M:%S")
 
 
-def event_embed(event, level, remaining=None):
+def event_embed(event, level="final", remaining=None):
+    if level != "final":
+        raise ValueError("Moon notification mode is FINAL-only")
+
     meta = TARGET_MOONS[event["kind"]]
     event_epoch = int(event["event_epoch"])
+    sent_epoch = int(event.get("final_sent_epoch") or utc_now().timestamp())
+    first_seen_epoch = int(event.get("first_seen_epoch") or sent_epoch)
+    round_id = event.get("round_id") or build_round_id(
+        event["kind"],
+        event_epoch,
+    )
 
     if remaining is None:
-        remaining = max(0, event_epoch - int(utc_now().timestamp()))
+        remaining = max(0, event_epoch - sent_epoch)
 
-    if level == "prepare":
-        title = f"🔔 {meta['emoji']} {meta['label']} — เตรียมตัว"
-        description = (
-            f"⏳ เหลือประมาณ **{format_seconds(remaining)}**\n"
-            f"🌙 คาดว่าเข้าสู่ **Night / Moon เริ่ม** ประมาณ **{event_time_th(event_epoch)} น.** เวลาไทย\n\n"
-            f"{meta['seed_emoji']} มีโอกาสเกิด **{meta['seed']}**\n"
-            "ยังไม่ต้องรีบ แต่เตรียมเข้าเกมไว้ได้เลย"
-        )
-    elif level == "ready":
-        title = f"⚠️ {meta['emoji']} {meta['label']} — ใกล้เริ่มแล้ว"
-        description = (
-            f"⏳ เหลือประมาณ **{format_seconds(remaining)}**\n"
-            f"🌙 คาดว่าเข้าสู่ **Night / Moon เริ่ม** ประมาณ **{event_time_th(event_epoch)} น.** เวลาไทย\n\n"
-            f"{meta['seed_emoji']} เตรียมหา **{meta['seed']}**\n"
-            "แนะนำเปิดเกมและเตรียมเข้าเซิร์ฟเวอร์ได้เลย"
-        )
-    elif level == "final":
-        title = f"🚨 {meta['emoji']} {meta['label']} — เข้าเกมตอนนี้!"
-        description = (
-            f"⏳ เหลือประมาณ **{format_seconds(remaining)}**\n"
-            f"🌙 คาดว่าเข้าสู่ **Night / Moon เริ่ม** ประมาณ **{event_time_th(event_epoch)} น.** เวลาไทย\n\n"
-            f"{meta['seed_emoji']} **{meta['seed']}** กำลังจะมีโอกาสเกิด\n"
-            "นี่คือการเตือนรอบสุดท้ายก่อน Event"
-        )
+    verification = event.get("verification") or verification_details(event)
+    target_epoch = event_epoch - FINAL_TARGET_SECONDS
+    target_delay = sent_epoch - target_epoch
+    if target_delay > 0:
+        target_text = f"ช้ากว่าเป้า **{format_seconds(target_delay)}**"
+    elif target_delay < 0:
+        target_text = f"เร็วกว่าเป้า **{format_seconds(abs(target_delay))}**"
     else:
-        title = f"🚨 {meta['emoji']} {meta['label']} — เริ่มแล้ว!"
-        description = (
-            f"{meta['seed_emoji']} **{meta['seed']}** สามารถมีโอกาสเกิดได้ตอนนี้\n"
-            "ระบบไม่ทันส่งเตือน ~45 วินาทีก่อนเริ่ม จึงแจ้งทันทีเมื่อพบว่า Event เริ่มแล้ว"
-        )
+        target_text = "ตรงเป้า **45 วินาที**"
 
-    slot_clock = event.get("clock_text")
-    if slot_clock:
-        description += f"\n\n🧭 GAG2 slot: **{slot_clock}**"
-
-    verify_text = (
-        "Verified Name+Time+Countdown+2 Snapshots"
-        if event.get("snapshot_verified")
-        else "Verified Name+Time+Countdown"
+    title = f"⚠️ {meta['emoji']} {meta['label']} — ใกล้เริ่มแล้ว"
+    description = (
+        f"{meta['seed_emoji']} **{meta['seed']}** กำลังจะมีโอกาสเกิด\n"
+        f"เหลือประมาณ **{format_seconds(remaining)}** ก่อน Night / Moon เริ่ม\n\n"
+        "ระบบตั้งเป็น **FINAL เท่านั้น** — รอบนี้จะไม่มีข้อความเตือนแรกและไม่มีข้อความเริ่มแล้ว"
     )
-    if event.get("game_cycle_verified"):
-        verify_text += "+10m Game Cycle"
+
+    slot_clock = event.get("clock_text") or "ไม่แสดง"
 
     return {
         "title": title,
         "description": description,
+        "color": meta["color"],
+        "fields": [
+            {
+                "name": "🌙 Moon เริ่ม",
+                "value": (
+                    f"**{event_time_th(event_epoch)} น.** เวลาไทย\n"
+                    f"<t:{event_epoch}:R>"
+                ),
+                "inline": True,
+            },
+            {
+                "name": "📨 ส่ง FINAL",
+                "value": (
+                    f"**{event_time_th(sent_epoch)} น.**\n"
+                    f"ก่อนเริ่ม **{format_seconds(remaining)}**"
+                ),
+                "inline": True,
+            },
+            {
+                "name": "🎯 ความตรงเวลา",
+                "value": target_text,
+                "inline": True,
+            },
+            {
+                "name": "🔎 ตรวจพบครั้งแรก",
+                "value": (
+                    f"**{event_time_th(first_seen_epoch)} น.**\n"
+                    f"ล่วงหน้า **{format_seconds(event_epoch - first_seen_epoch)}**"
+                ),
+                "inline": True,
+            },
+            {
+                "name": "🧭 GAG2 Slot",
+                "value": f"**{slot_clock}**",
+                "inline": True,
+            },
+            {
+                "name": "🆔 Round ID",
+                "value": f"`{round_id}`",
+                "inline": True,
+            },
+            {
+                "name": "✅ หลักฐานยืนยัน",
+                "value": (
+                    f"**{verification['score']}/{verification['maximum']} signals** · "
+                    f"{verification['text']}"
+                ),
+                "inline": False,
+            },
+        ],
         "footer": {
-            "text": f"GAG2 Moon Alert v6.4 · {verify_text}"
+            "text": (
+                f"GAG2 Moon Alert {BOT_DISPLAY_VERSION} · FINAL ONLY · "
+                "Frozen Anchor + Round Ledger"
+            )
         },
+        "timestamp": iso_at(sent_epoch),
     }
 
 
 def send_level(event, level, remaining=None):
-    send_discord("", [event_embed(event, level, remaining)])
+    if level != "final":
+        raise ValueError("Moon notification mode is FINAL-only")
+
+    sent_epoch = int(utc_now().timestamp())
+    outgoing = dict(event)
+    outgoing["final_sent_epoch"] = sent_epoch
+    result = send_discord("", [event_embed(outgoing, "final", remaining)])
+    result["sent_epoch"] = sent_epoch
+    return result
 
 
 def read_weather():
@@ -904,15 +1097,6 @@ def find_matching_event(parsed, original_event):
     return best
 
 
-def mark_earlier_levels_skipped(event_state, level):
-    if level == "ready":
-        event_state.setdefault("prepare", True)
-    elif level == "final":
-        event_state.setdefault("prepare", True)
-        event_state.setdefault("ready", True)
-
-
-
 def resolve_anchor_state(events_state, event):
     """
     Primary key is the exact GAG2 slot_id:
@@ -967,7 +1151,6 @@ def resolve_anchor_state(events_state, event):
             "clock_text": event.get("clock_text"),
             "event_epoch": predicted_epoch,
             "anchor_epoch": 0,
-            "ready": False,
             "final": False,
         },
     )
@@ -993,8 +1176,9 @@ def process_upcoming(state, parsed):
     for event in parsed.get("upcoming", []):
         remaining = int(event["remaining"])
 
-        # We care only about the nearest 5-minute window.
-        if remaining > READY_THRESHOLD_SECONDS:
+        # Track only the nearest five-minute window. Tracking is silent;
+        # Discord receives no READY/PREPARE message.
+        if remaining > FINAL_TRACK_THRESHOLD_SECONDS:
             continue
 
         state_key, es = resolve_anchor_state(events_state, event)
@@ -1006,7 +1190,8 @@ def process_upcoming(state, parsed):
             es["anchor_epoch"] = anchor_epoch
             es["event_epoch"] = anchor_epoch
             es["first_seen_remaining"] = remaining
-            es["first_seen_at"] = iso_now()
+            es["first_seen_epoch"] = now_epoch
+            es["first_seen_at"] = iso_at(now_epoch)
             es["slot_time_th"] = event_time_th(anchor_epoch)
             es["slot_id"] = event.get("slot_id")
             es["clock_text"] = event.get("clock_text")
@@ -1020,31 +1205,18 @@ def process_upcoming(state, parsed):
                 f"remaining={remaining}s anchor_epoch={anchor_epoch}"
             )
 
+        first_seen_epoch = int(es.get("first_seen_epoch", now_epoch) or now_epoch)
+        round_id, ledger_record = ensure_round_ledger(
+            state,
+            es,
+            event,
+            anchor_epoch,
+            first_seen_epoch,
+        )
+        es["round_id"] = round_id
+        es["final_target_epoch"] = anchor_epoch - FINAL_TARGET_SECONDS
+
         anchor_remaining = anchor_epoch - int(utc_now().timestamp())
-
-        # Alert #1: send once when there is enough useful lead time.
-        # If first discovery is already <=90s, skip this alert so Discord
-        # doesn't receive two messages back-to-back.
-        if not es.get("ready"):
-            if anchor_remaining > FIRST_ALERT_MIN_REMAINING_SECONDS:
-                first_event = frozen_event_for_embed(event, anchor_epoch)
-                send_level(first_event, "ready", anchor_remaining)
-                es["ready"] = True
-                es["prepare"] = True
-                es["ready_sent_at"] = iso_now()
-
-                print(
-                    f"5-MIN alert sent from FROZEN anchor: "
-                    f"{event['kind']} remaining={anchor_remaining}s"
-                )
-            else:
-                es["ready"] = True
-                es["prepare"] = True
-                es["ready_skipped_late"] = True
-                print(
-                    f"5-MIN alert skipped (first seen late): "
-                    f"{event['kind']} remaining={anchor_remaining}s"
-                )
 
         if not es.get("final"):
             candidates.append(
@@ -1053,6 +1225,8 @@ def process_upcoming(state, parsed):
                     "event": event,
                     "anchor_epoch": anchor_epoch,
                     "anchor_remaining": anchor_remaining,
+                    "round_id": round_id,
+                    "ledger_record": ledger_record,
                 }
             )
 
@@ -1071,12 +1245,17 @@ def process_upcoming(state, parsed):
 
     anchor_remaining = anchor_epoch - int(utc_now().timestamp())
 
-    # If the frozen time has already passed, don't invent a "45s" alert.
-    # Active fallback below can still report a genuinely active event.
+    # If the frozen time has already passed, close the ledger as missed. FINAL
+    # only means there is deliberately no "started" fallback message.
     if anchor_remaining <= 0:
+        missed_epoch = int(utc_now().timestamp())
+        es["final"] = True
+        es["final_missed"] = True
+        mark_round_missed(state, es, "frozen-anchor-passed", missed_epoch)
+        rebuild_round_metrics(state)
         print(
             f"FROZEN anchor already passed for {event['kind']}; "
-            "waiting for active fallback"
+            "FINAL closed as missed (no active fallback)"
         )
         return
 
@@ -1097,62 +1276,72 @@ def process_upcoming(state, parsed):
     )
 
     if actual_by_anchor <= 0:
+        missed_epoch = int(utc_now().timestamp())
+        es["final"] = True
+        es["final_missed"] = True
+        mark_round_missed(state, es, "final-wait-finished-after-anchor", missed_epoch)
+        rebuild_round_metrics(state)
         print(
             f"FINAL missed frozen start for {event['kind']}; "
-            "active fallback will handle it"
+            "no active fallback in FINAL-only mode"
         )
         return
 
-    if actual_by_anchor < FINAL_SEND_MIN_REMAINING_SECONDS:
-        es["final_skipped_too_late"] = True
-        es["final_skip_remaining"] = actual_by_anchor
-        es["event_epoch"] = anchor_epoch
+    # A system clock jump or interrupted wait must not generate an early FINAL.
+    # Leave it armed so the next run can try again using the same frozen anchor.
+    if actual_by_anchor > FINAL_MAX_ACCEPTABLE_SECONDS:
         print(
-            f"FROZEN FINAL skipped (too late): {event['kind']} "
-            f"remaining={actual_by_anchor}s min_required={FINAL_SEND_MIN_REMAINING_SECONDS}s"
+            f"FINAL postponed: {event['kind']} still has "
+            f"{actual_by_anchor}s (> {FINAL_MAX_ACCEPTABLE_SECONDS}s)"
         )
         return
 
     final_event = frozen_event_for_embed(event, anchor_epoch)
-    send_level(final_event, "final", actual_by_anchor)
+    final_event["round_id"] = es["round_id"]
+    final_event["first_seen_epoch"] = int(es.get("first_seen_epoch", now_epoch))
+    final_event["verification"] = candidate["ledger_record"].get(
+        "verification",
+        verification_details(event),
+    )
+    send_result = send_level(final_event, "final", actual_by_anchor) or {}
+
+    sent_epoch = int(send_result.get("sent_epoch") or utc_now().timestamp())
+    final_lead_seconds = max(0, anchor_epoch - sent_epoch)
+    target_delay_seconds = sent_epoch - (
+        anchor_epoch - FINAL_TARGET_SECONDS
+    )
 
     es["final"] = True
-    es["final_sent_at"] = iso_now()
-    es["final_remaining_by_anchor"] = actual_by_anchor
+    es["final_sent_epoch"] = sent_epoch
+    es["final_sent_at"] = iso_at(sent_epoch)
+    es["final_remaining_by_anchor"] = final_lead_seconds
+    es["final_target_delay_seconds"] = target_delay_seconds
+    es["discord_delivery_ms"] = send_result.get("delivery_ms")
     es["event_epoch"] = anchor_epoch
-    mark_earlier_levels_skipped(es, "final")
 
-    state.setdefault("last_final_by_kind", {})[
-        event["kind"]
-    ] = {
-        "sent_epoch": int(utc_now().timestamp()),
-        "event_epoch": anchor_epoch,
-    }
+    ledger_record = candidate["ledger_record"]
+    ledger_record["status"] = "final_sent"
+    ledger_record["final_sent_epoch"] = sent_epoch
+    ledger_record["final_sent_at"] = iso_at(sent_epoch)
+    ledger_record["final_lead_seconds"] = final_lead_seconds
+    ledger_record["final_target_delay_seconds"] = target_delay_seconds
+    ledger_record["discord_delivery_ms"] = send_result.get("delivery_ms")
+    append_ledger_timeline(
+        ledger_record,
+        "final_sent",
+        sent_epoch,
+        lead_seconds=final_lead_seconds,
+        target_delay_seconds=target_delay_seconds,
+        discord_delivery_ms=send_result.get("delivery_ms"),
+    )
+    rebuild_round_metrics(state)
 
     print(
         f"FROZEN FINAL sent: {event['kind']} "
-        f"remaining={actual_by_anchor}s"
+        f"round_id={es['round_id']} remaining={final_lead_seconds}s "
+        f"target_delay={target_delay_seconds:+d}s "
+        f"discord={send_result.get('delivery_ms')}ms"
     )
-
-
-def process_active_fallback(state, parsed):
-    """
-    Disabled in v6.4.
-
-    The user-facing Moon policy is a hard maximum of two alerts per event:
-      1) ready alert
-      2) final alert
-
-    We intentionally do NOT send a third "event started" message, even if
-    the bot first notices the Moon after it becomes active. This prevents the
-    extra message seen during/near the end of Night.
-    """
-    active = parsed.get("active")
-    if active in TARGET_MOONS:
-        print(
-            f"ACTIVE fallback suppressed by max-two-alert policy: {active}"
-        )
-    return
 
 
 def maybe_send_scanner_warning(state, error_text):
@@ -1209,7 +1398,8 @@ def main():
         f"cycle_phase={cycle_info.get('phase')} "
         f"cycle_samples={cycle_info.get('consensus_count', 0)}/"
         f"{cycle_info.get('sample_count', 0)} "
-        f"attempt={parsed.get('attempt')} logic={ANCHOR_LOGIC_VERSION}"
+        f"attempt={parsed.get('attempt')} logic={ANCHOR_LOGIC_VERSION} "
+        "notification_mode=FINAL_ONLY"
     )
 
     for event in parsed.get("upcoming", []):
@@ -1225,10 +1415,6 @@ def main():
         )
 
     process_upcoming(state, parsed)
-
-    # v6.4 hard policy: never send a third "started" alert.
-    # This call only logs that an active target was suppressed.
-    process_active_fallback(state, parsed)
 
     save_state(state)
 

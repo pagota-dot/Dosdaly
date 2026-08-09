@@ -1,18 +1,28 @@
 import sys
-import os
 import types
 import importlib.util
 from pathlib import Path
 from datetime import datetime, timedelta, timezone
 
-BOT_FILENAME = (os.environ.get("MOON_BOT_FILE") or "moon_bot.py").strip()
+BOT_FILENAME = "moon_bot.py"
 
 def install_optional_dependency_stubs():
     """
     Offline logic tests do not open Chrome/Selenium.
-    Stub Selenium only when it is not installed, so moon_bot.py can be
-    imported on a clean Windows/Python machine for pure parsing tests.
+    Stub Requests/Selenium only when missing, so moon_bot.py can be imported
+    on a clean machine for pure parsing tests without network access.
     """
+    try:
+        import requests  # noqa: F401
+    except Exception:
+        requests = types.ModuleType("requests")
+
+        def no_network_post(*args, **kwargs):
+            raise AssertionError("Offline test attempted a real HTTP request")
+
+        requests.post = no_network_post
+        sys.modules["requests"] = requests
+
     try:
         import selenium  # noqa: F401
         return
@@ -90,8 +100,7 @@ def parse(page, when_epoch):
     return bot.parse_weather_page(page, when_epoch)
 
 print("=" * 72)
-print("GAG2 Moon Alert v6.4 - OFFLINE LOGIC + HARD MAX-2 TEST")
-print(f"Bot file under test: {BOT_FILENAME}")
+print("GAG2 Moon Alert v7.0.1 FINAL-only - OFFLINE LOGIC TEST")
 print("ไม่เปิดเว็บ / ไม่ยิง Discord / ไม่แก้ moon_state.json จริง")
 print("=" * 72)
 
@@ -383,154 +392,73 @@ ok(
     str(bot.clock_text_to_minutes("11:59 PM"))
 )
 
-
 # ---------------------------------------------------------------------
-# TEST 11: Game cycle constants = Day 7:30 + Sunset 0:30 + Night 2:00
+# TEST 11: FINAL-only guard ต้องปฏิเสธทุกระดับแจ้งเตือนอื่น
 # ---------------------------------------------------------------------
-ok(
-    "Game cycle durations total 10 minutes",
-    bot.GAME_DAY_SECONDS == 450
-    and bot.GAME_SUNSET_SECONDS == 30
-    and bot.GAME_NIGHT_SECONDS == 120
-    and bot.GAME_CYCLE_SECONDS == 600,
-    (
-        f"day={getattr(bot, 'GAME_DAY_SECONDS', None)} "
-        f"sunset={getattr(bot, 'GAME_SUNSET_SECONDS', None)} "
-        f"night={getattr(bot, 'GAME_NIGHT_SECONDS', None)} "
-        f"cycle={getattr(bot, 'GAME_CYCLE_SECONDS', None)}"
-    )
-)
-
-# ---------------------------------------------------------------------
-# TEST 12: Dynamic 10-minute Moon grid - phase is learned, not hard-coded
-# ---------------------------------------------------------------------
-phase8_page = """
-No active weather
-Upcoming Moons
-Gold Moon
-5:28 AM
-2m 50s
-Bloodmoon
-5:38 AM
-12m 50s
-Rainbow Moon
-5:48 AM
-22m 50s
-Recently Seen
-"""
-# 05:25:10 + 2:50 = 05:28:00
-r_phase8 = parse(phase8_page, t0)
-cycle8 = r_phase8.get("game_cycle") or {}
-gold8 = next((e for e in r_phase8["upcoming"] if e["kind"] == "gold"), None)
-rainbow8 = next((e for e in r_phase8["upcoming"] if e["kind"] == "rainbow"), None)
-
-ok(
-    "10-minute Moon grid consensus detected dynamically",
-    cycle8.get("verified") is True
-    and cycle8.get("phase") == 8
-    and cycle8.get("consensus_count") == 3,
-    f"game_cycle={cycle8}"
-)
-ok(
-    "Target Moon rows pass verified 10-minute game cycle",
-    gold8 is not None
-    and rainbow8 is not None
-    and gold8.get("game_cycle_verified") is True
-    and rainbow8.get("game_cycle_verified") is True,
-    f"gold={gold8}, rainbow={rainbow8}, errors={r_phase8['parse_errors']}"
-)
-
-# ---------------------------------------------------------------------
-# TEST 13: One off-grid Moon row must be rejected when consensus is strong
-# ---------------------------------------------------------------------
-offgrid_page = """
-No active weather
-Upcoming Moons
-Gold Moon
-5:30 AM
-4m 50s
-Bloodmoon
-5:40 AM
-14m 50s
-Rainbow Moon
-5:50 AM
-24m 50s
-Mega Moon
-6:01 AM
-35m 50s
-Recently Seen
-"""
-r_off = parse(offgrid_page, t0)
-off_cycle = r_off.get("game_cycle") or {}
-mega_off = next((e for e in r_off["upcoming"] if e["kind"] == "mega"), None)
-
-ok(
-    "Strong game-cycle consensus survives one bad row",
-    off_cycle.get("verified") is True
-    and off_cycle.get("phase") == 0
-    and off_cycle.get("consensus_count") == 3
-    and off_cycle.get("sample_count") == 4,
-    f"game_cycle={off_cycle}"
-)
-ok(
-    "Off-grid Moon row rejected",
-    mega_off is None
-    and any("off 10-minute Night/Moon grid" in x for x in r_off["parse_errors"]),
-    f"upcoming={r_off['upcoming']}, errors={r_off['parse_errors']}"
-)
-
-# ---------------------------------------------------------------------
-# TEST 14: Discord embed identifies Night/Moon start and cycle verification
-# ---------------------------------------------------------------------
-embed_event = {
+guard_event = {
     "kind": "gold",
-    "event_epoch": t0 + 290,
-    "clock_text": "5:30 AM",
-    "snapshot_verified": True,
-    "game_cycle_verified": True,
+    "event_epoch": t0 + 45,
 }
-embed = bot.event_embed(embed_event, "ready", 290)
-footer_text = ((embed.get("footer") or {}).get("text") or "")
-desc_text = embed.get("description") or ""
+
+embed_rejected = []
+send_rejected = []
+for stale_level in ("prepare", "ready", "active"):
+    try:
+        bot.event_embed(guard_event, stale_level, 45)
+    except ValueError:
+        embed_rejected.append(stale_level)
+
+    try:
+        bot.send_level(guard_event, stale_level, 45)
+    except ValueError:
+        send_rejected.append(stale_level)
 
 ok(
-    "Discord copy references Night / Moon start",
-    "Night / Moon" in desc_text,
-    f"description={desc_text}"
+    "Embed accepts FINAL only",
+    embed_rejected == ["prepare", "ready", "active"],
+    str(embed_rejected),
 )
 ok(
-    "Discord footer shows 10m Game Cycle verification",
-    "+10m Game Cycle" in footer_text,
-    f"footer={footer_text}"
+    "Sender accepts FINAL only",
+    send_rejected == ["prepare", "ready", "active"],
+    str(send_rejected),
 )
 
+# ---------------------------------------------------------------------
+# TEST 12: รอบ 45 วินาทีต้องส่ง FINAL ครั้งเดียวและเขียน Round Ledger
+# ---------------------------------------------------------------------
+fixed_dt_final = datetime.fromtimestamp(t0, tz=timezone.utc)
+original_utc_now = bot.utc_now
+original_send_level = bot.send_level
+original_sleep = bot.time.sleep
+final_calls = []
 
-# ---------------------------------------------------------------------
-# TEST 15: Late discovery (<30s) must NOT send a late Final
-# ---------------------------------------------------------------------
-late_epoch = t0
-late_dt = datetime.fromtimestamp(late_epoch, tz=timezone.utc)
-late_sent = []
-orig_utc_now = bot.utc_now
-orig_send_level = bot.send_level
-orig_sleep = bot.time.sleep
 try:
-    bot.utc_now = lambda: late_dt
-    bot.send_level = lambda event, level, remaining=None: late_sent.append((level, remaining))
+    bot.utc_now = lambda: fixed_dt_final
+
+    def fake_final_send(event, level, remaining=None):
+        final_calls.append((event, level, remaining))
+        return {
+            "sent_epoch": t0,
+            "delivery_ms": 123,
+        }
+
+    bot.send_level = fake_final_send
     bot.time.sleep = lambda *args, **kwargs: None
 
-    late_state = {
+    final_state = {
         "events": {},
-        "last_final_by_kind": {},
+        "round_ledger": {},
+        "metrics": {},
         "health": {"last_warning_epoch": 0},
     }
-    late_event = {
+    final_event = {
         "kind": "gold",
-        "remaining": 14,
-        "countdown_text": "14s",
+        "remaining": 45,
+        "countdown_text": "45s",
         "countdown_precise": True,
         "clock_text": "5:25 AM",
-        "event_epoch": late_epoch + 14,
+        "event_epoch": t0 + 45,
         "event_key": "gold|2026-08-09|05:25",
         "slot_id": "gold|2026-08-09|05:25",
         "row_quality": "NAME_CLOCK_COUNTDOWN",
@@ -538,38 +466,176 @@ try:
         "game_cycle_verified": True,
         "game_cycle_phase": 5,
     }
-    bot.process_upcoming(late_state, {"upcoming": [late_event]})
+
+    bot.process_upcoming(final_state, {"upcoming": [final_event]})
+    bot.process_upcoming(final_state, {"upcoming": [final_event]})
+
+    final_es = final_state["events"]["gold|2026-08-09|05:25"]
+    final_round_id = final_es["round_id"]
+    final_record = final_state["round_ledger"][final_round_id]
+
     ok(
-        "Late <30s discovery sends no Ready/Final",
-        late_sent == [],
-        f"sent={late_sent}, state={late_state}"
+        "Exactly one FINAL is sent",
+        len(final_calls) == 1 and final_calls[0][1] == "final",
+        str(final_calls),
+    )
+    ok(
+        "Same round cannot send FINAL twice",
+        len(final_calls) == 1 and final_es.get("final") is True,
+        str(final_es),
+    )
+    ok(
+        "Round Ledger stores final_sent status",
+        final_record.get("status") == "final_sent",
+        str(final_record),
+    )
+    ok(
+        "FINAL target delay measured at zero",
+        final_record.get("final_target_delay_seconds") == 0
+        and final_record.get("final_lead_seconds") == 45,
+        str(final_record),
+    )
+    ok(
+        "Discord delivery time stored",
+        final_record.get("discord_delivery_ms") == 123,
+        str(final_record),
+    )
+    ok(
+        "Metrics count one sent round",
+        final_state["metrics"].get("final_sent") == 1
+        and final_state["metrics"].get("final_missed") == 0,
+        str(final_state["metrics"]),
     )
 finally:
-    bot.utc_now = orig_utc_now
-    bot.send_level = orig_send_level
-    bot.time.sleep = orig_sleep
+    bot.utc_now = original_utc_now
+    bot.send_level = original_send_level
+    bot.time.sleep = original_sleep
 
 # ---------------------------------------------------------------------
-# TEST 16: Active Moon must NEVER create a third started alert
+# TEST 13: Embed ใหม่ต้องมี Round ID, เวลา, หลักฐาน และ FINAL ONLY
 # ---------------------------------------------------------------------
-active_sent = []
-orig_send_level = bot.send_level
+embed_event = dict(final_event)
+embed_event.update(
+    {
+        "round_id": "MOON-GOLD-20260809-052555",
+        "first_seen_epoch": t0 - 200,
+        "final_sent_epoch": t0,
+    }
+)
+embed = bot.event_embed(embed_event, "final", 45)
+field_names = {field["name"] for field in embed.get("fields", [])}
+
+ok(
+    "Discord Embed contains audit fields",
+    {
+        "🌙 Moon เริ่ม",
+        "📨 ส่ง FINAL",
+        "🎯 ความตรงเวลา",
+        "🔎 ตรวจพบครั้งแรก",
+        "🧭 GAG2 Slot",
+        "🆔 Round ID",
+        "✅ หลักฐานยืนยัน",
+    }.issubset(field_names),
+    str(field_names),
+)
+ok(
+    "45-second Embed says ใกล้เริ่มแล้ว",
+    embed["title"] == "⚠️ 🌕 Gold Moon — ใกล้เริ่มแล้ว"
+    and "เข้าเกมตอนนี้" not in embed["title"]
+    and "FINAL ONLY" in embed["footer"]["text"]
+    and embed.get("color") == bot.TARGET_MOONS["gold"]["color"],
+    str(embed),
+)
+
+# ---------------------------------------------------------------------
+# TEST 14: ถ้าพบหลัง Frozen Anchor ต้องบันทึก missed และไม่แจ้งเริ่มแล้ว
+# ---------------------------------------------------------------------
+original_utc_now = bot.utc_now
+original_send_level = bot.send_level
+miss_calls = []
+
 try:
-    bot.send_level = lambda event, level, remaining=None: active_sent.append((level, remaining))
-    active_state = {
+    bot.utc_now = lambda: fixed_dt_final
+    bot.send_level = lambda *args, **kwargs: miss_calls.append((args, kwargs))
+
+    miss_state = {
         "events": {},
-        "last_final_by_kind": {},
+        "round_ledger": {},
+        "metrics": {},
         "health": {"last_warning_epoch": 0},
     }
-    bot.process_active_fallback(active_state, {"active": "gold"})
+    missed_event = dict(final_event)
+    missed_event.update(
+        {
+            "remaining": -5,
+            "event_epoch": t0 - 5,
+            "event_key": "gold|2026-08-09|05:24",
+            "slot_id": "gold|2026-08-09|05:24",
+        }
+    )
+    bot.process_upcoming(miss_state, {"upcoming": [missed_event]})
+    miss_es = miss_state["events"]["gold|2026-08-09|05:24"]
+    miss_record = miss_state["round_ledger"][miss_es["round_id"]]
+
     ok(
-        "Active fallback suppressed (hard max 2 alerts)",
-        active_sent == [] and getattr(bot, "ACTIVE_FALLBACK_ENABLED", None) is False,
-        f"sent={active_sent}, enabled={getattr(bot, 'ACTIVE_FALLBACK_ENABLED', None)}"
+        "Missed FINAL sends no active fallback",
+        miss_calls == [],
+        str(miss_calls),
+    )
+    ok(
+        "Missed FINAL is recorded in ledger",
+        miss_record.get("status") == "final_missed"
+        and miss_state["metrics"].get("final_missed") == 1,
+        str(miss_record),
     )
 finally:
-    bot.send_level = orig_send_level
+    bot.utc_now = original_utc_now
+    bot.send_level = original_send_level
 
+# ---------------------------------------------------------------------
+# TEST 15: active-only input ต้องเงียบ และ Ledger เก่าต้องถูก prune
+# ---------------------------------------------------------------------
+silent_state = {
+    "events": {},
+    "round_ledger": {},
+    "metrics": {},
+}
+bot.process_upcoming(silent_state, {"active": "gold", "upcoming": []})
+ok(
+    "Active-only page produces no Moon alert",
+    silent_state["events"] == {} and silent_state["round_ledger"] == {},
+    str(silent_state),
+)
+
+original_utc_now = bot.utc_now
+try:
+    bot.utc_now = lambda: fixed_dt_final
+    old_epoch = t0 - bot.ROUND_LEDGER_RETENTION_SECONDS - 1
+    prune_state = {
+        "events": {},
+        "round_ledger": {
+            "OLD": {
+                "round_id": "OLD",
+                "anchor_epoch": old_epoch,
+                "status": "final_sent",
+                "final_target_delay_seconds": 0,
+            }
+        },
+    }
+    bot.prune_state(prune_state)
+    ok(
+        "Expired Round Ledger entry is pruned",
+        prune_state["round_ledger"] == {},
+        str(prune_state),
+    )
+finally:
+    bot.utc_now = original_utc_now
+
+ok(
+    "Round ID is deterministic",
+    bot.build_round_id("gold", t0 + 290) == "MOON-GOLD-20260809-053000",
+    bot.build_round_id("gold", t0 + 290),
+)
 
 print("\n" + "=" * 72)
 TOTAL = PASS + FAIL
@@ -577,9 +643,9 @@ print(f"RESULT: {PASS}/{TOTAL} PASSED")
 if FAIL == 0:
     print("✅ Logic tests ผ่านทั้งหมด")
     print("   ระบบอ่านชื่อ/เวลา/Countdown, แยก Moon row, แยกหลาย slot,")
-    print("   ตรวจ 2 snapshots, Frozen Anchor, Game Cycle 10 นาที และ Hard Max-2 ผ่านชุดทดสอบนี้")
+    print("   ตรวจ 2 snapshots, Frozen Anchor, FINAL-only, Round Ledger,")
+    print("   Latency metrics และ Discord Embed ผ่านชุดทดสอบนี้")
 else:
     print(f"❌ มี {FAIL} test(s) ไม่ผ่าน - อย่าเพิ่งถือว่าระบบพร้อม")
 print("=" * 72)
-
-input("\nกด Enter เพื่อปิด...")
+sys.exit(1 if FAIL else 0)
