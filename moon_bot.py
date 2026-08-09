@@ -35,7 +35,31 @@ FINAL_MAX_ACCEPTABLE_SECONDS = 80
 # Freeze the predicted start time from the FIRST reliable <=5m alert.
 # Later GAG2 countdown changes must NOT move the final alert later.
 ANCHOR_LOGIC_VERSION = "v7.0-final-only-round-ledger"
-BOT_DISPLAY_VERSION = "v7.0.1"
+BOT_DISPLAY_VERSION = "v7.0.2"
+
+# UI-only category color.  Every Moon FINAL uses one unmistakable moonlight
+# border so it cannot be confused with Stock rarity colors or SELL ×2/×4.
+# This value is never read by parsing, anchor, timing, duplicate, or ledger
+# logic.
+MOON_SYSTEM_COLOR = 0xD7D9FF
+MOON_SYSTEM_BADGE = "🌙 MOON FINAL ALERT"
+
+# Locked reference for the palettes already assigned to the Stock/Sell bot.
+# Regression tests require the Moon border to stay outside this set.
+NON_MOON_RESERVED_COLORS = frozenset(
+    {
+        0xA0A0A0,  # Stock Common
+        0x3BA55D,  # Stock Uncommon
+        0x3498DB,  # Stock Rare
+        0x9B59B6,  # Stock Epic
+        0xF1C40F,  # Stock Legendary
+        0xE74C3C,  # Stock Mythic
+        0xFF4FD8,  # Stock Super
+        0x57F287,  # Stock unknown fallback
+        0x00F5D4,  # SELL ×2
+        0xFF6B00,  # SELL ×4
+    }
+)
 
 # Persistent audit trail. This lives inside moon_state.json, so the workflow's
 # existing state commit/retry protection also protects the ledger.
@@ -72,21 +96,21 @@ TARGET_MOONS = {
         "emoji": "🌕",
         "seed": "Golden Seed",
         "seed_emoji": "🌟",
-        "color": 0xF1C40F,
+        "color": MOON_SYSTEM_COLOR,
     },
     "rainbow": {
         "label": "Rainbow Moon",
         "emoji": "🌈",
         "seed": "Rainbow Seed",
         "seed_emoji": "🌈",
-        "color": 0x9B59B6,
+        "color": MOON_SYSTEM_COLOR,
     },
     "mega": {
         "label": "Mega Moon",
         "emoji": "🌙",
         "seed": "Mega Seed",
         "seed_emoji": "💠",
-        "color": 0x3498DB,
+        "color": MOON_SYSTEM_COLOR,
     },
 }
 
@@ -912,6 +936,7 @@ def event_embed(event, level="final", remaining=None):
     slot_clock = event.get("clock_text") or "ไม่แสดง"
 
     return {
+        "author": {"name": MOON_SYSTEM_BADGE},
         "title": title,
         "description": description,
         "color": meta["color"],

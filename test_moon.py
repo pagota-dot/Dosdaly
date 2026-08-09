@@ -1,3 +1,5 @@
+import ast
+import hashlib
 import sys
 import types
 import importlib.util
@@ -100,9 +102,50 @@ def parse(page, when_epoch):
     return bot.parse_weather_page(page, when_epoch)
 
 print("=" * 72)
-print("GAG2 Moon Alert v7.0.1 FINAL-only - OFFLINE LOGIC TEST")
+print("GAG2 Moon Alert v7.0.2 FINAL-only - OFFLINE LOGIC TEST")
 print("ไม่เปิดเว็บ / ไม่ยิง Discord / ไม่แก้ moon_state.json จริง")
 print("=" * 72)
+
+# ---------------------------------------------------------------------
+# UI-only release guard: Anchor/FINAL behavior must not migrate.
+# ---------------------------------------------------------------------
+ok(
+    "Display release is v7.0.2",
+    bot.BOT_DISPLAY_VERSION == "v7.0.2",
+    bot.BOT_DISPLAY_VERSION,
+)
+ok(
+    "Anchor logic version remains unchanged",
+    bot.ANCHOR_LOGIC_VERSION == "v7.0-final-only-round-ledger",
+    bot.ANCHOR_LOGIC_VERSION,
+)
+
+LOCKED_CORE_HASHES = {
+    "parse_weather_page": "0972b4aa5403892445e102a498c39f6fe12ba9337732c39805a27a5b6d78e0ad",
+    "verify_snapshots": "878dcf8cbd1efb57e98e3b53a31cbd26c6cab379c896dae0cd0366513abdd84f",
+    "ensure_round_ledger": "cdd4e8ef7713af172488cbaceaebce398d00315685c6a4faa5f8dd64bd481e1e",
+    "mark_round_missed": "a0b22053e50189653a392ec547adf2a6a1a3cfc8b2778c05c1507516737e088c",
+    "find_matching_event": "ba168d6a2a2ac2f16e55d257447f8202472fa21375992548e6080c87634d283b",
+    "resolve_anchor_state": "97322ea45f25b1382d8e96c23aa1988b8de6d89a4bc3ce58e11b1c2faaa4f089",
+    "frozen_event_for_embed": "ac985c38d258e38ea7e48d162a81c462f315d805a0e659077a1e4acb36ebebea",
+    "process_upcoming": "21afcf1f0c1fe562aa5dfe2e2d61fd9600b011471eeb47ef70c4a96b3dc26885",
+}
+source_text = (Path(__file__).resolve().parent / BOT_FILENAME).read_text(
+    encoding="utf-8"
+)
+actual_core_hashes = {}
+for node in ast.parse(source_text).body:
+    if isinstance(node, ast.FunctionDef) and node.name in LOCKED_CORE_HASHES:
+        function_source = ast.get_source_segment(source_text, node)
+        actual_core_hashes[node.name] = hashlib.sha256(
+            function_source.encode("utf-8")
+        ).hexdigest()
+
+ok(
+    "Moon parsing/FINAL core is byte-for-byte unchanged",
+    actual_core_hashes == LOCKED_CORE_HASHES,
+    str(actual_core_hashes),
+)
 
 # ---------------------------------------------------------------------
 # TEST 1: เวลาปกติ
@@ -543,8 +586,23 @@ ok(
     embed["title"] == "⚠️ 🌕 Gold Moon — ใกล้เริ่มแล้ว"
     and "เข้าเกมตอนนี้" not in embed["title"]
     and "FINAL ONLY" in embed["footer"]["text"]
-    and embed.get("color") == bot.TARGET_MOONS["gold"]["color"],
+    and embed.get("color") == bot.MOON_SYSTEM_COLOR,
     str(embed),
+)
+ok(
+    "Moon has its own border and category badge",
+    bot.MOON_SYSTEM_COLOR not in bot.NON_MOON_RESERVED_COLORS
+    and embed.get("author", {}).get("name") == "🌙 MOON FINAL ALERT"
+    and {
+        meta.get("color") for meta in bot.TARGET_MOONS.values()
+    } == {bot.MOON_SYSTEM_COLOR},
+    str(
+        {
+            "moon_color": bot.MOON_SYSTEM_COLOR,
+            "reserved": sorted(bot.NON_MOON_RESERVED_COLORS),
+            "author": embed.get("author"),
+        }
+    ),
 )
 
 # ---------------------------------------------------------------------
