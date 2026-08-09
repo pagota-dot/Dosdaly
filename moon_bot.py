@@ -1,6 +1,8 @@
 import os
 import re
 import json
+import copy
+import hashlib
 import time
 from pathlib import Path
 from datetime import datetime, timezone, timedelta
@@ -15,6 +17,7 @@ WEATHER_URL = "https://www.gag2.gg/stock/weather"
 STATE_PATH = Path("moon_state.json")
 
 WEBHOOK = os.environ.get("DISCORD_WEBHOOK", "").strip()
+TRIGGER_SOURCE = os.environ.get("TRIGGER_SOURCE", "").strip().lower()
 
 THAILAND_TZ = timezone(timedelta(hours=7))
 
@@ -35,7 +38,19 @@ FINAL_MAX_ACCEPTABLE_SECONDS = 80
 # Freeze the predicted start time from the FIRST reliable <=5m alert.
 # Later GAG2 countdown changes must NOT move the final alert later.
 ANCHOR_LOGIC_VERSION = "v7.0-final-only-round-ledger"
-BOT_DISPLAY_VERSION = "v7.0.2"
+BOT_DISPLAY_VERSION = "v7.0.4"
+
+# Delivery-only hardening.  This is deliberately separate from
+# ANCHOR_LOGIC_VERSION so installing the fix does not clear, migrate, or move
+# any existing Frozen Anchor.  The production workflow also checks out the
+# latest main branch before every scan, so a queued dispatch sees the FINAL
+# status committed by the run ahead of it.
+DELIVERY_GUARD_VERSION = "v7.0.4-fresh-main-round-closure"
+
+# Existing unsealed files stay compatible. New saves receive a checksum and
+# use atomic replacement; this guard never participates in Moon timing,
+# anchor matching, FINAL eligibility, or duplicate handling.
+STATE_INTEGRITY_SCHEMA = "gag2-moon-state-sha256-v1"
 
 # UI-only category color.  Every Moon FINAL uses one unmistakable moonlight
 # border so it cannot be confused with Stock rarity colors or SELL ×2/×4.
@@ -646,25 +661,112 @@ def verify_snapshots(first, second, elapsed_seconds):
     }
 
 
+class StateIntegrityError(RuntimeError):
+    """Existing Moon state is unsafe to use as a FINAL-round baseline."""
+
+
+def default_state():
+    return {
+        "version": 3,
+        "logic_version": ANCHOR_LOGIC_VERSION,
+        "notification_mode": "final-only",
+        "events": {},
+        "round_ledger": {},
+        "metrics": {},
+        "health": {"last_warning_epoch": 0},
+    }
+
+
+def _state_digest(state):
+    payload = copy.deepcopy(state)
+    payload.pop("_integrity", None)
+    encoded = json.dumps(
+        payload,
+        ensure_ascii=False,
+        sort_keys=True,
+        separators=(",", ":"),
+    ).encode("utf-8")
+    return hashlib.sha256(encoded).hexdigest()
+
+
+def _constant_time_equal(left, right):
+    if not isinstance(left, str) or not isinstance(right, str):
+        return False
+    if len(left) != len(right):
+        return False
+    result = 0
+    for left_char, right_char in zip(left.encode(), right.encode()):
+        result |= left_char ^ right_char
+    return result == 0
+
+
+def validate_state_payload(state):
+    """Validate persistence shape only; never recalculate a Moon prediction."""
+    if not isinstance(state, dict):
+        raise StateIntegrityError("state root must be a JSON object")
+    if not state:
+        raise StateIntegrityError("existing state is empty")
+
+    structural_fields = {
+        "logic_version",
+        "events",
+        "round_ledger",
+        "metrics",
+        "health",
+        "last_final_by_kind",
+    }
+    if not structural_fields.intersection(state):
+        raise StateIntegrityError("state has no recognized Moon fields")
+
+    for field in (
+        "events",
+        "round_ledger",
+        "metrics",
+        "health",
+        "last_final_by_kind",
+    ):
+        if field in state and not isinstance(state[field], dict):
+            raise StateIntegrityError(f"{field} must be an object")
+
+    if "logic_version" in state and not isinstance(state["logic_version"], str):
+        raise StateIntegrityError("logic_version must be text")
+    if "notification_mode" in state and not isinstance(
+        state["notification_mode"], str
+    ):
+        raise StateIntegrityError("notification_mode must be text")
+
+    for field in ("events", "round_ledger"):
+        values = (state.get(field) or {}).values()
+        if any(not isinstance(value, dict) for value in values):
+            raise StateIntegrityError(f"{field} contains a non-object entry")
+
+    seal = state.get("_integrity")
+    if seal is not None:
+        if not isinstance(seal, dict):
+            raise StateIntegrityError("integrity seal must be an object")
+        if seal.get("schema") != STATE_INTEGRITY_SCHEMA:
+            raise StateIntegrityError("integrity schema is unsupported")
+        expected = seal.get("sha256")
+        if not isinstance(expected, str) or not re.fullmatch(r"[0-9a-f]{64}", expected):
+            raise StateIntegrityError("integrity checksum is invalid")
+        if not _constant_time_equal(expected, _state_digest(state)):
+            raise StateIntegrityError("integrity checksum does not match state")
+
+    return state
+
+
 def load_state():
     if not STATE_PATH.exists():
-        return {
-            "version": 3,
-            "logic_version": ANCHOR_LOGIC_VERSION,
-            "notification_mode": "final-only",
-            "events": {},
-            "round_ledger": {},
-            "metrics": {},
-            "health": {"last_warning_epoch": 0},
-        }
+        return default_state()
 
     try:
         raw = json.loads(STATE_PATH.read_text(encoding="utf-8"))
-    except Exception:
-        raw = {}
+    except Exception as exc:
+        raise StateIntegrityError(
+            f"cannot parse {STATE_PATH.name}: {type(exc).__name__}"
+        ) from exc
 
-    if not isinstance(raw, dict):
-        raw = {}
+    validate_state_payload(raw)
 
     raw["version"] = 3
     raw["notification_mode"] = "final-only"
@@ -693,11 +795,36 @@ def load_state():
 
 
 def save_state(state):
-    state["updated_at"] = iso_now()
-    STATE_PATH.write_text(
-        json.dumps(state, ensure_ascii=False, indent=2, sort_keys=True),
-        encoding="utf-8",
+    payload = copy.deepcopy(state)
+    payload.pop("_integrity", None)
+    payload["updated_at"] = iso_now()
+    validate_state_payload(payload)
+    payload["_integrity"] = {
+        "schema": STATE_INTEGRITY_SCHEMA,
+        "sha256": _state_digest(payload),
+    }
+
+    serialized = json.dumps(
+        payload,
+        ensure_ascii=False,
+        indent=2,
+        sort_keys=True,
     )
+    temp_path = STATE_PATH.with_name(
+        f".{STATE_PATH.name}.tmp-{os.getpid()}-{time.time_ns()}"
+    )
+
+    try:
+        with temp_path.open("w", encoding="utf-8") as handle:
+            handle.write(serialized)
+            handle.flush()
+            os.fsync(handle.fileno())
+        os.replace(temp_path, STATE_PATH)
+    finally:
+        try:
+            temp_path.unlink()
+        except FileNotFoundError:
+            pass
 
 
 def prune_state(state):
@@ -813,6 +940,27 @@ def ensure_round_ledger(state, event_state, event, anchor_epoch, seen_epoch):
         lead_seconds=max(0, int(anchor_epoch) - int(seen_epoch)),
     )
     return round_id, record
+
+
+def close_event_from_round_ledger(event_state, ledger_record):
+    """Mirror a durable closed Round ID back into the transient event flags.
+
+    Round Ledger is the authoritative duplicate guard.  This protects FINAL
+    even if an older event entry is incomplete while its same Round ID was
+    already recorded as sent or missed.  It never changes timing or creates a
+    notification.
+    """
+    status = ledger_record.get("status")
+    if status not in {"final_sent", "final_missed"}:
+        return False
+
+    event_state["final"] = True
+    if status == "final_sent":
+        event_state["final_sent_epoch"] = ledger_record.get("final_sent_epoch")
+        event_state["final_sent_at"] = ledger_record.get("final_sent_at")
+    else:
+        event_state["final_missed"] = True
+    return True
 
 
 def mark_round_missed(state, event_state, reason, missed_epoch):
@@ -1009,6 +1157,101 @@ def send_level(event, level, remaining=None):
     result = send_discord("", [event_embed(outgoing, "final", remaining)])
     result["sent_epoch"] = sent_epoch
     return result
+
+
+def build_moon_test_preview_events(now_epoch=None):
+    """Create three FINAL-style examples without opening GAG2 or State."""
+    now_epoch = int(now_epoch or utc_now().timestamp())
+    event_epoch = now_epoch + FINAL_TARGET_SECONDS
+    events = []
+
+    for kind in ("gold", "rainbow", "mega"):
+        events.append(
+            {
+                "kind": kind,
+                "remaining": FINAL_TARGET_SECONDS,
+                "event_epoch": event_epoch,
+                "event_key": f"test-preview:{kind}",
+                "slot_id": f"test-preview:{kind}",
+                "clock_text": f"TEST {event_time_th(event_epoch)}",
+                "countdown_text": f"{FINAL_TARGET_SECONDS}s",
+                "countdown_precise": True,
+                "row_quality": "TEST_PREVIEW",
+                "snapshot_verified": True,
+                "game_cycle_verified": True,
+                "game_cycle_phase": 0,
+                "first_seen_epoch": now_epoch - (
+                    FINAL_TRACK_THRESHOLD_SECONDS - FINAL_TARGET_SECONDS
+                ),
+                "final_sent_epoch": now_epoch,
+                "round_id": f"TEST-MOON-{kind.upper()}-FINAL",
+                "verification": {
+                    "score": 5,
+                    "maximum": 5,
+                    "signals": [
+                        "Name",
+                        "Time",
+                        "Countdown",
+                        "2 Snapshots",
+                        "10m Cycle",
+                    ],
+                    "text": "TEST ONLY · ไม่อ่าน GAG2 จริง",
+                },
+            }
+        )
+
+    return events
+
+
+def build_moon_test_preview_embed(event):
+    embed = copy.deepcopy(
+        event_embed(event, "final", FINAL_TARGET_SECONDS)
+    )
+    embed["author"] = {"name": f"🧪 TEST ONLY · {MOON_SYSTEM_BADGE}"}
+    embed["title"] = "🧪 TEST — " + embed.get("title", "")
+    embed["description"] = (
+        "**MOON TEST PREVIEW — ไม่ใช่ Moon จริง**\n"
+        "**ไม่เปิด GAG2 · ไม่แก้ moon_state.json · ไม่ปิดรอบจริง**\n\n"
+        + embed.get("description", "")
+    )[:4000]
+    embed["footer"] = {
+        "text": (
+            f"GAG2 Moon Alert {BOT_DISPLAY_VERSION} · TEST PREVIEW · "
+            "READ-ONLY · FINAL STYLE"
+        )
+    }
+    return embed
+
+
+def send_moon_test_preview():
+    """One clearly-labelled Discord message containing all Moon UI examples."""
+    events = build_moon_test_preview_events()
+    embeds = [build_moon_test_preview_embed(event) for event in events]
+    send_discord(
+        "🧪 **GAG2 Moon Test Preview — Gold / Rainbow / Mega**\n"
+        "ทั้งหมดเป็น **TEST ONLY** ไม่ใช่รอบจริง และไม่มีการแก้ State",
+        embeds,
+    )
+    print(f"MOON TEST PREVIEW sent: {len(embeds)} FINAL-style embeds")
+
+
+def send_state_integrity_warning(error):
+    """Warn without reading GAG2 or modifying the unsafe Moon state."""
+    return send_discord(
+        "\n".join(
+            [
+                "🛑 **GAG2 SYSTEM — Moon State Integrity Guard**",
+                "**นี่ไม่ใช่ Moon FINAL Alert**",
+                "",
+                f"`{STATE_PATH.name}` ไม่ผ่านการตรวจความสมบูรณ์",
+                f"สาเหตุ: `{str(error)[:300]}`",
+                "บอตหยุดรอบนี้ก่อนอ่าน GAG2 เพื่อไม่สร้าง Frozen Anchor ใหม่ผิดรอบ",
+                "จึงไม่มี FINAL ปลอมและไม่มีการเลื่อนเวลาแจ้งจาก State ที่เสีย",
+                "",
+                "ไฟล์ State เดิมไม่ได้ถูกลบหรือเขียนทับ",
+            ]
+        )
+    )
 
 
 def read_weather():
@@ -1241,6 +1484,15 @@ def process_upcoming(state, parsed):
         es["round_id"] = round_id
         es["final_target_epoch"] = anchor_epoch - FINAL_TARGET_SECONDS
 
+        # A closed Round ID is final even when the event-side flag is missing.
+        # This is a second guard behind the workflow's fresh-main checkout.
+        if close_event_from_round_ledger(es, ledger_record):
+            print(
+                f"FINAL suppressed: {event['kind']} round_id={round_id} "
+                f"ledger_status={ledger_record.get('status')}"
+            )
+            continue
+
         anchor_remaining = anchor_epoch - int(utc_now().timestamp())
 
         if not es.get("final"):
@@ -1393,7 +1645,19 @@ def main():
     if not WEBHOOK:
         raise RuntimeError("Missing GitHub Actions secret: DISCORD_WEBHOOK")
 
-    state = load_state()
+    # Explicit preview exits before State and GAG2 are opened.
+    if TRIGGER_SOURCE == "test_preview":
+        send_moon_test_preview()
+        print("Moon Test Preview complete; moon_state.json untouched")
+        return
+
+    try:
+        state = load_state()
+    except StateIntegrityError as exc:
+        print(f"State Integrity Guard stopped Moon run: {exc}")
+        send_state_integrity_warning(exc)
+        return
+
     prune_state(state)
 
     try:

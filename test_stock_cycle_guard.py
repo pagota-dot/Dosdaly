@@ -3,7 +3,9 @@ import ast
 import copy
 import hashlib
 import importlib.util
+import json
 import sys
+import tempfile
 import time
 import types
 from pathlib import Path
@@ -289,7 +291,7 @@ accepted, _ = bot.filter_exact_stock_cycle_duplicates(
 result("Magic Mail untouched", accepted == [magic_event])
 
 # -------------------------------------------------------------------------
-# v6.5.8 observability/rarity UI regression tests.
+# v6.5.10 Wiki-authoritative rarity UI + State Integrity regression tests.
 # These run AFTER the old guard suite and do not open GAG2 or Discord.
 # -------------------------------------------------------------------------
 
@@ -299,8 +301,8 @@ result(
     bot.ALERT_LOGIC_VERSION,
 )
 result(
-    "Display release is v6.5.8",
-    bot.BOT_DISPLAY_VERSION == "6.5.8",
+    "Display release is v6.5.10",
+    bot.BOT_DISPLAY_VERSION == "6.5.10",
     bot.BOT_DISPLAY_VERSION,
 )
 
@@ -374,19 +376,42 @@ stock_embed = bot.build_event_embed(
     context=ui_context,
 )
 field_names = [x.get("name") for x in stock_embed.get("fields", [])]
+status_value = next(
+    x["value"] for x in stock_embed["fields"]
+    if x["name"] == "📌 สถานะ"
+)
 timing_value = next(
     x["value"] for x in stock_embed["fields"]
     if x["name"] == "⏱️ เวลาและความล่าช้า"
 )
 result(
-    "Compact Common Stock Embed has rarity border and 45s delay",
-    stock_embed.get("color") == bot.RARITY_UI_STYLES["common"]["color"]
-    and "COMMON" in stock_embed.get("title", "")
+    "Live-like COMMON parse is displayed as Wiki-authoritative SUPER",
+    stock_embed.get("color") == bot.RARITY_UI_STYLES["super"]["color"]
+    and "🌈 SUPER" in stock_embed.get("title", "")
+    and "COMMON" not in stock_embed.get("title", "")
+    and "SUPER" in status_value
+    and "COMMON" not in status_value
     and "เข้า Stock" in stock_embed.get("title", "")
     and "📌 สถานะ" in field_names
     and "🔄 รอบร้าน" in field_names
     and "45s" in timing_value,
     str(stock_embed),
+)
+result(
+    "Wiki rarity presentation does not mutate raw event/source evidence",
+    ui_event == event_before_context
+    and ui_event["items"][0]["rarity"] == "COMMON",
+    str(ui_event),
+)
+
+legacy_conflict_text = bot.format_single_event_message(
+    ui_event,
+    attempts=2,
+)
+result(
+    "Legacy fallback also shows SUPER and never leaks conflicting COMMON",
+    "SUPER" in legacy_conflict_text and "COMMON" not in legacy_conflict_text,
+    legacy_conflict_text,
 )
 
 magic_ui_event = {
@@ -470,14 +495,70 @@ catalog_ok = bot.KNOWN_TARGET_RARITIES == {
     "amber cranberry": "SUPER",
     "maple mushroom": "EPIC",
 }
+catalog_sources_ok = (
+    set(bot.KNOWN_TARGET_RARITY_SOURCES) == set(bot.KNOWN_TARGET_RARITIES)
+    and all(
+        url.startswith("https://growagarden2.fandom.com/wiki/")
+        for url in bot.KNOWN_TARGET_RARITY_SOURCES.values()
+    )
+    and bot.RARITY_CATALOG_VERIFIED_DATE == "2026-08-09"
+)
 preview_amber = next(
     event for event in bot.build_test_preview_events()
     if event.get("target_key") == "amber cranberry"
 )
 result(
-    "GAG2 target rarity catalog and Amber preview are current",
-    catalog_ok and bot.event_rarity(preview_amber) == "super",
+    "Fandom Wiki target rarity catalog and Amber preview are current",
+    catalog_ok
+    and catalog_sources_ok
+    and bot.event_rarity(preview_amber) == "super",
     str(bot.KNOWN_TARGET_RARITIES),
+)
+
+conflicting_catalog_cases = {
+    "atlantic giant pumpkin": ("COMMON", "legendary"),
+    "super syrup watering can": ("COMMON", "super"),
+    "super syrup sprinkler": ("RARE", "super"),
+    "amber cranberry": ("LEGENDARY", "super"),
+    "maple mushroom": ("COMMON", "epic"),
+}
+catalog_conflicts_resolved = True
+for target_key, (wrong_page_rarity, expected_rarity) in conflicting_catalog_cases.items():
+    label = next(
+        (
+            meta["label"]
+            for key_name, meta in {
+                **bot.EXACT_STOCK_TARGETS,
+                **bot.SELL_TARGETS,
+            }.items()
+            if key_name == target_key
+        ),
+        target_key.title(),
+    )
+    conflict_event = {
+        "kind": "stock",
+        "target_key": target_key,
+        "label": label,
+        "items": [
+            {
+                "name": label,
+                "qty": 1,
+                "rarity": wrong_page_rarity,
+                "type": "gear",
+            }
+        ],
+    }
+    if (
+        bot.event_rarity(conflict_event) != expected_rarity
+        or bot.display_item_rarity(conflict_event, conflict_event["items"][0])
+        != expected_rarity.upper()
+    ):
+        catalog_conflicts_resolved = False
+
+result(
+    "Every watched Wiki name overrides a conflicting page rarity for UI only",
+    catalog_conflicts_resolved,
+    str(conflicting_catalog_cases),
 )
 
 # Real alert path: exactly one request and no repeated plain content.
@@ -624,6 +705,140 @@ result(
     len(oversized_ledger["entries"]) == bot.ROUND_LEDGER_MAX_ENTRIES,
     str(len(oversized_ledger["entries"])),
 )
+
+# -------------------------------------------------------------------------
+# State Integrity Guard + atomic save. These tests use a temporary directory;
+# they never read or modify the repository's real state.json.
+# -------------------------------------------------------------------------
+original_state_path = bot.STATE_PATH
+original_replace = bot.os.replace
+original_collect_live_data = bot.collect_live_data
+original_integrity_warning = bot.send_state_integrity_warning
+original_webhook = bot.WEBHOOK
+
+with tempfile.TemporaryDirectory() as temp_dir:
+    test_state_path = Path(temp_dir) / "state.json"
+    bot.STATE_PATH = test_state_path
+
+    result(
+        "Missing state is the only clean first-install path",
+        bot.load_state() == {},
+    )
+
+    malformed_bytes = b'{"targets": '
+    test_state_path.write_bytes(malformed_bytes)
+    malformed_rejected = False
+    try:
+        bot.load_state()
+    except bot.StateIntegrityError:
+        malformed_rejected = True
+    result(
+        "Malformed existing Stock state is rejected unchanged",
+        malformed_rejected and test_state_path.read_bytes() == malformed_bytes,
+    )
+
+    test_state_path.write_text("{}", encoding="utf-8")
+    empty_rejected = False
+    try:
+        bot.load_state()
+    except bot.StateIntegrityError:
+        empty_rejected = True
+    result(
+        "Existing empty Stock state cannot become a fresh baseline",
+        empty_rejected,
+    )
+
+    valid_state = {
+        "version": "6.5.8",
+        "alert_logic_version": bot.ALERT_LOGIC_VERSION,
+        "shop_fingerprints": {"seed": "seed-fp", "gear": "gear-fp"},
+        "shop_cycles": {},
+        "targets": {"stock": {}, "magic_mail": {}, "sell": {}},
+        "daily_stats": {"days": {}},
+        "round_ledger": bot.empty_round_ledger(),
+        "health": {"status": "ok"},
+    }
+    test_state_path.write_text(
+        json.dumps(valid_state, ensure_ascii=False),
+        encoding="utf-8",
+    )
+    result(
+        "Compatible unsealed Stock state still loads normally",
+        bot.load_state().get("alert_logic_version") == bot.ALERT_LOGIC_VERSION,
+    )
+
+    bot.save_state(valid_state)
+    sealed_state = json.loads(test_state_path.read_text(encoding="utf-8"))
+    result(
+        "Atomic Stock save adds a valid SHA-256 integrity seal",
+        sealed_state.get("_integrity", {}).get("schema")
+        == bot.STATE_INTEGRITY_SCHEMA
+        and bot.load_state().get("health", {}).get("status") == "ok",
+        str(sealed_state.get("_integrity")),
+    )
+
+    tampered_state = copy.deepcopy(sealed_state)
+    tampered_state["health"]["status"] = "tampered"
+    test_state_path.write_text(
+        json.dumps(tampered_state, ensure_ascii=False),
+        encoding="utf-8",
+    )
+    tamper_rejected = False
+    try:
+        bot.load_state()
+    except bot.StateIntegrityError:
+        tamper_rejected = True
+    result(
+        "Tampered sealed Stock state is rejected",
+        tamper_rejected,
+    )
+
+    bot.save_state(valid_state)
+    original_bytes = test_state_path.read_bytes()
+
+    def fail_atomic_replace(*args, **kwargs):
+        raise OSError("forced atomic replace failure")
+
+    bot.os.replace = fail_atomic_replace
+    atomic_failure_raised = False
+    try:
+        changed_state = copy.deepcopy(valid_state)
+        changed_state["health"]["status"] = "changed"
+        bot.save_state(changed_state)
+    except OSError:
+        atomic_failure_raised = True
+    finally:
+        bot.os.replace = original_replace
+
+    leftover_temp_files = list(Path(temp_dir).glob(".state.json.tmp-*"))
+    result(
+        "Failed atomic Stock save preserves original and cleans temp file",
+        atomic_failure_raised
+        and test_state_path.read_bytes() == original_bytes
+        and leftover_temp_files == [],
+        str(leftover_temp_files),
+    )
+
+    # A corrupt production state must stop before collect_live_data/GAG2.
+    test_state_path.write_bytes(malformed_bytes)
+    guard_calls = []
+    bot.collect_live_data = lambda: (_ for _ in ()).throw(
+        AssertionError("collect_live_data must not run")
+    )
+    bot.send_state_integrity_warning = lambda error: guard_calls.append(str(error))
+    bot.WEBHOOK = "test-webhook-present"
+    bot.main()
+    result(
+        "Stock integrity failure stops before GAG2 and emits SYSTEM warning",
+        len(guard_calls) == 1 and test_state_path.read_bytes() == malformed_bytes,
+        str(guard_calls),
+    )
+
+bot.STATE_PATH = original_state_path
+bot.os.replace = original_replace
+bot.collect_live_data = original_collect_live_data
+bot.send_state_integrity_warning = original_integrity_warning
+bot.WEBHOOK = original_webhook
 
 print("=" * 64)
 print(f"RESULT: {PASS}/{PASS + FAIL} PASSED")

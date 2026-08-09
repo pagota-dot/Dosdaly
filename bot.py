@@ -81,14 +81,20 @@ ALERT_LOGIC_VERSION = "6.4.4-image-alert-v1"
 # Presentation/observability release only.  ALERT_LOGIC_VERSION intentionally
 # stays unchanged so installing this file cannot trigger a logic migration or
 # replace the existing stock baseline.
-BOT_DISPLAY_VERSION = "6.5.8"
+BOT_DISPLAY_VERSION = "6.5.10"
 ROUND_LEDGER_VERSION = 1
 ROUND_LEDGER_RETENTION_DAYS = 14
 ROUND_LEDGER_MAX_ENTRIES = 300
 
+# State Integrity Guard is deliberately outside the alert-selection logic.
+# Existing unsealed states remain compatible; every new save is checksummed
+# and replaced atomically so a stopped workflow cannot leave half-written JSON.
+STATE_INTEGRITY_SCHEMA = "gag2-stock-state-sha256-v1"
+
 # Discord supports one solid accent color per Embed.  Stock/Magic alerts use
-# the rarity reported by GAG2, while Sell uses a deliberately separate palette
-# so the multiplier is recognizable from the border alone.
+# the authoritative name-to-rarity catalog below before any page-parsed value,
+# while Sell uses a deliberately separate palette so the multiplier is
+# recognizable from the border alone.
 RARITY_UI_STYLES = {
     "common": {"color": 0xA0A0A0, "badge": "⚪ COMMON", "bar": ""},
     "uncommon": {"color": 0x3BA55D, "badge": "🟢 UNCOMMON", "bar": ""},
@@ -119,10 +125,11 @@ SELL_MULTIPLIER_UI_STYLES = {
     },
 }
 
-# GAG2/Grow A Garden 2 catalog fallback.  Live Stock/Magic events still
-# prefer the rarity parsed from the current GAG2 page.  Sell rows do not carry
-# rarity, so their item grade is available for labels/audit only; the border
-# always follows ×2/×4 above.
+# Authoritative UI catalog verified against growagarden2.fandom.com/wiki on
+# 2026-08-09.  For these exact watched names the catalog MUST win over a
+# conflicting rarity parsed from the live Stock page.  This prevents the
+# reported Super Syrup Watering Can = COMMON card while leaving raw source data,
+# stock fingerprints, cycle comparison, and alert eligibility untouched.
 KNOWN_TARGET_RARITIES = {
     "atlantic giant pumpkin": "LEGENDARY",
     "super syrup watering can": "SUPER",
@@ -130,6 +137,24 @@ KNOWN_TARGET_RARITIES = {
     "amber cranberry": "SUPER",
     "maple mushroom": "EPIC",
 }
+KNOWN_TARGET_RARITY_SOURCES = {
+    "atlantic giant pumpkin": (
+        "https://growagarden2.fandom.com/wiki/Atlantic_Giant_Pumpkin"
+    ),
+    "super syrup watering can": (
+        "https://growagarden2.fandom.com/wiki/Super_Syrup_Watering_Can"
+    ),
+    "super syrup sprinkler": (
+        "https://growagarden2.fandom.com/wiki/Super_Syrup_Sprinkler"
+    ),
+    "amber cranberry": (
+        "https://growagarden2.fandom.com/wiki/Amber_Cranberry"
+    ),
+    "maple mushroom": (
+        "https://growagarden2.fandom.com/wiki/Maple_Mushroom"
+    ),
+}
+RARITY_CATALOG_VERIFIED_DATE = "2026-08-09"
 
 # v6.5.0 Daily Statistics
 THAILAND_TZ = timezone(timedelta(hours=7))
@@ -2232,18 +2257,191 @@ def collect_live_data():
     }
 
 
+class StateIntegrityError(RuntimeError):
+    """Existing state is unsafe to use as an alert baseline."""
+
+
+def _state_digest(state):
+    payload = copy.deepcopy(state)
+    payload.pop("_integrity", None)
+    encoded = json.dumps(
+        payload,
+        ensure_ascii=False,
+        sort_keys=True,
+        separators=(",", ":"),
+    ).encode("utf-8")
+    return hashlib.sha256(encoded).hexdigest()
+
+
+def _require_state_mapping(state, field):
+    if field in state and not isinstance(state[field], dict):
+        raise StateIntegrityError(f"{field} must be an object")
+
+
+def validate_state_payload(state):
+    """
+    Validate only persistence structure, never alert eligibility or values.
+
+    Missing state.json is the one supported first-install condition.  If a
+    file already exists, malformed/empty/unknown data must not be interpreted
+    as a fresh baseline because that could create false bootstrap alerts.
+    """
+    if not isinstance(state, dict):
+        raise StateIntegrityError("state root must be a JSON object")
+    if not state:
+        raise StateIntegrityError("existing state is empty")
+
+    recognized = {
+        "version",
+        "alert_logic_version",
+        "updated_at",
+        "shop_fingerprints",
+        "shop_cycles",
+        "targets",
+        "daily_stats",
+        "round_ledger",
+        "health",
+    }
+    if not recognized.intersection(state):
+        raise StateIntegrityError("state has no recognized Stock fields")
+
+    for field in (
+        "shop_fingerprints",
+        "shop_cycles",
+        "targets",
+        "daily_stats",
+        "round_ledger",
+        "health",
+    ):
+        _require_state_mapping(state, field)
+
+    if "alert_logic_version" in state and not isinstance(
+        state["alert_logic_version"], str
+    ):
+        raise StateIntegrityError("alert_logic_version must be text")
+
+    targets = state.get("targets") or {}
+    for group in ("stock", "magic_mail", "sell"):
+        if group in targets and not isinstance(targets[group], dict):
+            raise StateIntegrityError(f"targets.{group} must be an object")
+        for target_key, target_value in (targets.get(group) or {}).items():
+            if not isinstance(target_key, str) or not isinstance(target_value, dict):
+                raise StateIntegrityError(
+                    f"targets.{group} contains an invalid target entry"
+                )
+
+    cycles = state.get("shop_cycles") or {}
+    if any(not isinstance(value, dict) for value in cycles.values()):
+        raise StateIntegrityError("shop_cycles contains a non-object entry")
+
+    fingerprints = state.get("shop_fingerprints") or {}
+    if any(
+        not isinstance(value, (str, type(None)))
+        for value in fingerprints.values()
+    ):
+        raise StateIntegrityError("shop_fingerprints contains an invalid value")
+
+    daily_stats = state.get("daily_stats") or {}
+    if "days" in daily_stats and not isinstance(daily_stats["days"], dict):
+        raise StateIntegrityError("daily_stats.days must be an object")
+
+    ledger = state.get("round_ledger") or {}
+    if "entries" in ledger:
+        entries = ledger["entries"]
+        if not isinstance(entries, list) or any(
+            not isinstance(entry, dict) for entry in entries
+        ):
+            raise StateIntegrityError("round_ledger.entries must be object entries")
+
+    seal = state.get("_integrity")
+    if seal is not None:
+        if not isinstance(seal, dict):
+            raise StateIntegrityError("integrity seal must be an object")
+        if seal.get("schema") != STATE_INTEGRITY_SCHEMA:
+            raise StateIntegrityError("integrity schema is unsupported")
+        expected = seal.get("sha256")
+        if not isinstance(expected, str) or not re.fullmatch(r"[0-9a-f]{64}", expected):
+            raise StateIntegrityError("integrity checksum is invalid")
+        if not hmac_compare_digest(expected, _state_digest(state)):
+            raise StateIntegrityError("integrity checksum does not match state")
+
+    return state
+
+
+def hmac_compare_digest(left, right):
+    """Constant-time string comparison without adding another dependency."""
+    if not isinstance(left, str) or not isinstance(right, str):
+        return False
+    if len(left) != len(right):
+        return False
+    result = 0
+    for left_char, right_char in zip(left.encode(), right.encode()):
+        result |= left_char ^ right_char
+    return result == 0
+
+
 def load_state():
+    if not STATE_PATH.exists():
+        return {}
+
     try:
         data = json.loads(STATE_PATH.read_text(encoding="utf-8"))
-        return data if isinstance(data, dict) else {}
-    except Exception:
-        return {}
+    except Exception as exc:
+        raise StateIntegrityError(
+            f"cannot parse {STATE_PATH.name}: {type(exc).__name__}"
+        ) from exc
+
+    return validate_state_payload(data)
 
 
 def save_state(state):
-    STATE_PATH.write_text(
-        json.dumps(state, ensure_ascii=False, indent=2, sort_keys=True),
-        encoding="utf-8",
+    payload = copy.deepcopy(state)
+    payload.pop("_integrity", None)
+    validate_state_payload(payload)
+    payload["_integrity"] = {
+        "schema": STATE_INTEGRITY_SCHEMA,
+        "sha256": _state_digest(payload),
+    }
+
+    serialized = json.dumps(
+        payload,
+        ensure_ascii=False,
+        indent=2,
+        sort_keys=True,
+    )
+    temp_path = STATE_PATH.with_name(
+        f".{STATE_PATH.name}.tmp-{os.getpid()}-{time.time_ns()}"
+    )
+
+    try:
+        with temp_path.open("w", encoding="utf-8") as handle:
+            handle.write(serialized)
+            handle.flush()
+            os.fsync(handle.fileno())
+        os.replace(temp_path, STATE_PATH)
+    finally:
+        try:
+            temp_path.unlink()
+        except FileNotFoundError:
+            pass
+
+
+def send_state_integrity_warning(error):
+    """Warn once in this run without reading GAG2 or touching state.json."""
+    return send_discord(
+        "\n".join(
+            [
+                "🛑 **GAG2 SYSTEM — State Integrity Guard**",
+                "**นี่ไม่ใช่แจ้งเตือน Stock / Sell**",
+                "",
+                f"`{STATE_PATH.name}` ไม่ผ่านการตรวจความสมบูรณ์",
+                f"สาเหตุ: `{str(error)[:300]}`",
+                "บอตหยุดรอบนี้ก่อนอ่าน GAG2 เพื่อไม่ตีความเป็นการติดตั้งใหม่",
+                "จึงไม่เปลี่ยน baseline และไม่ส่ง Stock/Sell มั่ว",
+                "",
+                "ไฟล์ State เดิมไม่ได้ถูกลบหรือเขียนทับ",
+            ]
+        )
     )
 
 
@@ -2401,7 +2599,8 @@ def format_event_message(events, attempts):
         if event["kind"] == "stock":
             lines += ["", f"{event['emoji']} **{event['label']}**"]
             for item in event["items"]:
-                rarity = f" · {item.get('rarity')}" if item.get("rarity") else ""
+                display_rarity = display_item_rarity(event, item)
+                rarity = f" · {display_rarity}" if display_rarity else ""
                 lines.append(
                     f"• {item.get('name', event['label'])} ×{item.get('qty', 0)}{rarity}"
                 )
@@ -2425,7 +2624,8 @@ def format_single_event_message(event, attempts, daily_stats=None):
 
     if event["kind"] == "stock":
         for item in event.get("items", []):
-            rarity = f" · {item.get('rarity')}" if item.get("rarity") else ""
+            display_rarity = display_item_rarity(event, item)
+            rarity = f" · {display_rarity}" if display_rarity else ""
             lines.append(
                 f"• {item.get('name', event['label'])} ×{item.get('qty', 0)}{rarity}"
             )
@@ -2444,25 +2644,68 @@ def is_magic_mail_event(event):
     )
 
 
+def authoritative_catalog_rarity(*names):
+    """Resolve only exact Wiki-verified names; returns lowercase or empty."""
+    for name in names:
+        known = norm(KNOWN_TARGET_RARITIES.get(key(name), "")).lower()
+        if known in RARITY_UI_STYLES:
+            return known
+    return ""
+
+
+def rarity_word_from_name(name):
+    """Name-only UI inference, useful for Legendary/Super Magic Mail."""
+    tokens = set(key(name).split())
+    for rarity in RARITY_WORDS:
+        if rarity in tokens:
+            return rarity
+    return ""
+
+
+def event_catalog_rarity(event):
+    items = event.get("items") or []
+    return authoritative_catalog_rarity(
+        event.get("target_key", ""),
+        event.get("label", ""),
+        *(item.get("name", "") for item in items if isinstance(item, dict)),
+    )
+
+
+def display_item_rarity(event, item):
+    """
+    UI-only rarity. Exact Wiki catalog > rarity word in name > page value.
+
+    The event/item dictionaries are never modified, so cycle fingerprints,
+    baseline comparison, duplicate suppression, and alert timing stay exactly
+    as approved.
+    """
+    rarity = event_catalog_rarity(event) or authoritative_catalog_rarity(
+        item.get("name", "")
+    )
+    if not rarity:
+        rarity = rarity_word_from_name(item.get("name", ""))
+    if not rarity:
+        parsed = norm(item.get("rarity", "")).lower()
+        rarity = parsed if parsed in RARITY_UI_STYLES else ""
+    return rarity.upper() if rarity in RARITY_UI_STYLES else ""
+
+
 def event_rarity(event):
     """Resolve rarity for UI only; never participates in alert selection."""
+    known = event_catalog_rarity(event)
+    if known:
+        return known
+
     for item in event.get("items") or []:
+        inferred = rarity_word_from_name(item.get("name", ""))
+        if inferred in RARITY_UI_STYLES:
+            return inferred
+
         rarity = norm(item.get("rarity", "")).lower()
         if rarity in RARITY_UI_STYLES:
             return rarity
 
-        inferred = norm(rarity_from_item(item) or "").lower()
-        if inferred in RARITY_UI_STYLES:
-            return inferred
-
-    target_key = key(event.get("target_key", ""))
-    label_key = key(event.get("label", ""))
-    known = (
-        KNOWN_TARGET_RARITIES.get(target_key)
-        or KNOWN_TARGET_RARITIES.get(label_key)
-    )
-    known = norm(known).lower()
-    return known if known in RARITY_UI_STYLES else "unknown"
+    return "unknown"
 
 
 def rarity_ui_style(event):
@@ -2641,7 +2884,8 @@ def _compact_status_text(event):
 
     parts = []
     for item in event.get("items", []):
-        rarity = f" • {item.get('rarity')}" if item.get("rarity") else ""
+        display_rarity = display_item_rarity(event, item)
+        rarity = f" • {display_rarity}" if display_rarity else ""
         parts.append(
             f"{item.get('name', event.get('label', 'รายการ'))} "
             f"**×{int(item.get('qty', 0) or 0)}**{rarity}"
@@ -3250,7 +3494,14 @@ def format_health_message(stock, sell, snapshot, attempts, recovered=False, self
         matches = find_exact_stock(stock, target_key)
         if matches:
             info = matches[0]
-            rarity = f" · {info.get('rarity')}" if info.get("rarity") else ""
+            display_event = {
+                "kind": "stock",
+                "target_key": target_key,
+                "label": meta["label"],
+                "items": [info],
+            }
+            display_rarity = display_item_rarity(display_event, info)
+            rarity = f" · {display_rarity}" if display_rarity else ""
             lines.append(
                 f"{meta['emoji']} {meta['label']}: ✅ ×{info.get('qty',0)}{rarity}"
             )
@@ -3266,7 +3517,8 @@ def format_health_message(stock, sell, snapshot, attempts, recovered=False, self
 
     if magic:
         desc = ", ".join(
-            f"{x.get('rarity') or rarity_from_item(x).upper() or '?'} ×{x.get('qty',0)}"
+            f"{display_item_rarity({'kind': 'stock', 'label': x.get('name'), 'items': [x]}, x) or '?'} "
+            f"×{x.get('qty',0)}"
             for x in magic[:6]
         )
         lines.append(f"✨ Magic Mail (ไม่รวม Rare): ✅ {desc}")
@@ -4265,7 +4517,12 @@ def main():
             "Alert rule self-test failed: " + "; ".join(self_test.get("errors", []))
         )
 
-    old_state = load_state()
+    try:
+        old_state = load_state()
+    except StateIntegrityError as exc:
+        print(f"State Integrity Guard stopped Stock run: {exc}")
+        send_state_integrity_warning(exc)
+        return
 
     # Dedicated READ-ONLY preview mode.
     # This returns before reading GAG2 and before any state save.
