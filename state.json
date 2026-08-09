@@ -1,7 +1,7 @@
 {
   "_integrity": {
     "schema": "gag2-stock-state-sha256-v1",
-    "sha256": "954bc22374eca70b220c0f925ef3e0703ec54d7852298d219e098edfb5f48cf6"
+    "sha256": "5f59d88310cbf57eeb504e0f04af3d366d5a2176380ab1fa047502ab4debb3dc"
   },
   "alert_logic_version": "6.4.4-image-alert-v1",
   "daily_stats": {
@@ -63,7 +63,7 @@
         }
       },
       "2026-08-09": {
-        "alerts_sent": 24,
+        "alerts_sent": 25,
         "magic_mail": {
           "legendary": 3,
           "rare": 9
@@ -122,13 +122,14 @@
           }
         },
         "stock_occurrences": {
-          "atlantic giant pumpkin": 1,
+          "atlantic giant pumpkin": 2,
           "super syrup sprinkler": 5,
           "super syrup watering can": 2
         },
         "stock_seen_cycles": {
           "atlantic giant pumpkin": [
-            "seed|timer:1786240500"
+            "seed|timer:1786240500",
+            "seed|timer:1786261500"
           ],
           "super syrup sprinkler": [
             "gear|timer:1786216800",
@@ -295,6 +296,46 @@
           "discord_delivery_ms": 248
         },
         "ui_mode": "compact-embed"
+      },
+      {
+        "cycle_id": 291,
+        "cycle_key": "timer:1786261500",
+        "cycle_source": "gag2-timer",
+        "entry_id": "ALERT-df043790378b5af6",
+        "evidence": {
+          "cycle_confidence": "MID_CYCLE_STABLE",
+          "snapshot_samples": 2,
+          "snapshot_stable": true,
+          "timer_wait_seconds": 16
+        },
+        "items": [
+          {
+            "name": "Atlantic Giant Pumpkin",
+            "qty": 1,
+            "rarity": "LEGENDARY",
+            "type": "seed"
+          }
+        ],
+        "kind": "stock",
+        "label": "Atlantic Giant Pumpkin",
+        "multi": null,
+        "reason": "กลับเข้า Stock",
+        "recorded_at": "2026-08-09T07:40:40.653103+00:00",
+        "recorded_epoch": 1786261240.6531029,
+        "round_id": "STOCK-SEED-C291",
+        "shop": "seed",
+        "status": "alert_sent",
+        "target_key": "atlantic giant pumpkin",
+        "timeline": {
+          "alert_sent_epoch": 1786261240.3416083,
+          "cycle_reset_epoch": 1786261200.0,
+          "cycle_to_send_seconds": 40,
+          "detected_epoch": 1786261233.3182573,
+          "detected_to_send_ms": 7023,
+          "discord_completed_epoch": 1786261240.6531029,
+          "discord_delivery_ms": 311
+        },
+        "ui_mode": "compact-embed"
       }
     ],
     "max_entries": 300,
@@ -303,26 +344,26 @@
   },
   "shop_cycles": {
     "crate": {
-      "id": 290,
-      "key": "timer:1786261200",
+      "id": 291,
+      "key": "timer:1786261500",
       "source": "gag2-timer"
     },
     "gear": {
-      "id": 290,
-      "key": "timer:1786261200",
+      "id": 291,
+      "key": "timer:1786261500",
       "source": "gag2-timer"
     },
     "seed": {
-      "id": 290,
-      "key": "timer:1786261200",
+      "id": 291,
+      "key": "timer:1786261500",
       "source": "gag2-timer"
     }
   },
   "shop_fingerprints": {
-    "crate": "ee1196123c5f05b9168f954f86120b85dc4582f25f1a090acb3650b9639448c0",
-    "gear": "3d7d969e865d392e6d14a3b539552338a3eb5f4abfb7a767e8db6221b78e5836",
-    "seed": "2b6bcb9cf55891e0a2341e2361cfa7e4bf66319720c8e7abb74b07edd297a2d2",
-    "sell": "8e899478283bf304dc27b9151e7dd75fc34381d76d70a6912e4922ac788aa4c9",
+    "crate": "997c28a98c4f5ab1240bb5cbff4d28e869be884d585dc76e23525bbd5d04164b",
+    "gear": "f941a9def0326326805772c45aa53ee65aed8005259da00261ff58d2652b5b93",
+    "seed": "115f0e377295b59a13e39047519ffb5e0132bc9b1ffb23090ea64e8596cb7605",
+    "sell": "e911219b3b0c9bfe65fa1c2db08b56bcf9b3fc066ec2bc80e76285252a287c69",
     "unknown": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
   },
   "targets": {
@@ -331,13 +372,13 @@
       "atlantic giant pumpkin": {
         "image_url": "https://cdn.gag2.gg/items/atlantic_giant_pumpkin.webp",
         "label": "Atlantic Giant Pumpkin",
-        "multi": 2.0,
+        "multi": 1.2,
         "present": true
       },
       "maple mushroom": {
         "image_url": "https://cdn.gag2.gg/items/maple_mushroom.webp",
         "label": "Maple Mushroom",
-        "multi": 0.87,
+        "multi": 0.86,
         "present": true
       }
     },
@@ -350,9 +391,16 @@
       },
       "atlantic giant pumpkin": {
         "image_url": "https://cdn.gag2.gg/items/atlantic_giant_pumpkin.webp",
-        "items": [],
+        "items": [
+          {
+            "name": "Atlantic Giant Pumpkin",
+            "qty": 1,
+            "rarity": "LEGENDARY",
+            "type": "seed"
+          }
+        ],
         "label": "Atlantic Giant Pumpkin",
-        "present": false
+        "present": true
       },
       "super syrup sprinkler": {
         "image_url": "https://cdn.gag2.gg/items/super_syrup_sprinkler.webp",
@@ -368,6 +416,6 @@
       }
     }
   },
-  "updated_at": "2026-08-09T07:35:39.597558+00:00",
+  "updated_at": "2026-08-09T07:40:40.654690+00:00",
   "version": "6.5.10"
 }
