@@ -301,8 +301,8 @@ result(
     bot.ALERT_LOGIC_VERSION,
 )
 result(
-    "Display release is v6.5.10",
-    bot.BOT_DISPLAY_VERSION == "6.5.10",
+    "Display release is v6.5.11",
+    bot.BOT_DISPLAY_VERSION == "6.5.11",
     bot.BOT_DISPLAY_VERSION,
 )
 
@@ -704,6 +704,240 @@ result(
     "Round Ledger retention is bounded",
     len(oversized_ledger["entries"]) == bot.ROUND_LEDGER_MAX_ENTRIES,
     str(len(oversized_ledger["entries"])),
+)
+
+# -------------------------------------------------------------------------
+# v6.5.11 Daily Stock pieces: one maximum quantity per target/shop cycle.
+# -------------------------------------------------------------------------
+daily_quantity_names = set()
+for node in source_tree.body:
+    if (
+        isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))
+        and node.name
+        in {
+            "exact_stock_quantity",
+            "update_stock_piece_total",
+            "update_daily_occurrence_stats",
+        }
+    ):
+        daily_quantity_names.update(
+            child.id
+            for child in ast.walk(node)
+            if isinstance(child, ast.Name)
+        )
+result(
+    "Daily piece counter adds no request, Discord send, or sleep",
+    daily_quantity_names.isdisjoint(
+        {
+            "requests",
+            "send_discord",
+            "collect_live_data",
+            "read_source_synced_stock",
+            "sleep",
+        }
+    ),
+    str(sorted(daily_quantity_names)),
+)
+
+daily_target = "atlantic giant pumpkin"
+daily_label = "Atlantic Giant Pumpkin"
+daily_stats = {"days": {}}
+daily_key = bot.thailand_date_str()
+
+
+def update_daily_stock_quantity(quantity, cycle_key):
+    stock_items = [
+        {
+            "name": daily_label,
+            "qty": quantity,
+            "rarity": "LEGENDARY",
+            "type": "seed",
+        }
+    ]
+    snapshot = bot.target_snapshot(stock_items, [])
+    bot.update_daily_occurrence_stats(
+        daily_stats,
+        stock_items,
+        [],
+        snapshot,
+        {
+            "seed": {
+                "id": 1,
+                "key": cycle_key,
+                "source": "gag2-timer",
+            }
+        },
+        {"seed": f"fp-{cycle_key}"},
+    )
+
+
+update_daily_stock_quantity(1, "timer:daily-1")
+daily_day = daily_stats["days"][daily_key]
+result(
+    "First Stock cycle records one occurrence and its real quantity",
+    daily_day["stock_occurrences"].get(daily_target) == 1
+    and daily_day["stock_pieces"].get(daily_target) == 1
+    and daily_day["stock_cycle_quantities"][daily_target].get(
+        "seed|timer:daily-1"
+    ) == 1,
+    str(daily_day),
+)
+
+update_daily_stock_quantity(1, "timer:daily-1")
+result(
+    "Repeated snapshot in the same cycle adds neither round nor piece",
+    daily_day["stock_occurrences"].get(daily_target) == 1
+    and daily_day["stock_pieces"].get(daily_target) == 1,
+    str(daily_day),
+)
+
+update_daily_stock_quantity(2, "timer:daily-1")
+result(
+    "Same-cycle quantity correction x1 to x2 adds only one piece",
+    daily_day["stock_occurrences"].get(daily_target) == 1
+    and daily_day["stock_pieces"].get(daily_target) == 2
+    and daily_day["stock_cycle_quantities"][daily_target].get(
+        "seed|timer:daily-1"
+    ) == 2,
+    str(daily_day),
+)
+
+update_daily_stock_quantity(1, "timer:daily-1")
+result(
+    "Same-cycle quantity decrease never subtracts or recounts pieces",
+    daily_day["stock_occurrences"].get(daily_target) == 1
+    and daily_day["stock_pieces"].get(daily_target) == 2,
+    str(daily_day),
+)
+
+update_daily_stock_quantity(3, "timer:daily-2")
+result(
+    "New shop cycle adds its quantity to today's total",
+    daily_day["stock_occurrences"].get(daily_target) == 2
+    and daily_day["stock_pieces"].get(daily_target) == 5
+    and daily_day["stock_cycle_quantities"][daily_target].get(
+        "seed|timer:daily-2"
+    ) == 3,
+    str(daily_day),
+)
+
+result(
+    "Duplicate parser variants use the highest quantity instead of a sum",
+    bot.exact_stock_quantity(
+        {
+            "items": [
+                {"qty": 2},
+                {"qty": 4},
+                {"qty": 4},
+            ]
+        }
+    ) == 4,
+)
+
+daily_event = {
+    "kind": "stock",
+    "target_key": daily_target,
+    "label": daily_label,
+    "emoji": "🎃",
+    "items": [
+        {
+            "name": daily_label,
+            "qty": 3,
+            "rarity": "LEGENDARY",
+            "type": "seed",
+        }
+    ],
+    "reason": "รอบร้านใหม่",
+}
+daily_counter = bot.event_daily_counter(daily_event, daily_stats)
+daily_embed = bot.build_event_embed(
+    daily_event,
+    attempts=1,
+    daily_stats=daily_stats,
+)
+daily_counter_field = next(
+    field["value"]
+    for field in daily_embed["fields"]
+    if field["name"] == "📊 สถิติวันนี้"
+)
+result(
+    "Real Stock card shows both today's round and piece totals",
+    daily_counter == {"kind": "stock", "current": 2, "pieces": 5}
+    and "ครั้งที่ **2**" in daily_counter_field
+    and "รวมวันนี้ **5 ชิ้น**" in daily_counter_field,
+    str(daily_counter_field),
+)
+
+preview_base = {"days": {}}
+preview_before = copy.deepcopy(preview_base)
+preview_event = next(
+    item
+    for item in bot.build_test_preview_events()
+    if item.get("target_key") == "super syrup watering can"
+)
+preview_stats = bot.preview_daily_stats_for_event(
+    preview_base,
+    preview_event,
+)
+preview_day = preview_stats["days"][daily_key]
+preview_embed = bot.build_test_preview_embed(preview_event, preview_base)
+preview_counter_field = next(
+    field["value"]
+    for field in preview_embed["fields"]
+    if field["name"] == "📊 สถิติวันนี้"
+)
+result(
+    "Read-only Preview exercises x2 pieces without mutating real statistics",
+    preview_event["items"][0]["qty"] == 2
+    and preview_day["stock_occurrences"].get(TARGET) == 1
+    and preview_day["stock_pieces"].get(TARGET) == 2
+    and "รวมวันนี้ **2 ชิ้น**" in preview_counter_field
+    and preview_base == preview_before,
+    str(preview_counter_field),
+)
+
+legacy_day = {
+    "stock_occurrences": {daily_target: 3},
+    "stock_seen_cycles": {
+        daily_target: ["seed|old-1", "seed|old-2", "seed|old-3"]
+    },
+    "magic_mail": {},
+    "magic_seen_cycles": {},
+    "sell": {},
+    "sell_seen_rotations": {},
+    "alerts_sent": 0,
+}
+legacy_stats = {"days": {"legacy": copy.deepcopy(legacy_day)}}
+migrated_day = bot.ensure_daily_day(legacy_stats, "legacy")
+result(
+    "v6.5.10 day migrates safely with one minimum piece per old occurrence",
+    migrated_day["stock_pieces"].get(daily_target) == 3
+    and set(migrated_day["stock_cycle_quantities"][daily_target].values())
+    == {1},
+    str(migrated_day),
+)
+
+legacy_today_stats = {"days": {daily_key: copy.deepcopy(legacy_day)}}
+legacy_today_before = copy.deepcopy(legacy_today_stats)
+manual_statistics = bot.format_today_statistics_message(legacy_today_stats)
+result(
+    "Manual Daily Statistics migrates for display only and remains read-only",
+    "Atlantic Giant Pumpkin: **3 รอบ** · รวม **3 ชิ้น**"
+    in manual_statistics
+    and legacy_today_stats == legacy_today_before,
+    manual_statistics,
+)
+
+reset_stats = {"days": {}}
+old_day = bot.ensure_daily_day(reset_stats, "2099-01-01")
+old_day["stock_pieces"][daily_target] = 9
+new_day = bot.ensure_daily_day(reset_stats, "2099-01-02")
+result(
+    "Thailand date boundary starts a separate zeroed piece total",
+    new_day["stock_pieces"] == {}
+    and reset_stats["days"]["2099-01-01"]["stock_pieces"][daily_target]
+    == 9,
+    str(reset_stats),
 )
 
 # -------------------------------------------------------------------------

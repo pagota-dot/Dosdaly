@@ -134,7 +134,7 @@ moon = load_module("cross_moon_bot", MOON_FILE)
 
 check(
     "Display versions are the combined safety release",
-    stock.BOT_DISPLAY_VERSION == "6.5.10"
+    stock.BOT_DISPLAY_VERSION == "6.5.11"
     and moon.BOT_DISPLAY_VERSION == "v7.0.4",
     f"Stock={stock.BOT_DISPLAY_VERSION} Moon={moon.BOT_DISPLAY_VERSION}",
 )
@@ -189,6 +189,38 @@ check(
     "LEGENDARY" in stock_embed.get("title", "")
     and stock_embed.get("color") == stock.RARITY_UI_STYLES["legendary"]["color"],
     str(stock_embed),
+)
+
+stock_daily_stats = {
+    "days": {
+        stock.thailand_date_str(): {
+            "stock_occurrences": {"atlantic giant pumpkin": 6},
+            "stock_seen_cycles": {},
+            "stock_pieces": {"atlantic giant pumpkin": 8},
+            "stock_cycle_quantities": {},
+            "magic_mail": {},
+            "magic_seen_cycles": {},
+            "sell": {},
+            "sell_seen_rotations": {},
+            "alerts_sent": 6,
+        }
+    }
+}
+stock_daily_embed = stock.build_event_embed(
+    stock_event,
+    attempts=1,
+    daily_stats=stock_daily_stats,
+)
+stock_daily_value = next(
+    field["value"]
+    for field in stock_daily_embed.get("fields", [])
+    if field.get("name") == "📊 สถิติวันนี้"
+)
+check(
+    "Stock UI separates today's occurrence count from total pieces",
+    "ครั้งที่ **6**" in stock_daily_value
+    and "รวมวันนี้ **8 ชิ้น**" in stock_daily_value,
+    stock_daily_value,
 )
 
 wiki_conflict_event = {

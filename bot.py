@@ -81,7 +81,7 @@ ALERT_LOGIC_VERSION = "6.4.4-image-alert-v1"
 # Presentation/observability release only.  ALERT_LOGIC_VERSION intentionally
 # stays unchanged so installing this file cannot trigger a logic migration or
 # replace the existing stock baseline.
-BOT_DISPLAY_VERSION = "6.5.10"
+BOT_DISPLAY_VERSION = "6.5.11"
 ROUND_LEDGER_VERSION = 1
 ROUND_LEDGER_RETENTION_DAYS = 14
 ROUND_LEDGER_MAX_ENTRIES = 300
@@ -2550,9 +2550,13 @@ def event_daily_counter(event, daily_stats):
         current = int(
             (day.get("stock_occurrences") or {}).get(target_key, 0) or 0
         )
+        pieces = int(
+            (day.get("stock_pieces") or {}).get(target_key, 0) or 0
+        )
         return {
             "kind": "stock",
             "current": current,
+            "pieces": pieces,
         }
 
     return None
@@ -2585,6 +2589,7 @@ def format_event_counter_lines(event, daily_stats):
         "",
         "📊 **สถิติวันนี้**",
         f"• พบ {event.get('label', 'เป้าหมายนี้')}: **ครั้งที่ {counter['current']}**",
+        f"• จำนวนที่พบรวมวันนี้: **{counter['pieces']} ชิ้น**",
     ]
 
 
@@ -2875,7 +2880,10 @@ def _compact_counter_text(event, daily_stats):
         rarity = (counter.get("rarity") or "unknown").title()
         return f"{rarity} Magic Mail • ครั้งที่ **{counter['current']}**"
 
-    return f"พบเป้าหมายนี้ • ครั้งที่ **{counter['current']}**"
+    return (
+        f"พบเป้าหมายนี้ • ครั้งที่ **{counter['current']}** • "
+        f"รวมวันนี้ **{counter['pieces']} ชิ้น**"
+    )
 
 
 def _compact_status_text(event):
@@ -3862,6 +3870,10 @@ def empty_daily_day():
     return {
         "stock_occurrences": {},
         "stock_seen_cycles": {},
+        # Quantity total for each exact Stock target.  One shop cycle owns one
+        # maximum quantity, so a late page update ×1 -> ×2 adds only +1.
+        "stock_pieces": {},
+        "stock_cycle_quantities": {},
         "magic_mail": {},
         "magic_seen_cycles": {},
         "sell": {},
@@ -3897,10 +3909,34 @@ def ensure_daily_day(stats, day_key):
         day = empty_daily_day()
         days[day_key] = day
 
+    # Backward-compatible one-time minimum migration for days collected by
+    # v6.5.10.  Every recorded occurrence represents at least one piece.
+    # Existing cycle markers start at ×1; a later ×2/×3 observation in the
+    # same cycle will add only the positive difference.
+    had_stock_pieces = isinstance(day.get("stock_pieces"), dict)
+    had_cycle_quantities = isinstance(
+        day.get("stock_cycle_quantities"),
+        dict,
+    )
+
     defaults = empty_daily_day()
     for k, default in defaults.items():
         if k not in day or not isinstance(day[k], type(default)):
             day[k] = copy.deepcopy(default)
+
+    if not had_stock_pieces:
+        for target_key, count in (day.get("stock_occurrences") or {}).items():
+            day["stock_pieces"][target_key] = max(0, int(count or 0))
+
+    if not had_cycle_quantities:
+        for target_key, markers in (day.get("stock_seen_cycles") or {}).items():
+            if not isinstance(markers, list):
+                continue
+            day["stock_cycle_quantities"][target_key] = {
+                str(marker): 1
+                for marker in markers
+                if marker
+            }
 
     return day
 
@@ -3933,6 +3969,59 @@ def _register_unique_seen(seen_map, counter_map, key_name, marker):
     return True
 
 
+def exact_stock_quantity(current_state):
+    """Return the safest quantity for one exact target in one snapshot.
+
+    A watched item normally owns one row.  If the parser exposes duplicate
+    variants, use the highest quantity instead of summing rows and inflating
+    the daily total.
+    """
+    quantities = []
+    for item in (current_state or {}).get("items", []) or []:
+        if not isinstance(item, dict):
+            continue
+        try:
+            quantities.append(max(0, int(item.get("qty", 0) or 0)))
+        except (TypeError, ValueError):
+            continue
+    return max(quantities, default=0)
+
+
+def update_stock_piece_total(day, target_key, marker, quantity):
+    """Keep one maximum quantity per target and source shop cycle."""
+    if not marker:
+        return False
+
+    try:
+        quantity = max(0, int(quantity or 0))
+    except (TypeError, ValueError):
+        return False
+
+    target_cycles = day["stock_cycle_quantities"].get(target_key)
+    if not isinstance(target_cycles, dict):
+        target_cycles = {}
+        day["stock_cycle_quantities"][target_key] = target_cycles
+
+    try:
+        previous = max(0, int(target_cycles.get(marker, 0) or 0))
+    except (TypeError, ValueError):
+        previous = 0
+    if quantity <= previous:
+        return False
+
+    target_cycles[marker] = quantity
+    increase = quantity - previous
+    try:
+        current_total = max(
+            0,
+            int(day["stock_pieces"].get(target_key, 0) or 0),
+        )
+    except (TypeError, ValueError):
+        current_total = 0
+    day["stock_pieces"][target_key] = current_total + increase
+    return True
+
+
 def update_daily_occurrence_stats(
     daily_stats,
     stock,
@@ -3946,6 +4035,8 @@ def update_daily_occurrence_stats(
 
     Exact Stock:
       once per Seed/Gear/Crate cycle.
+      Pieces use the maximum observed quantity in that cycle.  A same-cycle
+      ×1 -> ×2 correction adds +1; repeats or decreases add nothing.
 
     Magic Mail:
       every rarity INCLUDING Rare for statistics, once per shop cycle.
@@ -3975,6 +4066,12 @@ def update_daily_occurrence_stats(
             day["stock_occurrences"],
             target_key,
             marker,
+        )
+        update_stock_piece_total(
+            day,
+            target_key,
+            marker,
+            exact_stock_quantity(cur),
         )
 
     # All Magic Mail rarities, including Rare, for statistics.
@@ -4046,6 +4143,12 @@ def add_daily_alert_count(daily_stats, count):
     day["alerts_sent"] = int(day.get("alerts_sent", 0) or 0) + int(count)
 
 
+def daily_day_read_only_view(day):
+    """Return a migrated copy for Manual/Summary display without State writes."""
+    stats = {"days": {"view": copy.deepcopy(day)}}
+    return ensure_daily_day(stats, "view")
+
+
 
 def format_today_statistics_message(daily_stats):
     """
@@ -4062,8 +4165,11 @@ def format_today_statistics_message(daily_stats):
 
     if not isinstance(day, dict):
         day = empty_daily_day()
+    else:
+        day = daily_day_read_only_view(day)
 
     stock_counts = day.get("stock_occurrences", {}) or {}
+    stock_pieces = day.get("stock_pieces", {}) or {}
     magic_counts = day.get("magic_mail", {}) or {}
     sell_counts = day.get("sell", {}) or {}
 
@@ -4076,8 +4182,10 @@ def format_today_statistics_message(daily_stats):
 
     for target_key, meta in EXACT_STOCK_TARGETS.items():
         count = int(stock_counts.get(target_key, 0) or 0)
+        pieces = int(stock_pieces.get(target_key, 0) or 0)
         lines.append(
-            f"{meta['emoji']} {meta['label']}: **{count} รอบ**"
+            f"{meta['emoji']} {meta['label']}: **{count} รอบ** · "
+            f"รวม **{pieces} ชิ้น**"
         )
 
     # Compact Magic Mail line. Show all configured/common rarities with
@@ -4138,7 +4246,9 @@ def format_today_statistics_message(daily_stats):
 
 
 def format_daily_summary(day_key, day):
+    day = daily_day_read_only_view(day)
     stock_counts = day.get("stock_occurrences", {}) or {}
+    stock_pieces = day.get("stock_pieces", {}) or {}
     magic_counts = day.get("magic_mail", {}) or {}
     sell_counts = day.get("sell", {}) or {}
 
@@ -4152,8 +4262,10 @@ def format_daily_summary(day_key, day):
 
     for target_key, meta in EXACT_STOCK_TARGETS.items():
         count = int(stock_counts.get(target_key, 0) or 0)
+        pieces = int(stock_pieces.get(target_key, 0) or 0)
         lines.append(
-            f"{meta['emoji']} {meta['label']}: **{count} รอบ**"
+            f"{meta['emoji']} {meta['label']}: **{count} รอบ** · "
+            f"รวม **{pieces} ชิ้น**"
         )
 
     lines += ["", "✨ **Magic Mail**"]
@@ -4359,6 +4471,9 @@ def preview_daily_stats_for_event(base_daily_stats, event):
             day["stock_occurrences"][target_key] = int(
                 day["stock_occurrences"].get(target_key, 0) or 0
             ) + 1
+            day["stock_pieces"][target_key] = int(
+                day["stock_pieces"].get(target_key, 0) or 0
+            ) + exact_stock_quantity({"items": event.get("items") or []})
 
     return stats
 
@@ -4373,6 +4488,10 @@ def build_test_preview_events():
         "super syrup sprinkler": "SUPER",
         "amber cranberry": "SUPER",
     }
+    stock_preview_qty = {
+        # Exercise the uncommon >×1 path in every read-only Preview run.
+        "super syrup watering can": 2,
+    }
 
     for target_key, meta in EXACT_STOCK_TARGETS.items():
         events.append(
@@ -4384,7 +4503,7 @@ def build_test_preview_events():
                 "items": [
                     {
                         "name": meta["label"],
-                        "qty": 1,
+                        "qty": stock_preview_qty.get(target_key, 1),
                         "rarity": stock_rarity.get(target_key, "SUPER"),
                         "type": (
                             "seed"
