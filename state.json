@@ -1,7 +1,7 @@
 {
   "_integrity": {
     "schema": "gag2-stock-state-sha256-v1",
-    "sha256": "70c2070ddb2ad65fe9fff42aaf631bd877efde5ab3ab96c2aa2eaf6a9700f227"
+    "sha256": "73581a6ff1414f199d8260de0a517e657017c94c567b1dc03016f12056f396c6"
   },
   "alert_logic_version": "6.4.4-image-alert-v1",
   "daily_stats": {
@@ -464,10 +464,22 @@
       },
       "2026-08-12": {
         "alerts_sent": 0,
-        "magic_cycle_quantities": {},
-        "magic_mail": {},
-        "magic_mail_pieces": {},
-        "magic_seen_cycles": {},
+        "magic_cycle_quantities": {
+          "rare": {
+            "gear|timer:1786469700": 1
+          }
+        },
+        "magic_mail": {
+          "rare": 1
+        },
+        "magic_mail_pieces": {
+          "rare": 1
+        },
+        "magic_seen_cycles": {
+          "rare": [
+            "gear|timer:1786469700"
+          ]
+        },
         "sell": {},
         "sell_seen_rotations": {},
         "stock_cycle_quantities": {},
@@ -4249,26 +4261,26 @@
   },
   "shop_cycles": {
     "crate": {
-      "id": 983,
-      "key": "timer:1786469400",
+      "id": 984,
+      "key": "timer:1786469700",
       "source": "gag2-timer"
     },
     "gear": {
-      "id": 983,
-      "key": "timer:1786469400",
+      "id": 984,
+      "key": "timer:1786469700",
       "source": "gag2-timer"
     },
     "seed": {
-      "id": 983,
-      "key": "timer:1786469400",
+      "id": 984,
+      "key": "timer:1786469700",
       "source": "gag2-timer"
     }
   },
   "shop_fingerprints": {
-    "crate": "0ef50eb02b622926bb4629de5c795568cd109f183d79af8ecee37f89432a042b",
-    "gear": "d9917323585ba3314c38e6a6c9fd5f1ddbb1caa8da3be132e7b4eeb64d9e1733",
-    "seed": "00c88a1daf77876e9ad76ead8aa8028d973210b2d3b79d0de0ff23d696a4cbea",
-    "sell": "cfb8692e11d823a1f175ec5ce390593c2b4019168d3e16e1eb800767442e3668",
+    "crate": "f2d5a3181895877a90f0628df2e102dcfe8f370c1d67dcf0c76914a7457a18c4",
+    "gear": "a92e7674318f33552ffad8cb8c82f7e005408d4476061a5ab5c92111eb9110c5",
+    "seed": "295bf5cecf10c89228de6d1f697c7ce8f9467cb78abc7492e62b442dad256d75",
+    "sell": "d7bd939197408da1bbea5c01b5b588b484405ab7e8d17c47c9fd4291530fd819",
     "unknown": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
   },
   "targets": {
@@ -4277,13 +4289,13 @@
       "atlantic giant pumpkin": {
         "image_url": "https://cdn.gag2.gg/items/atlantic_giant_pumpkin.webp",
         "label": "Atlantic Giant Pumpkin",
-        "multi": 0.98,
+        "multi": 0.99,
         "present": true
       },
       "maple mushroom": {
         "image_url": "https://cdn.gag2.gg/items/maple_mushroom.webp",
         "label": "Maple Mushroom",
-        "multi": 0.97,
+        "multi": 1.01,
         "present": true
       }
     },
@@ -4314,6 +4326,6 @@
       }
     }
   },
-  "updated_at": "2026-08-11T17:25:39.333415+00:00",
+  "updated_at": "2026-08-11T17:30:40.004538+00:00",
   "version": "6.5.12"
 }
