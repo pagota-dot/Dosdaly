@@ -1,7 +1,7 @@
 {
   "_integrity": {
     "schema": "gag2-stock-state-sha256-v1",
-    "sha256": "5e8e32d4114fe83baa0fabd39076b69082660b99d687f5679e611e0ef660ebb4"
+    "sha256": "4bbc541dea2df003036b897fcac7f54a96e1f2d4be389c6ea1fdb02243f7480e"
   },
   "alert_logic_version": "6.4.4-image-alert-v1",
   "daily_stats": {
@@ -280,15 +280,16 @@
         }
       },
       "2026-08-11": {
-        "alerts_sent": 20,
+        "alerts_sent": 21,
         "magic_mail": {
-          "legendary": 2,
+          "legendary": 3,
           "rare": 9
         },
         "magic_seen_cycles": {
           "legendary": [
             "gear|timer:1786404000",
-            "gear|timer:1786410900"
+            "gear|timer:1786410900",
+            "gear|timer:1786420200"
           ],
           "rare": [
             "gear|timer:1786385700",
@@ -3266,6 +3267,46 @@
           "discord_delivery_ms": 675
         },
         "ui_mode": "compact-embed"
+      },
+      {
+        "cycle_id": 819,
+        "cycle_key": "timer:1786420200",
+        "cycle_source": "gag2-timer",
+        "entry_id": "ALERT-fbfb171537e000b4",
+        "evidence": {
+          "cycle_confidence": "MID_CYCLE_STABLE",
+          "snapshot_samples": 2,
+          "snapshot_stable": true,
+          "timer_wait_seconds": 16
+        },
+        "items": [
+          {
+            "name": "Legendary Magic Mail",
+            "qty": 1,
+            "rarity": "LEGENDARY",
+            "type": "gear"
+          }
+        ],
+        "kind": "stock",
+        "label": "Legendary Magic Mail",
+        "multi": null,
+        "reason": "Magic Mail ที่ต้องการอยู่ใน Stock",
+        "recorded_at": "2026-08-11T03:45:40.034875+00:00",
+        "recorded_epoch": 1786419940.0348747,
+        "round_id": "STOCK-GEAR-C819",
+        "shop": "gear",
+        "status": "alert_sent",
+        "target_key": "legendary magic mail|legendary",
+        "timeline": {
+          "alert_sent_epoch": 1786419939.7995713,
+          "cycle_reset_epoch": 1786419900.0,
+          "cycle_to_send_seconds": 40,
+          "detected_epoch": 1786419932.836263,
+          "detected_to_send_ms": 6963,
+          "discord_completed_epoch": 1786419940.0348747,
+          "discord_delivery_ms": 235
+        },
+        "ui_mode": "compact-embed"
       }
     ],
     "max_entries": 300,
@@ -3274,30 +3315,39 @@
   },
   "shop_cycles": {
     "crate": {
-      "id": 818,
-      "key": "timer:1786419900",
+      "id": 819,
+      "key": "timer:1786420200",
       "source": "gag2-timer"
     },
     "gear": {
-      "id": 818,
-      "key": "timer:1786419900",
+      "id": 819,
+      "key": "timer:1786420200",
       "source": "gag2-timer"
     },
     "seed": {
-      "id": 818,
-      "key": "timer:1786419900",
+      "id": 819,
+      "key": "timer:1786420200",
       "source": "gag2-timer"
     }
   },
   "shop_fingerprints": {
-    "crate": "473f7bd4ecf4262704596b68af231f5afddcf51ca003232797d74c15ae1ab957",
-    "gear": "a4f4aae8a30aeb6fa5b6012f66b42b8fdddaa0e4b9eadb11082a6c2bd7b7842b",
-    "seed": "11244e99edf79817ce4f9d0b479f743088b26fa9d82774faf8a387b8142908b3",
+    "crate": "525df159b519ef16cb7a7ae16ba13f76abeabada4bbcf21a9fb9ee79b0155893",
+    "gear": "d5d251d2af3ba7bc82543b13412daa326717859325256d5a4c2595de944e580e",
+    "seed": "f4c7a37109f8441f3d71b9293a3a8d9c7d1d8531e1ea915a8ed12307ba59e7ae",
     "sell": "d560c2145220fc7e2f0384fdc2edf2e932eca802f543092f2dbf23912326d23f",
     "unknown": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
   },
   "targets": {
-    "magic_mail": {},
+    "magic_mail": {
+      "legendary magic mail|legendary": {
+        "image_url": "https://cdn.gag2.gg/items/legendary_magic_mail.webp",
+        "name": "Legendary Magic Mail",
+        "present": true,
+        "qty": 1,
+        "rarity": "LEGENDARY",
+        "type": "gear"
+      }
+    },
     "sell": {
       "atlantic giant pumpkin": {
         "image_url": "https://cdn.gag2.gg/items/atlantic_giant_pumpkin.webp",
@@ -3339,6 +3389,6 @@
       }
     }
   },
-  "updated_at": "2026-08-11T03:41:00.072824+00:00",
+  "updated_at": "2026-08-11T03:45:40.039314+00:00",
   "version": "6.5.10"
 }
