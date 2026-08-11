@@ -134,8 +134,8 @@ moon = load_module("cross_moon_bot", MOON_FILE)
 
 check(
     "Display versions are the combined safety release",
-    stock.BOT_DISPLAY_VERSION == "6.5.11"
-    and moon.BOT_DISPLAY_VERSION == "v7.0.4",
+    stock.BOT_DISPLAY_VERSION == "6.5.12"
+    and moon.BOT_DISPLAY_VERSION == "v7.0.5",
     f"Stock={stock.BOT_DISPLAY_VERSION} Moon={moon.BOT_DISPLAY_VERSION}",
 )
 check(
@@ -200,6 +200,8 @@ stock_daily_stats = {
             "stock_cycle_quantities": {},
             "magic_mail": {},
             "magic_seen_cycles": {},
+            "magic_mail_pieces": {},
+            "magic_cycle_quantities": {},
             "sell": {},
             "sell_seen_rotations": {},
             "alerts_sent": 6,
@@ -221,6 +223,55 @@ check(
     "ครั้งที่ **6**" in stock_daily_value
     and "รวมวันนี้ **8 ชิ้น**" in stock_daily_value,
     stock_daily_value,
+)
+
+magic_daily_event = {
+    "kind": "stock",
+    "target_key": "legendary magic mail|legendary|gear",
+    "label": "Legendary Magic Mail",
+    "emoji": "✨",
+    "items": [
+        {
+            "name": "Legendary Magic Mail",
+            "qty": 2,
+            "rarity": "LEGENDARY",
+            "type": "gear",
+        }
+    ],
+    "reason": "รอบร้านใหม่",
+}
+magic_daily_stats = {
+    "days": {
+        stock.thailand_date_str(): {
+            "stock_occurrences": {},
+            "stock_seen_cycles": {},
+            "stock_pieces": {},
+            "stock_cycle_quantities": {},
+            "magic_mail": {"legendary": 7},
+            "magic_seen_cycles": {},
+            "magic_mail_pieces": {"legendary": 9},
+            "magic_cycle_quantities": {},
+            "sell": {},
+            "sell_seen_rotations": {},
+            "alerts_sent": 7,
+        }
+    }
+}
+magic_daily_embed = stock.build_event_embed(
+    magic_daily_event,
+    attempts=1,
+    daily_stats=magic_daily_stats,
+)
+magic_daily_value = next(
+    field["value"]
+    for field in magic_daily_embed.get("fields", [])
+    if field.get("name") == "📊 สถิติวันนี้"
+)
+check(
+    "Magic Mail UI separates today's occurrence count from total pieces",
+    "ครั้งที่ **7**" in magic_daily_value
+    and "รวมวันนี้ **9 ชิ้น**" in magic_daily_value,
+    magic_daily_value,
 )
 
 wiki_conflict_event = {
@@ -295,6 +346,8 @@ moon_event = {
     "round_id": "MOON-GOLD-20260809-052555",
     "snapshot_verified": True,
     "game_cycle_verified": True,
+    "daily_final_count": 4,
+    "daily_final_counts": {"gold": 4, "rainbow": 2, "mega": 1},
 }
 moon_embed = moon.event_embed(moon_event, "final", 45)
 check(
@@ -304,6 +357,27 @@ check(
     and moon_embed.get("author", {}).get("name") == moon.MOON_SYSTEM_BADGE
     and "FINAL ONLY" in moon_embed.get("footer", {}).get("text", ""),
     str(moon_embed),
+)
+moon_daily_value = next(
+    field["value"]
+    for field in moon_embed.get("fields", [])
+    if field.get("name") == "📊 MOON FINAL วันนี้"
+)
+check(
+    "Stock, Magic Mail, and Moon daily counters stay in separate namespaces",
+    "ครั้งที่ **6**" in stock_daily_value
+    and "รวมวันนี้ **8 ชิ้น**" in stock_daily_value
+    and "ครั้งที่ **7**" in magic_daily_value
+    and "รวมวันนี้ **9 ชิ้น**" in magic_daily_value
+    and "Gold Moon FINAL: **ครั้งที่ 4**" in moon_daily_value
+    and "Gold **4** · Rainbow **2** · Mega **1**" in moon_daily_value,
+    str(
+        {
+            "stock": stock_daily_value,
+            "magic": magic_daily_value,
+            "moon": moon_daily_value,
+        }
+    ),
 )
 
 preview_events = moon.build_moon_test_preview_events(now_epoch=1786227910)

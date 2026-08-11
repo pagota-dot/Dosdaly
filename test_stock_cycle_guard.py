@@ -301,8 +301,8 @@ result(
     bot.ALERT_LOGIC_VERSION,
 )
 result(
-    "Display release is v6.5.11",
-    bot.BOT_DISPLAY_VERSION == "6.5.11",
+    "Display release is v6.5.12",
+    bot.BOT_DISPLAY_VERSION == "6.5.12",
     bot.BOT_DISPLAY_VERSION,
 )
 
@@ -707,7 +707,8 @@ result(
 )
 
 # -------------------------------------------------------------------------
-# v6.5.11 Daily Stock pieces: one maximum quantity per target/shop cycle.
+# v6.5.12 Daily Stock/Magic Mail pieces: one maximum quantity per
+# target/shop cycle.
 # -------------------------------------------------------------------------
 daily_quantity_names = set()
 for node in source_tree.body:
@@ -717,6 +718,7 @@ for node in source_tree.body:
         in {
             "exact_stock_quantity",
             "update_stock_piece_total",
+            "update_magic_mail_piece_total",
             "update_daily_occurrence_stats",
         }
     ):
@@ -894,6 +896,261 @@ result(
     and "รวมวันนี้ **2 ชิ้น**" in preview_counter_field
     and preview_base == preview_before,
     str(preview_counter_field),
+)
+
+magic_rarity = "legendary"
+magic_daily_stats = {"days": {}}
+
+
+def update_daily_magic_quantity(quantity, cycle_key, duplicate_quantities=None):
+    quantities = (
+        list(duplicate_quantities)
+        if duplicate_quantities is not None
+        else [quantity]
+    )
+    stock_items = [
+        {
+            "name": "Legendary Magic Mail",
+            "qty": qty,
+            "rarity": "LEGENDARY",
+            "type": "gear",
+        }
+        for qty in quantities
+    ]
+    snapshot = bot.target_snapshot(stock_items, [])
+    bot.update_daily_occurrence_stats(
+        magic_daily_stats,
+        stock_items,
+        [],
+        snapshot,
+        {
+            "gear": {
+                "id": 1,
+                "key": cycle_key,
+                "source": "gag2-timer",
+            }
+        },
+        {"gear": f"fp-{cycle_key}"},
+    )
+
+
+update_daily_magic_quantity(1, "timer:magic-1")
+magic_day = magic_daily_stats["days"][daily_key]
+result(
+    "First Magic Mail cycle records one occurrence and its real quantity",
+    magic_day["magic_mail"].get(magic_rarity) == 1
+    and magic_day["magic_mail_pieces"].get(magic_rarity) == 1,
+    str(magic_day),
+)
+
+update_daily_magic_quantity(1, "timer:magic-1")
+result(
+    "Repeated Magic Mail snapshot adds neither round nor piece",
+    magic_day["magic_mail"].get(magic_rarity) == 1
+    and magic_day["magic_mail_pieces"].get(magic_rarity) == 1,
+    str(magic_day),
+)
+
+update_daily_magic_quantity(2, "timer:magic-1")
+result(
+    "Same-cycle Magic Mail correction x1 to x2 adds only one piece",
+    magic_day["magic_mail"].get(magic_rarity) == 1
+    and magic_day["magic_mail_pieces"].get(magic_rarity) == 2,
+    str(magic_day),
+)
+
+update_daily_magic_quantity(1, "timer:magic-1")
+result(
+    "Same-cycle Magic Mail decrease never subtracts pieces",
+    magic_day["magic_mail"].get(magic_rarity) == 1
+    and magic_day["magic_mail_pieces"].get(magic_rarity) == 2,
+    str(magic_day),
+)
+
+update_daily_magic_quantity(3, "timer:magic-2")
+result(
+    "New Magic Mail cycle adds its full quantity",
+    magic_day["magic_mail"].get(magic_rarity) == 2
+    and magic_day["magic_mail_pieces"].get(magic_rarity) == 5,
+    str(magic_day),
+)
+
+duplicate_magic_stats_before = copy.deepcopy(magic_daily_stats)
+update_daily_magic_quantity(
+    4,
+    "timer:magic-3",
+    duplicate_quantities=[2, 4, 4],
+)
+result(
+    "Duplicate Magic Mail parser variants use max quantity, not a sum",
+    magic_day["magic_mail"].get(magic_rarity) == 3
+    and magic_day["magic_mail_pieces"].get(magic_rarity) == 9
+    and magic_daily_stats != duplicate_magic_stats_before,
+    str(magic_day),
+)
+
+magic_daily_event = {
+    "kind": "stock",
+    "target_key": "legendary magic mail|legendary|gear",
+    "label": "Legendary Magic Mail",
+    "emoji": "✨",
+    "items": [
+        {
+            "name": "Legendary Magic Mail",
+            "qty": 4,
+            "rarity": "LEGENDARY",
+            "type": "gear",
+        }
+    ],
+    "reason": "รอบร้านใหม่",
+}
+magic_counter = bot.event_daily_counter(
+    magic_daily_event,
+    magic_daily_stats,
+)
+magic_embed = bot.build_event_embed(
+    magic_daily_event,
+    attempts=1,
+    daily_stats=magic_daily_stats,
+)
+magic_counter_field = next(
+    field["value"]
+    for field in magic_embed["fields"]
+    if field["name"] == "📊 สถิติวันนี้"
+)
+result(
+    "Magic Mail card shows both today's round and piece totals",
+    magic_counter
+    == {
+        "kind": "magic",
+        "rarity": "legendary",
+        "current": 3,
+        "pieces": 9,
+    }
+    and "ครั้งที่ **3**" in magic_counter_field
+    and "รวมวันนี้ **9 ชิ้น**" in magic_counter_field,
+    str(magic_counter_field),
+)
+
+magic_preview_base = {"days": {}}
+magic_preview_before = copy.deepcopy(magic_preview_base)
+magic_preview_event = next(
+    item
+    for item in bot.build_test_preview_events()
+    if "magic mail" in bot.key(item.get("label", ""))
+)
+magic_preview_embed = bot.build_test_preview_embed(
+    magic_preview_event,
+    magic_preview_base,
+)
+magic_preview_field = next(
+    field["value"]
+    for field in magic_preview_embed["fields"]
+    if field["name"] == "📊 สถิติวันนี้"
+)
+result(
+    "Magic Mail Preview shows pieces and stays read-only",
+    "ครั้งที่ **1**" in magic_preview_field
+    and "รวมวันนี้ **1 ชิ้น**" in magic_preview_field
+    and magic_preview_base == magic_preview_before,
+    str(magic_preview_field),
+)
+
+legacy_magic_day = {
+    "stock_occurrences": {},
+    "stock_seen_cycles": {},
+    "stock_pieces": {},
+    "stock_cycle_quantities": {},
+    "magic_mail": {magic_rarity: 3},
+    "magic_seen_cycles": {
+        magic_rarity: ["gear|old-1", "gear|old-2", "gear|old-3"]
+    },
+    "sell": {},
+    "sell_seen_rotations": {},
+    "alerts_sent": 0,
+}
+legacy_magic_stats = {
+    "days": {"legacy-magic": copy.deepcopy(legacy_magic_day)}
+}
+migrated_magic_day = bot.ensure_daily_day(
+    legacy_magic_stats,
+    "legacy-magic",
+)
+result(
+    "v6.5.11 Magic Mail rounds migrate with one minimum piece each",
+    migrated_magic_day["magic_mail_pieces"].get(magic_rarity) == 3
+    and set(
+        migrated_magic_day["magic_cycle_quantities"][magic_rarity].values()
+    )
+    == {1},
+    str(migrated_magic_day),
+)
+
+isolated_daily_stats = {"days": {}}
+isolated_stock_items = [
+    {
+        "name": "Atlantic Giant Pumpkin",
+        "qty": 1,
+        "rarity": "LEGENDARY",
+        "type": "seed",
+    },
+    {
+        "name": "Super Syrup Watering Can",
+        "qty": 2,
+        "rarity": "COMMON",
+        "type": "gear",
+    },
+    {
+        "name": "Legendary Magic Mail",
+        "qty": 2,
+        "rarity": "LEGENDARY",
+        "type": "gear",
+    },
+    {
+        "name": "Super Magic Mail",
+        "qty": 3,
+        "rarity": "SUPER",
+        "type": "gear",
+    },
+]
+isolated_snapshot = bot.target_snapshot(isolated_stock_items, [])
+bot.update_daily_occurrence_stats(
+    isolated_daily_stats,
+    isolated_stock_items,
+    [],
+    isolated_snapshot,
+    {
+        "seed": {
+            "id": 1,
+            "key": "timer:isolation-seed",
+            "source": "gag2-timer",
+        },
+        "gear": {
+            "id": 1,
+            "key": "timer:isolation-gear",
+            "source": "gag2-timer",
+        },
+    },
+    {"seed": "fp-isolation-seed", "gear": "fp-isolation-gear"},
+)
+isolated_day = isolated_daily_stats["days"][daily_key]
+result(
+    "Every Stock name and Magic Mail rarity owns an isolated daily counter",
+    isolated_day["stock_occurrences"]
+    == {
+        "atlantic giant pumpkin": 1,
+        "super syrup watering can": 1,
+    }
+    and isolated_day["stock_pieces"]
+    == {
+        "atlantic giant pumpkin": 1,
+        "super syrup watering can": 2,
+    }
+    and isolated_day["magic_mail"]
+    == {"legendary": 1, "super": 1}
+    and isolated_day["magic_mail_pieces"]
+    == {"legendary": 2, "super": 3},
+    str(isolated_day),
 )
 
 legacy_day = {

@@ -38,7 +38,7 @@ FINAL_MAX_ACCEPTABLE_SECONDS = 80
 # Freeze the predicted start time from the FIRST reliable <=5m alert.
 # Later GAG2 countdown changes must NOT move the final alert later.
 ANCHOR_LOGIC_VERSION = "v7.0-final-only-round-ledger"
-BOT_DISPLAY_VERSION = "v7.0.4"
+BOT_DISPLAY_VERSION = "v7.0.5"
 
 # Delivery-only hardening.  This is deliberately separate from
 # ANCHOR_LOGIC_VERSION so installing the fix does not clear, migrate, or move
@@ -58,6 +58,11 @@ STATE_INTEGRITY_SCHEMA = "gag2-moon-state-sha256-v1"
 # logic.
 MOON_SYSTEM_COLOR = 0xD7D9FF
 MOON_SYSTEM_BADGE = "🌙 MOON FINAL ALERT"
+
+# Read-only UI context bound by main(). Daily FINAL counts are derived from
+# the durable Round Ledger; this variable never participates in parsing,
+# Frozen Anchor timing, eligibility, sleeping, or duplicate suppression.
+_RUNTIME_STATE = None
 
 # Locked reference for the palettes already assigned to the Stock/Sell bot.
 # Regression tests require the Moon border to stay outside this set.
@@ -998,6 +1003,101 @@ def rebuild_round_metrics(state):
     }
 
 
+def bind_runtime_state(state):
+    """Expose the current in-memory State to the FINAL UI only."""
+    global _RUNTIME_STATE
+    _RUNTIME_STATE = state if isinstance(state, dict) else None
+
+
+def thailand_day_key(epoch):
+    return datetime.fromtimestamp(
+        int(epoch),
+        tz=timezone.utc,
+    ).astimezone(THAILAND_TZ).date().isoformat()
+
+
+def ledger_final_sent_epoch(record):
+    """Read a sent timestamp without changing or repairing the ledger."""
+    try:
+        epoch = int(record.get("final_sent_epoch", 0) or 0)
+    except (TypeError, ValueError):
+        epoch = 0
+    if epoch > 0:
+        return epoch
+
+    text = record.get("final_sent_at")
+    if not isinstance(text, str) or not text.strip():
+        return 0
+
+    try:
+        parsed = datetime.fromisoformat(text.strip().replace("Z", "+00:00"))
+        if parsed.tzinfo is None:
+            parsed = parsed.replace(tzinfo=timezone.utc)
+        return int(parsed.timestamp())
+    except (TypeError, ValueError):
+        return 0
+
+
+def moon_final_counts_today(state, reference_epoch=None):
+    """Count unique successful FINAL rounds by Moon kind for one Thai day."""
+    reference_epoch = int(reference_epoch or utc_now().timestamp())
+    wanted_day = thailand_day_key(reference_epoch)
+    counts = {kind: 0 for kind in TARGET_MOONS}
+
+    ledger = (
+        state.get("round_ledger", {})
+        if isinstance(state, dict)
+        else {}
+    )
+    if not isinstance(ledger, dict):
+        return counts
+
+    for record in ledger.values():
+        if not isinstance(record, dict):
+            continue
+        if record.get("status") != "final_sent":
+            continue
+
+        kind = str(record.get("kind") or "").strip().lower()
+        if kind not in counts:
+            continue
+
+        sent_epoch = ledger_final_sent_epoch(record)
+        if sent_epoch and thailand_day_key(sent_epoch) == wanted_day:
+            counts[kind] += 1
+
+    return counts
+
+
+def projected_moon_final_counts(state, event, sent_epoch):
+    """Return read-only counts including the FINAL that is about to send."""
+    sent_epoch = int(sent_epoch)
+    counts = moon_final_counts_today(state, sent_epoch)
+    kind = str(event.get("kind") or "").strip().lower()
+    if kind not in counts:
+        return counts
+
+    round_id = event.get("round_id")
+    ledger = (
+        state.get("round_ledger", {})
+        if isinstance(state, dict)
+        else {}
+    )
+    record = ledger.get(round_id) if isinstance(ledger, dict) else None
+    already_counted = bool(
+        isinstance(record, dict)
+        and record.get("status") == "final_sent"
+        and str(record.get("kind") or "").strip().lower() == kind
+        and ledger_final_sent_epoch(record)
+        and thailand_day_key(ledger_final_sent_epoch(record))
+        == thailand_day_key(sent_epoch)
+    )
+
+    if not already_counted:
+        counts[kind] += 1
+    return counts
+
+
 def send_discord(content, embeds=None):
     if not WEBHOOK:
         raise RuntimeError("Missing GitHub Actions secret: DISCORD_WEBHOOK")
@@ -1082,6 +1182,36 @@ def event_embed(event, level="final", remaining=None):
     )
 
     slot_clock = event.get("clock_text") or "ไม่แสดง"
+    raw_daily_counts = event.get("daily_final_counts")
+    if not isinstance(raw_daily_counts, dict):
+        raw_daily_counts = {}
+    daily_counts = {}
+    for kind in TARGET_MOONS:
+        try:
+            daily_counts[kind] = max(
+                0,
+                int(raw_daily_counts.get(kind, 0) or 0),
+            )
+        except (TypeError, ValueError):
+            daily_counts[kind] = 0
+
+    try:
+        current_daily_count = max(
+            1,
+            int(
+                event.get(
+                    "daily_final_count",
+                    daily_counts.get(event["kind"], 0),
+                )
+                or 0
+            ),
+        )
+    except (TypeError, ValueError):
+        current_daily_count = 1
+    daily_counts[event["kind"]] = max(
+        daily_counts.get(event["kind"], 0),
+        current_daily_count,
+    )
 
     return {
         "author": {"name": MOON_SYSTEM_BADGE},
@@ -1136,6 +1266,18 @@ def event_embed(event, level="final", remaining=None):
                 ),
                 "inline": False,
             },
+            {
+                "name": "📊 MOON FINAL วันนี้",
+                "value": (
+                    f"{meta['emoji']} {meta['label']} FINAL: "
+                    f"**ครั้งที่ {current_daily_count}**\n"
+                    "แยกประเภท · "
+                    f"Gold **{daily_counts['gold']}** · "
+                    f"Rainbow **{daily_counts['rainbow']}** · "
+                    f"Mega **{daily_counts['mega']}**"
+                ),
+                "inline": False,
+            },
         ],
         "footer": {
             "text": (
@@ -1154,6 +1296,16 @@ def send_level(event, level, remaining=None):
     sent_epoch = int(utc_now().timestamp())
     outgoing = dict(event)
     outgoing["final_sent_epoch"] = sent_epoch
+    daily_counts = projected_moon_final_counts(
+        _RUNTIME_STATE,
+        outgoing,
+        sent_epoch,
+    )
+    outgoing["daily_final_counts"] = daily_counts
+    outgoing["daily_final_count"] = daily_counts.get(
+        outgoing.get("kind"),
+        1,
+    )
     result = send_discord("", [event_embed(outgoing, "final", remaining)])
     result["sent_epoch"] = sent_epoch
     return result
@@ -1164,6 +1316,7 @@ def build_moon_test_preview_events(now_epoch=None):
     now_epoch = int(now_epoch or utc_now().timestamp())
     event_epoch = now_epoch + FINAL_TARGET_SECONDS
     events = []
+    preview_daily_counts = {"gold": 3, "rainbow": 2, "mega": 1}
 
     for kind in ("gold", "rainbow", "mega"):
         events.append(
@@ -1185,6 +1338,8 @@ def build_moon_test_preview_events(now_epoch=None):
                 ),
                 "final_sent_epoch": now_epoch,
                 "round_id": f"TEST-MOON-{kind.upper()}-FINAL",
+                "daily_final_count": preview_daily_counts[kind],
+                "daily_final_counts": dict(preview_daily_counts),
                 "verification": {
                     "score": 5,
                     "maximum": 5,
@@ -1659,6 +1814,7 @@ def main():
         return
 
     prune_state(state)
+    bind_runtime_state(state)
 
     try:
         parsed = read_weather()

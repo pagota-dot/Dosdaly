@@ -105,7 +105,7 @@ def parse(page, when_epoch):
     return bot.parse_weather_page(page, when_epoch)
 
 print("=" * 72)
-print("GAG2 Moon Alert v7.0.4 FINAL-only - OFFLINE LOGIC TEST")
+print("GAG2 Moon Alert v7.0.5 FINAL-only - OFFLINE LOGIC TEST")
 print("ไม่เปิดเว็บ / ไม่ยิง Discord / ไม่แก้ moon_state.json จริง")
 print("=" * 72)
 
@@ -113,8 +113,8 @@ print("=" * 72)
 # UI-only release guard: Anchor/FINAL behavior must not migrate.
 # ---------------------------------------------------------------------
 ok(
-    "Display release is v7.0.4",
-    bot.BOT_DISPLAY_VERSION == "v7.0.4",
+    "Display release is v7.0.5",
+    bot.BOT_DISPLAY_VERSION == "v7.0.5",
     bot.BOT_DISPLAY_VERSION,
 )
 ok(
@@ -629,6 +629,7 @@ ok(
         "🧭 GAG2 Slot",
         "🆔 Round ID",
         "✅ หลักฐานยืนยัน",
+        "📊 MOON FINAL วันนี้",
     }.issubset(field_names),
     str(field_names),
 )
@@ -654,6 +655,163 @@ ok(
             "author": embed.get("author"),
         }
     ),
+)
+
+# ---------------------------------------------------------------------
+# TEST 13B: ตัวนับ FINAL รายวันต้องแยก Gold/Rainbow/Mega จาก Round Ledger
+# ---------------------------------------------------------------------
+daily_counter_names = set()
+for node in ast.parse(source_text).body:
+    if (
+        isinstance(node, ast.FunctionDef)
+        and node.name
+        in {
+            "thailand_day_key",
+            "ledger_final_sent_epoch",
+            "moon_final_counts_today",
+            "projected_moon_final_counts",
+        }
+    ):
+        daily_counter_names.update(
+            child.id
+            for child in ast.walk(node)
+            if isinstance(child, ast.Name)
+        )
+ok(
+    "Moon daily FINAL counter adds no network, sleep, or State write",
+    daily_counter_names.isdisjoint(
+        {
+            "requests",
+            "send_discord",
+            "save_state",
+            "read_weather",
+            "sleep",
+        }
+    ),
+    str(sorted(daily_counter_names)),
+)
+
+previous_thai_day_epoch = epoch_th(2026, 8, 8, 23, 59, 59)
+daily_ledger_state = {
+    "round_ledger": {
+        "GOLD-1": {
+            "kind": "gold",
+            "status": "final_sent",
+            "final_sent_epoch": t0 - 3600,
+        },
+        "GOLD-2": {
+            "kind": "gold",
+            "status": "final_sent",
+            "final_sent_epoch": t0,
+        },
+        "RAINBOW-1": {
+            "kind": "rainbow",
+            "status": "final_sent",
+            "final_sent_epoch": t0 - 1800,
+        },
+        "MEGA-OLD": {
+            "kind": "mega",
+            "status": "final_sent",
+            "final_sent_epoch": previous_thai_day_epoch,
+        },
+        "MEGA-MISSED": {
+            "kind": "mega",
+            "status": "final_missed",
+            "missed_epoch": t0,
+        },
+        "MEGA-TRACKING": {
+            "kind": "mega",
+            "status": "tracking",
+            "anchor_epoch": t0 + 45,
+        },
+    }
+}
+daily_counts = bot.moon_final_counts_today(daily_ledger_state, t0)
+ok(
+    "Gold/Rainbow/Mega FINAL totals are independent and ignore missed rounds",
+    daily_counts == {"gold": 2, "rainbow": 1, "mega": 0},
+    str(daily_counts),
+)
+
+daily_ledger_before_projection = copy.deepcopy(daily_ledger_state)
+projected_counts = bot.projected_moon_final_counts(
+    daily_ledger_state,
+    {"kind": "mega", "round_id": "MEGA-NEW"},
+    t0,
+)
+ok(
+    "A new FINAL projects only its own Moon counter without mutating State",
+    projected_counts == {"gold": 2, "rainbow": 1, "mega": 1}
+    and daily_ledger_state == daily_ledger_before_projection,
+    str(projected_counts),
+)
+
+already_sent_counts = bot.projected_moon_final_counts(
+    daily_ledger_state,
+    {"kind": "gold", "round_id": "GOLD-2"},
+    t0,
+)
+ok(
+    "An already-sent Moon Round ID is never counted twice",
+    already_sent_counts == daily_counts,
+    str(already_sent_counts),
+)
+
+next_thai_day_epoch = epoch_th(2026, 8, 10, 0, 0, 1)
+next_day_counts = bot.moon_final_counts_today(
+    daily_ledger_state,
+    next_thai_day_epoch,
+)
+ok(
+    "Thai midnight starts separate zeroed Moon FINAL totals",
+    next_day_counts == {"gold": 0, "rainbow": 0, "mega": 0},
+    str(next_day_counts),
+)
+
+daily_send_calls = []
+saved_daily_send_discord = bot.send_discord
+saved_daily_utc_now = bot.utc_now
+saved_runtime_state = bot._RUNTIME_STATE
+try:
+    bot.bind_runtime_state(daily_ledger_state)
+    bot.utc_now = lambda: fixed_dt_final
+    bot.send_discord = lambda content, embeds=None: (
+        daily_send_calls.append({"content": content, "embeds": embeds})
+        or {"delivery_ms": 99}
+    )
+    bot.send_level(
+        {
+            "kind": "mega",
+            "event_epoch": t0 + 45,
+            "first_seen_epoch": t0 - 245,
+            "clock_text": "5:25 AM",
+            "round_id": "MEGA-NEW",
+            "snapshot_verified": True,
+            "game_cycle_verified": True,
+        },
+        "final",
+        45,
+    )
+finally:
+    bot.send_discord = saved_daily_send_discord
+    bot.utc_now = saved_daily_utc_now
+    bot.bind_runtime_state(saved_runtime_state)
+
+daily_send_embed = daily_send_calls[0]["embeds"][0]
+daily_send_field = next(
+    field["value"]
+    for field in daily_send_embed["fields"]
+    if field["name"] == "📊 MOON FINAL วันนี้"
+)
+ok(
+    "Live FINAL send path injects the correct separated daily counters",
+    len(daily_send_calls) == 1
+    and "Mega Moon FINAL: **ครั้งที่ 1**" in daily_send_field
+    and "Gold **2**" in daily_send_field
+    and "Rainbow **1**" in daily_send_field
+    and "Mega **1**" in daily_send_field
+    and daily_ledger_state == daily_ledger_before_projection,
+    daily_send_field,
 )
 
 # ---------------------------------------------------------------------
@@ -904,6 +1062,25 @@ ok(
     and all("ไม่ใช่ Moon จริง" in embed["description"] for embed in preview_embeds)
     and {embed["color"] for embed in preview_embeds} == {bot.MOON_SYSTEM_COLOR},
     str(preview_embeds),
+)
+preview_daily_fields = [
+    next(
+        field["value"]
+        for field in embed["fields"]
+        if field["name"] == "📊 MOON FINAL วันนี้"
+    )
+    for embed in preview_embeds
+]
+ok(
+    "Moon Test Preview proves Gold/Rainbow/Mega counters are separate",
+    "Gold Moon FINAL: **ครั้งที่ 3**" in preview_daily_fields[0]
+    and "Rainbow Moon FINAL: **ครั้งที่ 2**" in preview_daily_fields[1]
+    and "Mega Moon FINAL: **ครั้งที่ 1**" in preview_daily_fields[2]
+    and all(
+        "Gold **3** · Rainbow **2** · Mega **1**" in value
+        for value in preview_daily_fields
+    ),
+    str(preview_daily_fields),
 )
 
 preview_send_calls = []

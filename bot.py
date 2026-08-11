@@ -81,7 +81,7 @@ ALERT_LOGIC_VERSION = "6.4.4-image-alert-v1"
 # Presentation/observability release only.  ALERT_LOGIC_VERSION intentionally
 # stays unchanged so installing this file cannot trigger a logic migration or
 # replace the existing stock baseline.
-BOT_DISPLAY_VERSION = "6.5.11"
+BOT_DISPLAY_VERSION = "6.5.12"
 ROUND_LEDGER_VERSION = 1
 ROUND_LEDGER_RETENTION_DAYS = 14
 ROUND_LEDGER_MAX_ENTRIES = 300
@@ -2540,11 +2540,15 @@ def event_daily_counter(event, daily_stats):
                 rarity = (rarity_from_item({"name": event.get("label", "")}) or "unknown").lower()
 
             current = int((day.get("magic_mail") or {}).get(rarity, 0) or 0)
+            pieces = int(
+                (day.get("magic_mail_pieces") or {}).get(rarity, 0) or 0
+            )
 
             return {
                 "kind": "magic",
                 "rarity": rarity,
                 "current": current,
+                "pieces": pieces,
             }
 
         current = int(
@@ -2583,6 +2587,7 @@ def format_event_counter_lines(event, daily_stats):
             "",
             "📊 **สถิติวันนี้**",
             f"• {rarity} Magic Mail: **ครั้งที่ {counter['current']}**",
+            f"• จำนวนที่พบรวมวันนี้: **{counter['pieces']} ชิ้น**",
         ]
 
     return [
@@ -2878,7 +2883,10 @@ def _compact_counter_text(event, daily_stats):
 
     if counter["kind"] == "magic":
         rarity = (counter.get("rarity") or "unknown").title()
-        return f"{rarity} Magic Mail • ครั้งที่ **{counter['current']}**"
+        return (
+            f"{rarity} Magic Mail • ครั้งที่ **{counter['current']}** • "
+            f"รวมวันนี้ **{counter['pieces']} ชิ้น**"
+        )
 
     return (
         f"พบเป้าหมายนี้ • ครั้งที่ **{counter['current']}** • "
@@ -3876,6 +3884,11 @@ def empty_daily_day():
         "stock_cycle_quantities": {},
         "magic_mail": {},
         "magic_seen_cycles": {},
+        # Magic Mail keeps the same round-by-rarity counter as before, plus
+        # real pieces per rarity. Repeated snapshots in one shop cycle use
+        # only that cycle's maximum quantity.
+        "magic_mail_pieces": {},
+        "magic_cycle_quantities": {},
         "sell": {},
         "sell_seen_rotations": {},
         "alerts_sent": 0,
@@ -3918,6 +3931,14 @@ def ensure_daily_day(stats, day_key):
         day.get("stock_cycle_quantities"),
         dict,
     )
+    had_magic_mail_pieces = isinstance(
+        day.get("magic_mail_pieces"),
+        dict,
+    )
+    had_magic_cycle_quantities = isinstance(
+        day.get("magic_cycle_quantities"),
+        dict,
+    )
 
     defaults = empty_daily_day()
     for k, default in defaults.items():
@@ -3933,6 +3954,27 @@ def ensure_daily_day(stats, day_key):
             if not isinstance(markers, list):
                 continue
             day["stock_cycle_quantities"][target_key] = {
+                str(marker): 1
+                for marker in markers
+                if marker
+            }
+
+    # v6.5.11 stored Magic Mail rounds but not their quantities. Preserve
+    # those rounds as a truthful minimum of one piece each, then let later
+    # same-cycle observations add only a positive quantity correction.
+    if not had_magic_mail_pieces:
+        for rarity, count in (day.get("magic_mail") or {}).items():
+            try:
+                minimum_pieces = max(0, int(count or 0))
+            except (TypeError, ValueError):
+                minimum_pieces = 0
+            day["magic_mail_pieces"][rarity] = minimum_pieces
+
+    if not had_magic_cycle_quantities:
+        for rarity, markers in (day.get("magic_seen_cycles") or {}).items():
+            if not isinstance(markers, list):
+                continue
+            day["magic_cycle_quantities"][rarity] = {
                 str(marker): 1
                 for marker in markers
                 if marker
@@ -4022,6 +4064,41 @@ def update_stock_piece_total(day, target_key, marker, quantity):
     return True
 
 
+def update_magic_mail_piece_total(day, rarity, marker, quantity):
+    """Keep one maximum Magic Mail quantity per rarity and shop cycle."""
+    if not marker:
+        return False
+
+    try:
+        quantity = max(0, int(quantity or 0))
+    except (TypeError, ValueError):
+        return False
+
+    rarity_cycles = day["magic_cycle_quantities"].get(rarity)
+    if not isinstance(rarity_cycles, dict):
+        rarity_cycles = {}
+        day["magic_cycle_quantities"][rarity] = rarity_cycles
+
+    try:
+        previous = max(0, int(rarity_cycles.get(marker, 0) or 0))
+    except (TypeError, ValueError):
+        previous = 0
+    if quantity <= previous:
+        return False
+
+    rarity_cycles[marker] = quantity
+    increase = quantity - previous
+    try:
+        current_total = max(
+            0,
+            int(day["magic_mail_pieces"].get(rarity, 0) or 0),
+        )
+    except (TypeError, ValueError):
+        current_total = 0
+    day["magic_mail_pieces"][rarity] = current_total + increase
+    return True
+
+
 def update_daily_occurrence_stats(
     daily_stats,
     stock,
@@ -4041,6 +4118,7 @@ def update_daily_occurrence_stats(
     Magic Mail:
       every rarity INCLUDING Rare for statistics, once per shop cycle.
       Rare is still excluded from alerts.
+      Pieces use the maximum observed quantity for that rarity/cycle.
 
     Sell:
       x2/x4 once per distinct detected Sell rotation fingerprint.
@@ -4085,9 +4163,22 @@ def update_daily_occurrence_stats(
         if group not in SHOP_CYCLE_NAMES:
             group = "gear"
 
-        magic_rarities_in_cycle.setdefault(rarity, group)
+        try:
+            quantity = max(0, int(item.get("qty", 0) or 0))
+        except (TypeError, ValueError):
+            quantity = 0
 
-    for rarity, group in magic_rarities_in_cycle.items():
+        rarity_info = magic_rarities_in_cycle.setdefault(
+            rarity,
+            {"group": group, "quantity": 0},
+        )
+        rarity_info["quantity"] = max(
+            int(rarity_info.get("quantity", 0) or 0),
+            quantity,
+        )
+
+    for rarity, rarity_info in magic_rarities_in_cycle.items():
+        group = rarity_info["group"]
         marker = cycle_marker_for_shop(
             current_shop_cycles,
             group,
@@ -4098,6 +4189,12 @@ def update_daily_occurrence_stats(
             day["magic_mail"],
             rarity,
             marker,
+        )
+        update_magic_mail_piece_total(
+            day,
+            rarity,
+            marker,
+            rarity_info["quantity"],
         )
 
     # Sell x2/x4.
@@ -4171,6 +4268,7 @@ def format_today_statistics_message(daily_stats):
     stock_counts = day.get("stock_occurrences", {}) or {}
     stock_pieces = day.get("stock_pieces", {}) or {}
     magic_counts = day.get("magic_mail", {}) or {}
+    magic_pieces = day.get("magic_mail_pieces", {}) or {}
     sell_counts = day.get("sell", {}) or {}
 
     lines = [
@@ -4204,16 +4302,20 @@ def format_today_statistics_message(daily_stats):
 
     for rarity in rarity_order:
         count = int(magic_counts.get(rarity, 0) or 0)
+        pieces = int(magic_pieces.get(rarity, 0) or 0)
         if count > 0 or rarity == "rare":
             label = rarity.title()
             if rarity == "rare":
                 label += "🔕"
-            magic_parts.append(f"{label} {count}")
+            magic_parts.append(f"{label} {count} รอบ/{pieces} ชิ้น")
 
     for rarity in sorted(set(magic_counts) - set(rarity_order)):
         count = int(magic_counts.get(rarity, 0) or 0)
+        pieces = int(magic_pieces.get(rarity, 0) or 0)
         if count > 0:
-            magic_parts.append(f"{rarity.title()} {count}")
+            magic_parts.append(
+                f"{rarity.title()} {count} รอบ/{pieces} ชิ้น"
+            )
 
     if not magic_parts:
         magic_parts = ["ยังไม่พบ"]
@@ -4250,6 +4352,7 @@ def format_daily_summary(day_key, day):
     stock_counts = day.get("stock_occurrences", {}) or {}
     stock_pieces = day.get("stock_pieces", {}) or {}
     magic_counts = day.get("magic_mail", {}) or {}
+    magic_pieces = day.get("magic_mail_pieces", {}) or {}
     sell_counts = day.get("sell", {}) or {}
 
     lines = [
@@ -4284,17 +4387,24 @@ def format_daily_summary(day_key, day):
 
     for rarity in rarity_order:
         count = int(magic_counts.get(rarity, 0) or 0)
+        pieces = int(magic_pieces.get(rarity, 0) or 0)
         if count <= 0 and rarity == "unknown":
             continue
 
         shown.add(rarity)
         label = rarity.title()
         suffix = " *(ไม่นำไปแจ้ง)*" if rarity == "rare" else ""
-        lines.append(f"• {label}: **{count} รอบ**{suffix}")
+        lines.append(
+            f"• {label}: **{count} รอบ** · รวม **{pieces} ชิ้น**{suffix}"
+        )
 
     for rarity in sorted(set(magic_counts) - shown):
         count = int(magic_counts.get(rarity, 0) or 0)
-        lines.append(f"• {rarity.title()}: **{count} รอบ**")
+        pieces = int(magic_pieces.get(rarity, 0) or 0)
+        lines.append(
+            f"• {rarity.title()}: **{count} รอบ** · "
+            f"รวม **{pieces} ชิ้น**"
+        )
 
     lines += ["", "💰 **Sell ×2 / ×4**"]
 
@@ -4467,6 +4577,9 @@ def preview_daily_stats_for_event(base_daily_stats, event):
             day["magic_mail"][rarity] = int(
                 day["magic_mail"].get(rarity, 0) or 0
             ) + 1
+            day["magic_mail_pieces"][rarity] = int(
+                day["magic_mail_pieces"].get(rarity, 0) or 0
+            ) + exact_stock_quantity({"items": items})
         else:
             day["stock_occurrences"][target_key] = int(
                 day["stock_occurrences"].get(target_key, 0) or 0
