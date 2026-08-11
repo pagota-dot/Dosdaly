@@ -1,7 +1,7 @@
 {
   "_integrity": {
     "schema": "gag2-stock-state-sha256-v1",
-    "sha256": "b86adc992bd2448332331822b30be4ac6531f8a289ca4ae18fd35b5395ad613d"
+    "sha256": "3ac52855d757d537f8176fc0fb418f1b9ab750825d474f8d660d319c3e767a5e"
   },
   "alert_logic_version": "6.4.4-image-alert-v1",
   "daily_stats": {
@@ -280,9 +280,9 @@
         }
       },
       "2026-08-11": {
-        "alerts_sent": 27,
+        "alerts_sent": 28,
         "magic_mail": {
-          "legendary": 4,
+          "legendary": 5,
           "rare": 11
         },
         "magic_seen_cycles": {
@@ -290,7 +290,8 @@
             "gear|timer:1786404000",
             "gear|timer:1786410900",
             "gear|timer:1786420200",
-            "gear|timer:1786420500"
+            "gear|timer:1786420500",
+            "gear|timer:1786429500"
           ],
           "rare": [
             "gear|timer:1786385700",
@@ -3534,6 +3535,46 @@
           "discord_delivery_ms": 224
         },
         "ui_mode": "compact-embed"
+      },
+      {
+        "cycle_id": 850,
+        "cycle_key": "timer:1786429500",
+        "cycle_source": "gag2-timer",
+        "entry_id": "ALERT-52701e13f9d6d543",
+        "evidence": {
+          "cycle_confidence": "MID_CYCLE_STABLE",
+          "snapshot_samples": 2,
+          "snapshot_stable": true,
+          "timer_wait_seconds": 6
+        },
+        "items": [
+          {
+            "name": "Legendary Magic Mail",
+            "qty": 1,
+            "rarity": "LEGENDARY",
+            "type": "gear"
+          }
+        ],
+        "kind": "stock",
+        "label": "Legendary Magic Mail",
+        "multi": null,
+        "reason": "Magic Mail ที่ต้องการอยู่ใน Stock",
+        "recorded_at": "2026-08-11T06:20:49.548936+00:00",
+        "recorded_epoch": 1786429249.5489361,
+        "round_id": "STOCK-GEAR-C850",
+        "shop": "gear",
+        "status": "alert_sent",
+        "target_key": "legendary magic mail|legendary",
+        "timeline": {
+          "alert_sent_epoch": 1786429249.2937326,
+          "cycle_reset_epoch": 1786429200.0,
+          "cycle_to_send_seconds": 49,
+          "detected_epoch": 1786429242.3784006,
+          "detected_to_send_ms": 6915,
+          "discord_completed_epoch": 1786429249.5489361,
+          "discord_delivery_ms": 255
+        },
+        "ui_mode": "compact-embed"
       }
     ],
     "max_entries": 300,
@@ -3542,41 +3583,50 @@
   },
   "shop_cycles": {
     "crate": {
-      "id": 849,
-      "key": "timer:1786429200",
+      "id": 850,
+      "key": "timer:1786429500",
       "source": "gag2-timer"
     },
     "gear": {
-      "id": 849,
-      "key": "timer:1786429200",
+      "id": 850,
+      "key": "timer:1786429500",
       "source": "gag2-timer"
     },
     "seed": {
-      "id": 849,
-      "key": "timer:1786429200",
+      "id": 850,
+      "key": "timer:1786429500",
       "source": "gag2-timer"
     }
   },
   "shop_fingerprints": {
-    "crate": "b8d99d9a9a3ded1d17a8fcb4d4ddc890dcb254853e0dd13deee0af52d52490da",
-    "gear": "8f386958d2131ce235e3796a0d85e60bd32fe831630a696af8a99c4f3f49a8fe",
-    "seed": "834bf18184ec968a1a8af3fb61fd8c89d94979b46472df295ab25ce0fe17c262",
-    "sell": "c028604914aec48565009410f0d16d30996b54681832e5e1b7d3a5feb554c734",
+    "crate": "0b6aefaf8906fa0938e41e9bc8ad3745f9aefb5d8f20f9d095942b99323b73cb",
+    "gear": "d21c5f69ec336ff654de78b4369fb51e61ee395c99fcd7e66d18f9a2407e087d",
+    "seed": "8af6c9c54e15ffc5e6fa4525dfe57ba6363caf60351ab5896764c2da70fef36f",
+    "sell": "8653243c07748caeaf207b4385bd80dfd56c79fa98d7f291725da62049009721",
     "unknown": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
   },
   "targets": {
-    "magic_mail": {},
+    "magic_mail": {
+      "legendary magic mail|legendary": {
+        "image_url": "https://cdn.gag2.gg/items/legendary_magic_mail.webp",
+        "name": "Legendary Magic Mail",
+        "present": true,
+        "qty": 1,
+        "rarity": "LEGENDARY",
+        "type": "gear"
+      }
+    },
     "sell": {
       "atlantic giant pumpkin": {
         "image_url": "https://cdn.gag2.gg/items/atlantic_giant_pumpkin.webp",
         "label": "Atlantic Giant Pumpkin",
-        "multi": 1.17,
+        "multi": 0.82,
         "present": true
       },
       "maple mushroom": {
         "image_url": "https://cdn.gag2.gg/items/maple_mushroom.webp",
         "label": "Maple Mushroom",
-        "multi": 0.9,
+        "multi": 1.01,
         "present": true
       }
     },
@@ -3607,6 +3657,6 @@
       }
     }
   },
-  "updated_at": "2026-08-11T06:15:40.200503+00:00",
+  "updated_at": "2026-08-11T06:20:49.553444+00:00",
   "version": "6.5.10"
 }
