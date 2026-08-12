@@ -1,7 +1,7 @@
 {
   "_integrity": {
     "schema": "gag2-moon-state-sha256-v1",
-    "sha256": "bff8a5638b0441edb480cbe3ea4d4d8a7b3842923b0d1e44ae837ce6cd919598"
+    "sha256": "c83beb9cd4f4f70e31dd230274d68f8e68dd070608286e52835ede013bc5ae22"
   },
   "events": {
     "gold|2026-08-12|22:28": {
@@ -73,6 +73,29 @@
       "slot_time_th": "23:17:59",
       "snapshot_verified": true
     },
+    "mega|2026-08-13|04:18": {
+      "anchor_epoch": 1786569480,
+      "clock_text": "4:18 AM",
+      "discord_delivery_ms": 236,
+      "event_epoch": 1786569480,
+      "final": true,
+      "final_remaining_by_anchor": 45,
+      "final_sent_at": "2026-08-12T21:17:15+00:00",
+      "final_sent_epoch": 1786569435,
+      "final_target_delay_seconds": 0,
+      "final_target_epoch": 1786569435,
+      "first_seen_at": "2026-08-12T21:14:41+00:00",
+      "first_seen_epoch": 1786569281,
+      "first_seen_remaining": 199,
+      "game_cycle_phase": 8,
+      "game_cycle_verified": true,
+      "kind": "mega",
+      "round_id": "MOON-MEGA-20260813-041800",
+      "row_quality": "NAME_CLOCK_COUNTDOWN",
+      "slot_id": "mega|2026-08-13|04:18",
+      "slot_time_th": "04:18:00",
+      "snapshot_verified": true
+    },
     "rainbow|2026-08-12|22:18": {
       "anchor_epoch": 1786547880,
       "clock_text": "10:18 PM",
@@ -98,7 +121,7 @@
     }
   },
   "health": {
-    "last_success_at": "2026-08-12T21:12:42.472433+00:00",
+    "last_success_at": "2026-08-12T21:14:41.234770+00:00",
     "last_warning_epoch": 0
   },
   "last_started_by_kind": {
@@ -109,12 +132,12 @@
   },
   "logic_version": "v7.0-final-only-round-ledger",
   "metrics": {
-    "average_final_target_delay_seconds": 0.46,
+    "average_final_target_delay_seconds": 0.45,
     "final_missed": 0,
-    "final_sent": 76,
+    "final_sent": 77,
     "maximum_final_target_delay_seconds": 35,
-    "tracked_rounds": 76,
-    "updated_at": "2026-08-12T21:12:16.810570+00:00"
+    "tracked_rounds": 77,
+    "updated_at": "2026-08-12T21:17:15.472815+00:00"
   },
   "migrated_at": "2026-08-09T05:45:14.665727+00:00",
   "notification_mode": "final-only",
@@ -3239,6 +3262,54 @@
         "text": "Name + Time + Countdown + 2 Snapshots + 10m Cycle"
       }
     },
+    "MOON-MEGA-20260813-041800": {
+      "anchor_epoch": 1786569480,
+      "clock_text": "4:18 AM",
+      "detection_lead_seconds": 199,
+      "discord_delivery_ms": 236,
+      "event_time_th": "04:18:00",
+      "final_lead_seconds": 45,
+      "final_sent_at": "2026-08-12T21:17:15+00:00",
+      "final_sent_epoch": 1786569435,
+      "final_target_at": "2026-08-12T21:17:15+00:00",
+      "final_target_delay_seconds": 0,
+      "final_target_epoch": 1786569435,
+      "first_seen_at": "2026-08-12T21:14:41+00:00",
+      "first_seen_epoch": 1786569281,
+      "kind": "mega",
+      "label": "Mega Moon",
+      "round_id": "MOON-MEGA-20260813-041800",
+      "slot_id": "mega|2026-08-13|04:18",
+      "status": "final_sent",
+      "timeline": [
+        {
+          "action": "detected",
+          "at": "2026-08-12T21:14:41+00:00",
+          "epoch": 1786569281,
+          "lead_seconds": 199
+        },
+        {
+          "action": "final_sent",
+          "at": "2026-08-12T21:17:15+00:00",
+          "discord_delivery_ms": 236,
+          "epoch": 1786569435,
+          "lead_seconds": 45,
+          "target_delay_seconds": 0
+        }
+      ],
+      "verification": {
+        "maximum": 5,
+        "score": 5,
+        "signals": [
+          "Name",
+          "Time",
+          "Countdown",
+          "2 Snapshots",
+          "10m Cycle"
+        ],
+        "text": "Name + Time + Countdown + 2 Snapshots + 10m Cycle"
+      }
+    },
     "MOON-RAINBOW-20260809-161800": {
       "anchor_epoch": 1786267080,
       "clock_text": "4:18 PM",
@@ -3768,6 +3839,6 @@
       }
     }
   },
-  "updated_at": "2026-08-12T21:12:42.474376+00:00",
+  "updated_at": "2026-08-12T21:17:15.474891+00:00",
   "version": 3
 }
