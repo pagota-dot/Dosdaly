@@ -1,7 +1,7 @@
 {
   "_integrity": {
     "schema": "gag2-stock-state-sha256-v1",
-    "sha256": "28dc0a1af66b1dee50d97d3cb6a3696b07ac9a4707e97473c7f7d7cbdadecb39"
+    "sha256": "c406b59996a7bdc3692da48a779a0461fa50b968d55324163cee8d547f7aefed"
   },
   "alert_logic_version": "6.4.4-image-alert-v1",
   "daily_stats": {
@@ -565,7 +565,7 @@
         }
       },
       "2026-08-13": {
-        "alerts_sent": 9,
+        "alerts_sent": 10,
         "magic_cycle_quantities": {
           "rare": {
             "gear|timer:1786570800": 1
@@ -611,6 +611,9 @@
           }
         },
         "stock_cycle_quantities": {
+          "amber cranberry": {
+            "seed|timer:1786579200": 1
+          },
           "super syrup sprinkler": {
             "gear|timer:1786559100": 1
           },
@@ -620,14 +623,19 @@
           }
         },
         "stock_occurrences": {
+          "amber cranberry": 1,
           "super syrup sprinkler": 1,
           "super syrup watering can": 2
         },
         "stock_pieces": {
+          "amber cranberry": 1,
           "super syrup sprinkler": 1,
           "super syrup watering can": 3
         },
         "stock_seen_cycles": {
+          "amber cranberry": [
+            "seed|timer:1786579200"
+          ],
           "super syrup sprinkler": [
             "gear|timer:1786559100"
           ],
@@ -6007,6 +6015,46 @@
           "discord_delivery_ms": 537
         },
         "ui_mode": "compact-embed"
+      },
+      {
+        "cycle_id": 1349,
+        "cycle_key": "timer:1786579200",
+        "cycle_source": "gag2-timer",
+        "entry_id": "ALERT-dc87b0951c1373c6",
+        "evidence": {
+          "cycle_confidence": "MID_CYCLE_STABLE",
+          "snapshot_samples": 2,
+          "snapshot_stable": true,
+          "timer_wait_seconds": 13
+        },
+        "items": [
+          {
+            "name": "Amber Cranberry",
+            "qty": 1,
+            "rarity": "COMMON",
+            "type": "seed"
+          }
+        ],
+        "kind": "stock",
+        "label": "Amber Cranberry",
+        "multi": null,
+        "reason": "กลับเข้า Stock",
+        "recorded_at": "2026-08-12T23:55:40.015924+00:00",
+        "recorded_epoch": 1786578940.0159237,
+        "round_id": "STOCK-SEED-C1349",
+        "shop": "seed",
+        "status": "alert_sent",
+        "target_key": "amber cranberry",
+        "timeline": {
+          "alert_sent_epoch": 1786578939.7745426,
+          "cycle_reset_epoch": 1786578900.0,
+          "cycle_to_send_seconds": 40,
+          "detected_epoch": 1786578932.7580874,
+          "detected_to_send_ms": 7016,
+          "discord_completed_epoch": 1786578940.0159237,
+          "discord_delivery_ms": 241
+        },
+        "ui_mode": "compact-embed"
       }
     ],
     "max_entries": 300,
@@ -6015,25 +6063,25 @@
   },
   "shop_cycles": {
     "crate": {
-      "id": 1348,
-      "key": "timer:1786578900",
+      "id": 1349,
+      "key": "timer:1786579200",
       "source": "gag2-timer"
     },
     "gear": {
-      "id": 1348,
-      "key": "timer:1786578900",
+      "id": 1349,
+      "key": "timer:1786579200",
       "source": "gag2-timer"
     },
     "seed": {
-      "id": 1348,
-      "key": "timer:1786578900",
+      "id": 1349,
+      "key": "timer:1786579200",
       "source": "gag2-timer"
     }
   },
   "shop_fingerprints": {
-    "crate": "459b23fc33588daaee402b81dbac75619adac28a0d3c95d0bdb763f3625155be",
-    "gear": "31d7b67c546d6095219a1f82760f2b449de93f245302cd4977837c673e734423",
-    "seed": "5446535f65cc99978b33c2a25fa0661b3082e5dd9f8411292fb77a13b398e7a8",
+    "crate": "b801f6122503c2e19f64cf050c2a69259b78ae3e7ff43e2335b7b317af257e02",
+    "gear": "03769b9d3047e3e33c7f131aecc5f2e8db078fe8ca8a1ccf87d9f78a0b1b93ef",
+    "seed": "2d905a508c40d166995b22ffd4dc6c80b732e42c2c8aa387649a93bc8e6a900b",
     "sell": "8b92a7adb69cfce2d2f729839dcf5d65f0ae6c7b4d9abb63bbc0278a70a7dec0",
     "unknown": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
   },
@@ -6056,9 +6104,16 @@
     "stock": {
       "amber cranberry": {
         "image_url": "https://cdn.gag2.gg/items/amber_cranberry.webp",
-        "items": [],
+        "items": [
+          {
+            "name": "Amber Cranberry",
+            "qty": 1,
+            "rarity": "COMMON",
+            "type": "seed"
+          }
+        ],
         "label": "Amber Cranberry",
-        "present": false
+        "present": true
       },
       "atlantic giant pumpkin": {
         "image_url": "https://cdn.gag2.gg/items/atlantic_giant_pumpkin.webp",
@@ -6074,19 +6129,12 @@
       },
       "super syrup watering can": {
         "image_url": "https://cdn.gag2.gg/items/super_syrup_watering_can.webp",
-        "items": [
-          {
-            "name": "Super Syrup Watering Can",
-            "qty": 1,
-            "rarity": "COMMON",
-            "type": "gear"
-          }
-        ],
+        "items": [],
         "label": "Super Syrup Watering Can",
-        "present": true
+        "present": false
       }
     }
   },
-  "updated_at": "2026-08-12T23:50:41.025905+00:00",
+  "updated_at": "2026-08-12T23:55:40.023650+00:00",
   "version": "6.5.12"
 }
