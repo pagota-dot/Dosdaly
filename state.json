@@ -1,7 +1,7 @@
 {
   "_integrity": {
     "schema": "gag2-stock-state-sha256-v1",
-    "sha256": "8c4754f88ffbafadf7ef94a388edc2329c6518add43042ec30ece6e23b9caf79"
+    "sha256": "cd39b786c5ed752b31b94d26f99d79fd4debb3589e9ca93f691574bde12aa834"
   },
   "alert_logic_version": "6.4.4-image-alert-v1",
   "daily_stats": {
@@ -606,13 +606,25 @@
         }
       },
       "2026-08-14": {
-        "alerts_sent": 0,
+        "alerts_sent": 1,
         "magic_cycle_quantities": {},
         "magic_mail": {},
         "magic_mail_pieces": {},
         "magic_seen_cycles": {},
-        "sell": {},
-        "sell_seen_rotations": {},
+        "sell": {
+          "maple mushroom": {
+            "2": 1,
+            "4": 0
+          }
+        },
+        "sell_seen_rotations": {
+          "maple mushroom": {
+            "2": [
+              "sell|56b83f6b96411442b15867e1b6061cc2cb4232cbef10bbb74645e7dfc219eb79|maple mushroom|x2"
+            ],
+            "4": []
+          }
+        },
         "stock_cycle_quantities": {},
         "stock_occurrences": {},
         "stock_pieces": {},
@@ -6831,6 +6843,39 @@
           "discord_delivery_ms": 378
         },
         "ui_mode": "compact-embed"
+      },
+      {
+        "cycle_id": null,
+        "cycle_key": null,
+        "cycle_source": null,
+        "entry_id": "ALERT-f965dfcf64e3c894",
+        "evidence": {
+          "cycle_confidence": "MID_CYCLE_STABLE",
+          "snapshot_samples": 2,
+          "snapshot_stable": true,
+          "timer_wait_seconds": 1
+        },
+        "items": [],
+        "kind": "sell",
+        "label": "Maple Mushroom",
+        "multi": 2.0,
+        "reason": "Sell เปลี่ยนเป็น ×2",
+        "recorded_at": "2026-08-13T17:10:39.797380+00:00",
+        "recorded_epoch": 1786641039.7973797,
+        "round_id": "SELL-56b83f6b-X2",
+        "shop": "sell",
+        "status": "alert_sent",
+        "target_key": "maple mushroom",
+        "timeline": {
+          "alert_sent_epoch": 1786641039.4296925,
+          "cycle_reset_epoch": null,
+          "cycle_to_send_seconds": null,
+          "detected_epoch": 1786641032.5834863,
+          "detected_to_send_ms": 6846,
+          "discord_completed_epoch": 1786641039.7973797,
+          "discord_delivery_ms": 368
+        },
+        "ui_mode": "compact-embed"
       }
     ],
     "max_entries": 300,
@@ -6839,26 +6884,26 @@
   },
   "shop_cycles": {
     "crate": {
-      "id": 1555,
-      "key": "timer:1786641000",
+      "id": 1556,
+      "key": "timer:1786641300",
       "source": "gag2-timer"
     },
     "gear": {
-      "id": 1555,
-      "key": "timer:1786641000",
+      "id": 1556,
+      "key": "timer:1786641300",
       "source": "gag2-timer"
     },
     "seed": {
-      "id": 1555,
-      "key": "timer:1786641000",
+      "id": 1556,
+      "key": "timer:1786641300",
       "source": "gag2-timer"
     }
   },
   "shop_fingerprints": {
-    "crate": "189a66187e9fa3132f5142bee4f1251cfad53239d7ba3e75421dae81fc0cb631",
-    "gear": "dd871056ebb1059f2a2873a9f60bdfb5bde9af12b44492c27e4ae842b3213d8c",
-    "seed": "ac70a0dc2bff40e301a2465fd15c80e20061a0e380883b58f76e816aa7b78ecc",
-    "sell": "521581a4c098984dfb843f921d1be8a4fa71a7626eb04c72382cf2452fa6d0b1",
+    "crate": "f1877ab6e5ba94ef3478ca8fd49a092383f9ff4575972dbb03672f0160743dd9",
+    "gear": "40d2a1438fcf1d86500f42724439ce1c5e0208caf1a4792686a52eab31bfac71",
+    "seed": "6bc9fd7cec49876e5274780589299ed99a4807d7fd635fded7943410e35f16fb",
+    "sell": "56b83f6b96411442b15867e1b6061cc2cb4232cbef10bbb74645e7dfc219eb79",
     "unknown": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
   },
   "targets": {
@@ -6867,13 +6912,13 @@
       "atlantic giant pumpkin": {
         "image_url": "https://cdn.gag2.gg/items/atlantic_giant_pumpkin.webp",
         "label": "Atlantic Giant Pumpkin",
-        "multi": 0.93,
+        "multi": 0.82,
         "present": true
       },
       "maple mushroom": {
         "image_url": "https://cdn.gag2.gg/items/maple_mushroom.webp",
         "label": "Maple Mushroom",
-        "multi": 0.93,
+        "multi": 2.0,
         "present": true
       }
     },
@@ -6904,6 +6949,6 @@
       }
     }
   },
-  "updated_at": "2026-08-13T17:05:39.990618+00:00",
+  "updated_at": "2026-08-13T17:10:39.803360+00:00",
   "version": "6.5.12"
 }
