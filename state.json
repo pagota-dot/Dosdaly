@@ -1,7 +1,7 @@
 {
   "_integrity": {
     "schema": "gag2-stock-state-sha256-v1",
-    "sha256": "b24675a0072b8431d2589430af5a9eece48261c3033e7f7dcf3a7cf20341aaa5"
+    "sha256": "55434949bc1cc767ad4972898191e3181e2acc9e925a33981ddd7415961d7c9e"
   },
   "alert_logic_version": "6.4.4-image-alert-v1",
   "daily_stats": {
@@ -569,19 +569,21 @@
         "magic_cycle_quantities": {
           "rare": {
             "gear|timer:1786570800": 1,
-            "gear|timer:1786580700": 2
+            "gear|timer:1786580700": 2,
+            "gear|timer:1786591500": 2
           }
         },
         "magic_mail": {
-          "rare": 2
+          "rare": 3
         },
         "magic_mail_pieces": {
-          "rare": 3
+          "rare": 5
         },
         "magic_seen_cycles": {
           "rare": [
             "gear|timer:1786570800",
-            "gear|timer:1786580700"
+            "gear|timer:1786580700",
+            "gear|timer:1786591500"
           ]
         },
         "sell": {
@@ -6382,26 +6384,26 @@
   },
   "shop_cycles": {
     "crate": {
-      "id": 1389,
-      "key": "timer:1786591200",
+      "id": 1390,
+      "key": "timer:1786591500",
       "source": "gag2-timer"
     },
     "gear": {
-      "id": 1389,
-      "key": "timer:1786591200",
+      "id": 1390,
+      "key": "timer:1786591500",
       "source": "gag2-timer"
     },
     "seed": {
-      "id": 1389,
-      "key": "timer:1786591200",
+      "id": 1390,
+      "key": "timer:1786591500",
       "source": "gag2-timer"
     }
   },
   "shop_fingerprints": {
-    "crate": "1b53268a535890fde16973c7aba8993120a64425c53bd1e54347174a2504e2e4",
-    "gear": "b8a30dcf2918573dfb3aacb7a14d56ee58163e25ec5a2880b8b986cd2c14a242",
-    "seed": "44c232c0386ffc8e7b8867c4aaaeca7c0c9d5d803ab5ad5659c94f753f807ab5",
-    "sell": "385b06f530ab6255116f1e4d393c1e3deca4ba7505422850b51268c5deafa84d",
+    "crate": "72a49e43a2b7ae4442010ee5641029f476ecaa15b167d789371aaae5a15508fb",
+    "gear": "6ba7b828cafcc6b6b7abf9f6366393ecfdd23624c513f9f8dfd8e707ecc178b6",
+    "seed": "a3d9d3f26a3a6f7e59fb17e0aae84a272f1c5667c43c3d7b157760da458fcee0",
+    "sell": "0a34c61c66fd9b1c36c10c999f3bad7ba0697b489d4486f375d960658f1c02d8",
     "unknown": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
   },
   "targets": {
@@ -6410,13 +6412,13 @@
       "atlantic giant pumpkin": {
         "image_url": "https://cdn.gag2.gg/items/atlantic_giant_pumpkin.webp",
         "label": "Atlantic Giant Pumpkin",
-        "multi": 0.82,
+        "multi": 0.85,
         "present": true
       },
       "maple mushroom": {
         "image_url": "https://cdn.gag2.gg/items/maple_mushroom.webp",
         "label": "Maple Mushroom",
-        "multi": 1.17,
+        "multi": 0.85,
         "present": true
       }
     },
@@ -6441,19 +6443,12 @@
       },
       "super syrup watering can": {
         "image_url": "https://cdn.gag2.gg/items/super_syrup_watering_can.webp",
-        "items": [
-          {
-            "name": "Super Syrup Watering Can",
-            "qty": 1,
-            "rarity": "COMMON",
-            "type": "gear"
-          }
-        ],
+        "items": [],
         "label": "Super Syrup Watering Can",
-        "present": true
+        "present": false
       }
     }
   },
-  "updated_at": "2026-08-13T03:15:40.204947+00:00",
+  "updated_at": "2026-08-13T03:20:52.567616+00:00",
   "version": "6.5.12"
 }
