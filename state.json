@@ -1,7 +1,7 @@
 {
   "_integrity": {
     "schema": "gag2-stock-state-sha256-v1",
-    "sha256": "faffa23d28099e13df9d780df15a8ee635c61e94885a0e2a6e50b71df0d1fd5b"
+    "sha256": "ae14d120a7215313f6829bb67398d722ff121309bfdbdb705e9e4532d0e6e1e5"
   },
   "alert_logic_version": "6.4.4-image-alert-v1",
   "daily_stats": {
@@ -686,10 +686,22 @@
       },
       "2026-08-15": {
         "alerts_sent": 1,
-        "magic_cycle_quantities": {},
-        "magic_mail": {},
-        "magic_mail_pieces": {},
-        "magic_seen_cycles": {},
+        "magic_cycle_quantities": {
+          "rare": {
+            "gear|timer:1786731000": 1
+          }
+        },
+        "magic_mail": {
+          "rare": 1
+        },
+        "magic_mail_pieces": {
+          "rare": 1
+        },
+        "magic_seen_cycles": {
+          "rare": [
+            "gear|timer:1786731000"
+          ]
+        },
         "sell": {},
         "sell_seen_rotations": {},
         "stock_cycle_quantities": {
@@ -8823,25 +8835,25 @@
   },
   "shop_cycles": {
     "crate": {
-      "id": 1854,
-      "key": "timer:1786730700",
+      "id": 1855,
+      "key": "timer:1786731000",
       "source": "gag2-timer"
     },
     "gear": {
-      "id": 1854,
-      "key": "timer:1786730700",
+      "id": 1855,
+      "key": "timer:1786731000",
       "source": "gag2-timer"
     },
     "seed": {
-      "id": 1854,
-      "key": "timer:1786730700",
+      "id": 1855,
+      "key": "timer:1786731000",
       "source": "gag2-timer"
     }
   },
   "shop_fingerprints": {
-    "crate": "e778f5dac2e2258f552bca3a2183161f12ea412295aa2e3da9aad77366589df1",
-    "gear": "29820ec2a4200a1ea8a011dbfc74c5883e9f588c371c2145dd093bf13c4e33a5",
-    "seed": "5100854330d7dfe6336913e6a2db44b3558729b0fbc17832ec00f5b98d94bfc4",
+    "crate": "d43ac3a3a1a7a9bb92459f00d21d95e6e4707a66f6a8b81d4e925e07aadd00f9",
+    "gear": "9a8d423980f6daa2b28b2b2e0b13d9ff2604f6b43aa66d67e4e4b972d1e67c1d",
+    "seed": "d22b78ce8f62ee7f1079cef400e0d610cd451ed677ed25af837367954397bfa1",
     "sell": "02a01332fafed53fa02a1dbfd19fbbd5e0437268560f609d504ada02a853e823",
     "unknown": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
   },
@@ -8888,6 +8900,6 @@
       }
     }
   },
-  "updated_at": "2026-08-14T18:01:10.838418+00:00",
+  "updated_at": "2026-08-14T18:05:40.763066+00:00",
   "version": "6.5.12"
 }
