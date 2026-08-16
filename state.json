@@ -1,7 +1,7 @@
 {
   "_integrity": {
     "schema": "gag2-stock-state-sha256-v1",
-    "sha256": "6d31bab929f203395aabdea80d2093dd62f34f5b203656f60858dcd4f989549d"
+    "sha256": "d642e56433c09e3820a73eef5b8a31ca46154f8de73a1ba76a910b159611674e"
   },
   "alert_logic_version": "6.4.4-image-alert-v1",
   "daily_stats": {
@@ -676,10 +676,11 @@
         }
       },
       "2026-08-16": {
-        "alerts_sent": 40,
+        "alerts_sent": 41,
         "magic_cycle_quantities": {
           "legendary": {
-            "gear|timer:1786887300": 1
+            "gear|timer:1786887300": 1,
+            "gear|timer:1786895400": 1
           },
           "rare": {
             "gear|timer:1786814700": 2,
@@ -707,16 +708,17 @@
           }
         },
         "magic_mail": {
-          "legendary": 1,
+          "legendary": 2,
           "rare": 22
         },
         "magic_mail_pieces": {
-          "legendary": 1,
+          "legendary": 2,
           "rare": 35
         },
         "magic_seen_cycles": {
           "legendary": [
-            "gear|timer:1786887300"
+            "gear|timer:1786887300",
+            "gear|timer:1786895400"
           ],
           "rare": [
             "gear|timer:1786814700",
@@ -11765,6 +11767,46 @@
           "discord_delivery_ms": 294
         },
         "ui_mode": "compact-embed"
+      },
+      {
+        "cycle_id": 2402,
+        "cycle_key": "timer:1786895400",
+        "cycle_source": "gag2-timer",
+        "entry_id": "ALERT-b69a948fdae420a4",
+        "evidence": {
+          "cycle_confidence": "CHANGED_THEN_STABLE",
+          "snapshot_samples": 3,
+          "snapshot_stable": true,
+          "timer_wait_seconds": 25
+        },
+        "items": [
+          {
+            "name": "Legendary Magic Mail",
+            "qty": 1,
+            "rarity": "LEGENDARY",
+            "type": "gear"
+          }
+        ],
+        "kind": "stock",
+        "label": "Legendary Magic Mail",
+        "multi": null,
+        "reason": "Magic Mail ที่ต้องการอยู่ใน Stock",
+        "recorded_at": "2026-08-16T15:45:40.810040+00:00",
+        "recorded_epoch": 1786895140.81004,
+        "round_id": "STOCK-GEAR-C2402",
+        "shop": "gear",
+        "status": "alert_sent",
+        "target_key": "legendary magic mail|legendary",
+        "timeline": {
+          "alert_sent_epoch": 1786895140.566236,
+          "cycle_reset_epoch": 1786895100.0,
+          "cycle_to_send_seconds": 41,
+          "detected_epoch": 1786895133.5561879,
+          "detected_to_send_ms": 7010,
+          "discord_completed_epoch": 1786895140.81004,
+          "discord_delivery_ms": 244
+        },
+        "ui_mode": "compact-embed"
       }
     ],
     "max_entries": 300,
@@ -11773,30 +11815,39 @@
   },
   "shop_cycles": {
     "crate": {
-      "id": 2401,
-      "key": "timer:1786895100",
+      "id": 2402,
+      "key": "timer:1786895400",
       "source": "gag2-timer"
     },
     "gear": {
-      "id": 2401,
-      "key": "timer:1786895100",
+      "id": 2402,
+      "key": "timer:1786895400",
       "source": "gag2-timer"
     },
     "seed": {
-      "id": 2401,
-      "key": "timer:1786895100",
+      "id": 2402,
+      "key": "timer:1786895400",
       "source": "gag2-timer"
     }
   },
   "shop_fingerprints": {
-    "crate": "8dcbe655220f21c27c06926276b11eb6abfaefd9e23923f2d75b8f26b00251b0",
-    "gear": "964a112ef8ae78b7ebf92a05f7029d807addcb797bf3be6347cb181ed2051637",
-    "seed": "3923923a076d442b0d8ee454730a12db1a7d1675ae90beaa089c44737cbb30dc",
+    "crate": "783a4e51f0fc89eb782a090bc77c4092d8e2f4ee654dff942f0f82a0a841870a",
+    "gear": "64e6592688eec8aa3866d6345c8c76a93359866bbac9faedec5d40fca0e748cf",
+    "seed": "59ffe3b0485adcbbc0dcef6b4b34c4cc636f6a0e67080c2bcc01d0bdac307999",
     "sell": "522f9d497a4379ace049b78728d5c9e24787c432e6647f8e0be3364d27548577",
     "unknown": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
   },
   "targets": {
-    "magic_mail": {},
+    "magic_mail": {
+      "legendary magic mail|legendary": {
+        "image_url": "https://cdn.gag2.gg/items/legendary_magic_mail.webp",
+        "name": "Legendary Magic Mail",
+        "present": true,
+        "qty": 1,
+        "rarity": "LEGENDARY",
+        "type": "gear"
+      }
+    },
     "sell": {
       "atlantic giant pumpkin": {
         "image_url": "https://cdn.gag2.gg/items/atlantic_giant_pumpkin.webp",
@@ -11838,6 +11889,6 @@
       }
     }
   },
-  "updated_at": "2026-08-16T15:41:19.592041+00:00",
+  "updated_at": "2026-08-16T15:45:40.822947+00:00",
   "version": "6.5.12"
 }
