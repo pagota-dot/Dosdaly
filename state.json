@@ -1,7 +1,7 @@
 {
   "_integrity": {
     "schema": "gag2-stock-state-sha256-v1",
-    "sha256": "2b3fca68f0d7108e2f5231bc71ff752f9325e370b66b80798ccfebe0d4aa6c73"
+    "sha256": "2f0db78c57889aa4a7352eea488aba5d5cd633c33abf5d9c9cbf1103c0959d78"
   },
   "alert_logic_version": "6.4.4-image-alert-v1",
   "daily_stats": {
@@ -668,7 +668,7 @@
         }
       },
       "2026-08-19": {
-        "alerts_sent": 2,
+        "alerts_sent": 3,
         "magic_cycle_quantities": {
           "rare": {
             "gear|timer:1787076300": 2,
@@ -693,12 +693,22 @@
           "atlantic giant pumpkin": {
             "2": 1,
             "4": 0
+          },
+          "maple mushroom": {
+            "2": 1,
+            "4": 0
           }
         },
         "sell_seen_rotations": {
           "atlantic giant pumpkin": {
             "2": [
               "sell|15162ded6a1d48f76a25859b3d6cbfad5cf563504577196d582b77220f440f6d|atlantic giant pumpkin|x2"
+            ],
+            "4": []
+          },
+          "maple mushroom": {
+            "2": [
+              "sell|6f0e9a82a289e50dc1ce2d123c2084c7b55eacd6eec76a15c7e06ba79882d606|maple mushroom|x2"
             ],
             "4": []
           }
@@ -727,212 +737,13 @@
   "health": {
     "last_block_kind": null,
     "last_block_status_code": null,
-    "last_checked_at": "2026-08-18T21:10:11.173426+00:00",
-    "last_diagnostics": [
-      {
-        "attempt": 1,
-        "cycle_confidence": "NO_TIMER",
-        "first_to_final_diff": {
-          "added": 0,
-          "examples": [],
-          "qty_changed": 0,
-          "removed": 0,
-          "total_changes": 0
-        },
-        "multi_snapshot_stable": true,
-        "rollover_seen": false,
-        "sell_count": 2,
-        "sell_ok": true,
-        "sell_targets": {
-          "atlantic giant pumpkin": {
-            "contexts_found": 3,
-            "multiplier": 1.02
-          },
-          "maple mushroom": {
-            "contexts_found": 3,
-            "multiplier": 0.87
-          }
-        },
-        "shop_timers": {},
-        "snapshot_diffs": [
-          {
-            "added": 0,
-            "examples": [],
-            "from_sample": 1,
-            "qty_changed": 0,
-            "removed": 0,
-            "to_sample": 2,
-            "total_changes": 0
-          }
-        ],
-        "stable_pairs": 1,
-        "stock_changed_during_sync": false,
-        "stock_count": 21,
-        "stock_min_timer_seconds": null,
-        "stock_ok": false,
-        "stock_sample_counts": [
-          21,
-          21
-        ],
-        "stock_sync_samples": 2,
-        "timer_available": false,
-        "timer_guard_log": [],
-        "timer_safe": true,
-        "timer_source": "generic",
-        "timer_wait_seconds": 6
-      },
-      {
-        "attempt": 2,
-        "cycle_confidence": "NO_TIMER",
-        "first_to_final_diff": {
-          "added": 0,
-          "examples": [],
-          "qty_changed": 0,
-          "removed": 0,
-          "total_changes": 0
-        },
-        "multi_snapshot_stable": true,
-        "rollover_seen": false,
-        "sell_count": 2,
-        "sell_ok": true,
-        "sell_targets": {
-          "atlantic giant pumpkin": {
-            "contexts_found": 3,
-            "multiplier": 1.02
-          },
-          "maple mushroom": {
-            "contexts_found": 3,
-            "multiplier": 0.87
-          }
-        },
-        "shop_timers": {},
-        "snapshot_diffs": [
-          {
-            "added": 0,
-            "examples": [],
-            "from_sample": 1,
-            "qty_changed": 0,
-            "removed": 0,
-            "to_sample": 2,
-            "total_changes": 0
-          }
-        ],
-        "stable_pairs": 1,
-        "stock_changed_during_sync": false,
-        "stock_count": 21,
-        "stock_min_timer_seconds": null,
-        "stock_ok": false,
-        "stock_sample_counts": [
-          21,
-          21
-        ],
-        "stock_sync_samples": 2,
-        "timer_available": false,
-        "timer_guard_log": [],
-        "timer_safe": true,
-        "timer_source": "generic",
-        "timer_wait_seconds": 6
-      },
-      {
-        "attempt": 3,
-        "cycle_confidence": "NO_TIMER",
-        "first_to_final_diff": {
-          "added": 0,
-          "examples": [],
-          "qty_changed": 0,
-          "removed": 0,
-          "total_changes": 0
-        },
-        "multi_snapshot_stable": true,
-        "rollover_seen": false,
-        "sell_count": 2,
-        "sell_ok": true,
-        "sell_targets": {
-          "atlantic giant pumpkin": {
-            "contexts_found": 3,
-            "multiplier": 1.01
-          },
-          "maple mushroom": {
-            "contexts_found": 3,
-            "multiplier": 2.0
-          }
-        },
-        "shop_timers": {},
-        "snapshot_diffs": [
-          {
-            "added": 0,
-            "examples": [],
-            "from_sample": 1,
-            "qty_changed": 0,
-            "removed": 0,
-            "to_sample": 2,
-            "total_changes": 0
-          }
-        ],
-        "stable_pairs": 1,
-        "stock_changed_during_sync": false,
-        "stock_count": 21,
-        "stock_min_timer_seconds": null,
-        "stock_ok": false,
-        "stock_sample_counts": [
-          21,
-          21
-        ],
-        "stock_sync_samples": 2,
-        "timer_available": false,
-        "timer_guard_log": [],
-        "timer_safe": true,
-        "timer_source": "generic",
-        "timer_wait_seconds": 6
-      }
-    ],
     "last_error_alert_at": "2026-08-10T22:01:02.398851+00:00",
-    "no_timer_cloudflare_streak": 1,
+    "no_timer_cloudflare_streak": 0,
     "no_timer_warning_sent": false,
-    "status": "no_timer_wait"
+    "status": "ok"
   },
   "round_ledger": {
     "entries": [
-      {
-        "cycle_id": 748,
-        "cycle_key": "timer:1786398900",
-        "cycle_source": "gag2-timer",
-        "entry_id": "ALERT-52b3a6bf76b701d2",
-        "evidence": {
-          "cycle_confidence": "MID_CYCLE_STABLE",
-          "snapshot_samples": 2,
-          "snapshot_stable": true,
-          "timer_wait_seconds": 16
-        },
-        "items": [
-          {
-            "name": "Super Syrup Sprinkler",
-            "qty": 1,
-            "rarity": "COMMON",
-            "type": "gear"
-          }
-        ],
-        "kind": "stock",
-        "label": "Super Syrup Sprinkler",
-        "multi": null,
-        "reason": "กลับเข้า Stock",
-        "recorded_at": "2026-08-10T21:50:39.914127+00:00",
-        "recorded_epoch": 1786398639.914127,
-        "round_id": "STOCK-GEAR-C748",
-        "shop": "gear",
-        "status": "alert_sent",
-        "target_key": "super syrup sprinkler",
-        "timeline": {
-          "alert_sent_epoch": 1786398639.7041888,
-          "cycle_reset_epoch": 1786398600.0,
-          "cycle_to_send_seconds": 40,
-          "detected_epoch": 1786398632.7343886,
-          "detected_to_send_ms": 6970,
-          "discord_completed_epoch": 1786398639.914127,
-          "discord_delivery_ms": 210
-        },
-        "ui_mode": "compact-embed"
-      },
       {
         "cycle_id": null,
         "cycle_key": null,
@@ -11842,6 +11653,39 @@
           "discord_delivery_ms": 247
         },
         "ui_mode": "compact-embed"
+      },
+      {
+        "cycle_id": null,
+        "cycle_key": null,
+        "cycle_source": null,
+        "entry_id": "ALERT-ee61d2aff74903e4",
+        "evidence": {
+          "cycle_confidence": "MID_CYCLE_STABLE",
+          "snapshot_samples": 2,
+          "snapshot_stable": true,
+          "timer_wait_seconds": 6
+        },
+        "items": [],
+        "kind": "sell",
+        "label": "Maple Mushroom",
+        "multi": 2.0,
+        "reason": "Sell เปลี่ยนเป็น ×2",
+        "recorded_at": "2026-08-18T21:11:53.062543+00:00",
+        "recorded_epoch": 1787087513.0625427,
+        "round_id": "SELL-6f0e9a82-X2",
+        "shop": "sell",
+        "status": "alert_sent",
+        "target_key": "maple mushroom",
+        "timeline": {
+          "alert_sent_epoch": 1787087512.647441,
+          "cycle_reset_epoch": null,
+          "cycle_to_send_seconds": null,
+          "detected_epoch": 1787087505.5428321,
+          "detected_to_send_ms": 7105,
+          "discord_completed_epoch": 1787087513.0625427,
+          "discord_delivery_ms": 415
+        },
+        "ui_mode": "compact-embed"
       }
     ],
     "max_entries": 300,
@@ -11850,26 +11694,26 @@
   },
   "shop_cycles": {
     "crate": {
-      "id": 3033,
-      "key": "timer:1787087400",
+      "id": 3034,
+      "key": "timer:1787087700",
       "source": "gag2-timer"
     },
     "gear": {
-      "id": 3033,
-      "key": "timer:1787087400",
+      "id": 3034,
+      "key": "timer:1787087700",
       "source": "gag2-timer"
     },
     "seed": {
-      "id": 3033,
-      "key": "timer:1787087400",
+      "id": 3034,
+      "key": "timer:1787087700",
       "source": "gag2-timer"
     }
   },
   "shop_fingerprints": {
-    "crate": "77fa700f9ecbb5d507f2cc619772aa40e86aa279ca65c1acfc1d6a62c5c0c512",
-    "gear": "2e2479bf68a12020d8c59d2f6bcbc404598c74a1888d029e8d8e96fbd0808e4b",
-    "seed": "7f0584982c50370ea6a9fd1e51d33faa3c72f6033242e88c1d15bd8c63f14322",
-    "sell": "f2614e20eebb9c72c7fc9d4a0c635e7850ebc6a7939941ccfbcec68c775ee0be",
+    "crate": "fe34c6a780ba5f8b29f99c7876061188f65bb2d43fda1655fdbf86981859788f",
+    "gear": "718c0e6c8fcc0166e313bf3b14be51262e357aaeb25a83ddc1459fbc51d4e94f",
+    "seed": "b2614f3bb4ec1f2d43eedd05a8ecc7de13dca5d327141aa74155a8d542948764",
+    "sell": "6f0e9a82a289e50dc1ce2d123c2084c7b55eacd6eec76a15c7e06ba79882d606",
     "unknown": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
   },
   "targets": {
@@ -11878,13 +11722,13 @@
       "atlantic giant pumpkin": {
         "image_url": "https://cdn.gag2.gg/items/atlantic_giant_pumpkin.webp",
         "label": "Atlantic Giant Pumpkin",
-        "multi": 1.02,
+        "multi": 1.01,
         "present": true
       },
       "maple mushroom": {
         "image_url": "https://cdn.gag2.gg/items/maple_mushroom.webp",
         "label": "Maple Mushroom",
-        "multi": 0.87,
+        "multi": 2.0,
         "present": true
       }
     },
@@ -11915,6 +11759,6 @@
       }
     }
   },
-  "updated_at": "2026-08-18T21:05:39.967852+00:00",
+  "updated_at": "2026-08-18T21:11:53.075444+00:00",
   "version": "6.5.12"
 }
