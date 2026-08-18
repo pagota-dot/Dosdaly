@@ -1,7 +1,7 @@
 {
   "_integrity": {
     "schema": "gag2-stock-state-sha256-v1",
-    "sha256": "4593dfa4266cf5693bb33b0d356f97cb196e26f10c6267037e6eef6133610982"
+    "sha256": "9ef8dd7be230e59bc0fdd041a3210162f5a35e3c7548a6636e6094c9254ce5e3"
   },
   "alert_logic_version": "6.4.4-image-alert-v1",
   "daily_stats": {
@@ -717,10 +717,11 @@
         }
       },
       "2026-08-18": {
-        "alerts_sent": 24,
+        "alerts_sent": 25,
         "magic_cycle_quantities": {
           "legendary": {
-            "gear|timer:1787006400": 1
+            "gear|timer:1787006400": 1,
+            "gear|timer:1787067600": 1
           },
           "rare": {
             "gear|timer:1787002200": 1,
@@ -738,16 +739,17 @@
           }
         },
         "magic_mail": {
-          "legendary": 1,
+          "legendary": 2,
           "rare": 12
         },
         "magic_mail_pieces": {
-          "legendary": 1,
+          "legendary": 2,
           "rare": 17
         },
         "magic_seen_cycles": {
           "legendary": [
-            "gear|timer:1787006400"
+            "gear|timer:1787006400",
+            "gear|timer:1787067600"
           ],
           "rare": [
             "gear|timer:1787002200",
@@ -862,46 +864,6 @@
   },
   "round_ledger": {
     "entries": [
-      {
-        "cycle_id": 713,
-        "cycle_key": "timer:1786388400",
-        "cycle_source": "gag2-timer",
-        "entry_id": "ALERT-7d80590c1309f119",
-        "evidence": {
-          "cycle_confidence": "MID_CYCLE_STABLE",
-          "snapshot_samples": 2,
-          "snapshot_stable": true,
-          "timer_wait_seconds": 6
-        },
-        "items": [
-          {
-            "name": "Super Syrup Sprinkler",
-            "qty": 2,
-            "rarity": "COMMON",
-            "type": "gear"
-          }
-        ],
-        "kind": "stock",
-        "label": "Super Syrup Sprinkler",
-        "multi": null,
-        "reason": "กลับเข้า Stock",
-        "recorded_at": "2026-08-10T18:55:48.000487+00:00",
-        "recorded_epoch": 1786388148.0004869,
-        "round_id": "STOCK-GEAR-C713",
-        "shop": "gear",
-        "status": "alert_sent",
-        "target_key": "super syrup sprinkler",
-        "timeline": {
-          "alert_sent_epoch": 1786388145.8006532,
-          "cycle_reset_epoch": 1786388100.0,
-          "cycle_to_send_seconds": 46,
-          "detected_epoch": 1786388138.8132129,
-          "detected_to_send_ms": 6987,
-          "discord_completed_epoch": 1786388148.0004869,
-          "discord_delivery_ms": 2200
-        },
-        "ui_mode": "compact-embed"
-      },
       {
         "cycle_id": null,
         "cycle_key": null,
@@ -11811,6 +11773,46 @@
           "discord_delivery_ms": 311
         },
         "ui_mode": "compact-embed"
+      },
+      {
+        "cycle_id": 2967,
+        "cycle_key": "timer:1787067600",
+        "cycle_source": "gag2-timer",
+        "entry_id": "ALERT-fa89e31573fc8950",
+        "evidence": {
+          "cycle_confidence": "MID_CYCLE_STABLE",
+          "snapshot_samples": 2,
+          "snapshot_stable": true,
+          "timer_wait_seconds": 10
+        },
+        "items": [
+          {
+            "name": "Legendary Magic Mail",
+            "qty": 1,
+            "rarity": "LEGENDARY",
+            "type": "gear"
+          }
+        ],
+        "kind": "stock",
+        "label": "Legendary Magic Mail",
+        "multi": null,
+        "reason": "Magic Mail ที่ต้องการอยู่ใน Stock",
+        "recorded_at": "2026-08-18T15:35:40.374671+00:00",
+        "recorded_epoch": 1787067340.3746705,
+        "round_id": "STOCK-GEAR-C2967",
+        "shop": "gear",
+        "status": "alert_sent",
+        "target_key": "legendary magic mail|legendary",
+        "timeline": {
+          "alert_sent_epoch": 1787067340.039449,
+          "cycle_reset_epoch": 1787067300.0,
+          "cycle_to_send_seconds": 40,
+          "detected_epoch": 1787067333.26393,
+          "detected_to_send_ms": 6776,
+          "discord_completed_epoch": 1787067340.3746705,
+          "discord_delivery_ms": 335
+        },
+        "ui_mode": "compact-embed"
       }
     ],
     "max_entries": 300,
@@ -11819,30 +11821,39 @@
   },
   "shop_cycles": {
     "crate": {
-      "id": 2966,
-      "key": "timer:1787067300",
+      "id": 2967,
+      "key": "timer:1787067600",
       "source": "gag2-timer"
     },
     "gear": {
-      "id": 2966,
-      "key": "timer:1787067300",
+      "id": 2967,
+      "key": "timer:1787067600",
       "source": "gag2-timer"
     },
     "seed": {
-      "id": 2966,
-      "key": "timer:1787067300",
+      "id": 2967,
+      "key": "timer:1787067600",
       "source": "gag2-timer"
     }
   },
   "shop_fingerprints": {
-    "crate": "ab9909ca80903d70e4d84ded8d1750409a95ae16dc04f2674ba0e5c51436a98f",
-    "gear": "5f56a88767f90c99bbbdcb1eb053814bc2c343bcb754c8a2370d4a5b7a726086",
-    "seed": "2a37162f9ac3edd85bfc4a758e497bd93bf42127d26f6d37293dfce4776c9fe9",
+    "crate": "ed521a3f5e8e4371d4e0c03105cfa55e30d586c499b6b48f38c0a7b3702b0d30",
+    "gear": "4dfa4a4cdb28cd8aa3cca8e784f430cd5c10f9e34e250ea1d2223a75adafe8e5",
+    "seed": "99c15b20d8cdbf5d553eae2b8b101158b8bc473d6fdc4defbe10b676600b0080",
     "sell": "c48a4ec9b43a72fd68036faba3059230290eb3f33351cef8e3aab450ed7e1fa0",
     "unknown": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
   },
   "targets": {
-    "magic_mail": {},
+    "magic_mail": {
+      "legendary magic mail|legendary": {
+        "image_url": "https://cdn.gag2.gg/items/legendary_magic_mail.webp",
+        "name": "Legendary Magic Mail",
+        "present": true,
+        "qty": 1,
+        "rarity": "LEGENDARY",
+        "type": "gear"
+      }
+    },
     "sell": {
       "atlantic giant pumpkin": {
         "image_url": "https://cdn.gag2.gg/items/atlantic_giant_pumpkin.webp",
@@ -11884,6 +11895,6 @@
       }
     }
   },
-  "updated_at": "2026-08-18T15:31:19.586016+00:00",
+  "updated_at": "2026-08-18T15:35:40.384136+00:00",
   "version": "6.5.12"
 }
