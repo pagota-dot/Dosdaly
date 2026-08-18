@@ -1,7 +1,7 @@
 {
   "_integrity": {
     "schema": "gag2-stock-state-sha256-v1",
-    "sha256": "0d6ad346462c16da2cdf5d2703e810a1fc4f3bb05bad614732de94ba575e7a72"
+    "sha256": "1d6311032876ae09cb11f50bf8a119a2c9442d0226a24c9092d0e2ee5de1fe7a"
   },
   "alert_logic_version": "6.4.4-image-alert-v1",
   "daily_stats": {
@@ -668,7 +668,7 @@
         }
       },
       "2026-08-19": {
-        "alerts_sent": 0,
+        "alerts_sent": 1,
         "magic_cycle_quantities": {
           "rare": {
             "gear|timer:1787076300": 2,
@@ -691,10 +691,22 @@
         },
         "sell": {},
         "sell_seen_rotations": {},
-        "stock_cycle_quantities": {},
-        "stock_occurrences": {},
-        "stock_pieces": {},
-        "stock_seen_cycles": {}
+        "stock_cycle_quantities": {
+          "atlantic giant pumpkin": {
+            "seed|timer:1787080800": 1
+          }
+        },
+        "stock_occurrences": {
+          "atlantic giant pumpkin": 1
+        },
+        "stock_pieces": {
+          "atlantic giant pumpkin": 1
+        },
+        "stock_seen_cycles": {
+          "atlantic giant pumpkin": [
+            "seed|timer:1787080800"
+          ]
+        }
       }
     },
     "last_summary_date": "2026-08-18",
@@ -710,46 +722,6 @@
   },
   "round_ledger": {
     "entries": [
-      {
-        "cycle_id": 731,
-        "cycle_key": "timer:1786393800",
-        "cycle_source": "gag2-timer",
-        "entry_id": "ALERT-0d7be717bf8b0c74",
-        "evidence": {
-          "cycle_confidence": "MID_CYCLE_STABLE",
-          "snapshot_samples": 2,
-          "snapshot_stable": true,
-          "timer_wait_seconds": 6
-        },
-        "items": [
-          {
-            "name": "Atlantic Giant Pumpkin",
-            "qty": 1,
-            "rarity": "LEGENDARY",
-            "type": "seed"
-          }
-        ],
-        "kind": "stock",
-        "label": "Atlantic Giant Pumpkin",
-        "multi": null,
-        "reason": "กลับเข้า Stock",
-        "recorded_at": "2026-08-10T20:25:50.591362+00:00",
-        "recorded_epoch": 1786393550.5913615,
-        "round_id": "STOCK-SEED-C731",
-        "shop": "seed",
-        "status": "alert_sent",
-        "target_key": "atlantic giant pumpkin",
-        "timeline": {
-          "alert_sent_epoch": 1786393550.1971195,
-          "cycle_reset_epoch": 1786393500.0,
-          "cycle_to_send_seconds": 50,
-          "detected_epoch": 1786393543.1500142,
-          "detected_to_send_ms": 7047,
-          "discord_completed_epoch": 1786393550.5913615,
-          "discord_delivery_ms": 394
-        },
-        "ui_mode": "compact-embed"
-      },
       {
         "cycle_id": null,
         "cycle_key": null,
@@ -11659,6 +11631,46 @@
           "discord_delivery_ms": 379
         },
         "ui_mode": "compact-embed"
+      },
+      {
+        "cycle_id": 3011,
+        "cycle_key": "timer:1787080800",
+        "cycle_source": "gag2-timer",
+        "entry_id": "ALERT-5c7b34d862415363",
+        "evidence": {
+          "cycle_confidence": "CHANGED_THEN_STABLE",
+          "snapshot_samples": 3,
+          "snapshot_stable": true,
+          "timer_wait_seconds": 20
+        },
+        "items": [
+          {
+            "name": "Atlantic Giant Pumpkin",
+            "qty": 1,
+            "rarity": "LEGENDARY",
+            "type": "seed"
+          }
+        ],
+        "kind": "stock",
+        "label": "Atlantic Giant Pumpkin",
+        "multi": null,
+        "reason": "กลับเข้า Stock",
+        "recorded_at": "2026-08-18T19:15:41.044615+00:00",
+        "recorded_epoch": 1787080541.0446146,
+        "round_id": "STOCK-SEED-C3011",
+        "shop": "seed",
+        "status": "alert_sent",
+        "target_key": "atlantic giant pumpkin",
+        "timeline": {
+          "alert_sent_epoch": 1787080540.6551836,
+          "cycle_reset_epoch": 1787080500.0,
+          "cycle_to_send_seconds": 41,
+          "detected_epoch": 1787080533.7065833,
+          "detected_to_send_ms": 6949,
+          "discord_completed_epoch": 1787080541.0446146,
+          "discord_delivery_ms": 389
+        },
+        "ui_mode": "compact-embed"
       }
     ],
     "max_entries": 300,
@@ -11667,25 +11679,25 @@
   },
   "shop_cycles": {
     "crate": {
-      "id": 3010,
-      "key": "timer:1787080500",
+      "id": 3011,
+      "key": "timer:1787080800",
       "source": "gag2-timer"
     },
     "gear": {
-      "id": 3010,
-      "key": "timer:1787080500",
+      "id": 3011,
+      "key": "timer:1787080800",
       "source": "gag2-timer"
     },
     "seed": {
-      "id": 3010,
-      "key": "timer:1787080500",
+      "id": 3011,
+      "key": "timer:1787080800",
       "source": "gag2-timer"
     }
   },
   "shop_fingerprints": {
-    "crate": "09b9da81cc71f4097740e2cc46ba169c6a8824dc4a47427004d9559f3bf067ea",
-    "gear": "28ee2911a629b1adae915f9faea5bbc57f0ae64ce7f1cd113807e74b274be0c3",
-    "seed": "5c48b7b6ae9372232c35087178fd8f50a0cc023a8ac39d34a900571508ff8650",
+    "crate": "19f837b8665a7786a4dd1509a04255228dea79ac17cc26c1c1c7346e36abc6cf",
+    "gear": "bbe3abf0c684b9c6fd649def8499a75048945e7bbe65b6ae2eca1270fe64040e",
+    "seed": "ce45bbcf6c27ed3da36010c9689dc8b4b5ed6399300c67a9f235a055b218e937",
     "sell": "2c84bd0a29375dc652c83ce6f5c78940c28b0c836982c127bd186fc5aa867422",
     "unknown": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
   },
@@ -11714,9 +11726,16 @@
       },
       "atlantic giant pumpkin": {
         "image_url": "https://cdn.gag2.gg/items/atlantic_giant_pumpkin.webp",
-        "items": [],
+        "items": [
+          {
+            "name": "Atlantic Giant Pumpkin",
+            "qty": 1,
+            "rarity": "LEGENDARY",
+            "type": "seed"
+          }
+        ],
         "label": "Atlantic Giant Pumpkin",
-        "present": false
+        "present": true
       },
       "super syrup sprinkler": {
         "image_url": "https://cdn.gag2.gg/items/super_syrup_sprinkler.webp",
@@ -11732,6 +11751,6 @@
       }
     }
   },
-  "updated_at": "2026-08-18T19:11:11.781619+00:00",
+  "updated_at": "2026-08-18T19:15:41.058251+00:00",
   "version": "6.5.12"
 }
