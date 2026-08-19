@@ -1,7 +1,7 @@
 {
   "_integrity": {
     "schema": "gag2-moon-state-sha256-v1",
-    "sha256": "30b02a0de27174ce10a39cd13cbbd696b08059e645263e69e84cd555a9d52e4a"
+    "sha256": "5c33a5d065c37ca184c3592df586e9618adf5e86282eeb952cb3b7e53b8b4f60"
   },
   "events": {
     "gold|2026-08-19|16:18": {
@@ -95,10 +95,33 @@
       "slot_id": "mega|2026-08-19|17:38",
       "slot_time_th": "17:37:59",
       "snapshot_verified": true
+    },
+    "rainbow|2026-08-19|20:28": {
+      "anchor_epoch": 1787146079,
+      "clock_text": "8:28 PM",
+      "discord_delivery_ms": 170,
+      "event_epoch": 1787146079,
+      "final": true,
+      "final_remaining_by_anchor": 45,
+      "final_sent_at": "2026-08-19T13:27:14+00:00",
+      "final_sent_epoch": 1787146034,
+      "final_target_delay_seconds": 0,
+      "final_target_epoch": 1787146034,
+      "first_seen_at": "2026-08-19T13:23:17+00:00",
+      "first_seen_epoch": 1787145797,
+      "first_seen_remaining": 282,
+      "game_cycle_phase": 8,
+      "game_cycle_verified": true,
+      "kind": "rainbow",
+      "round_id": "MOON-RAINBOW-20260819-202759",
+      "row_quality": "NAME_CLOCK_COUNTDOWN",
+      "slot_id": "rainbow|2026-08-19|20:28",
+      "slot_time_th": "20:27:59",
+      "snapshot_verified": true
     }
   },
   "health": {
-    "last_success_at": "2026-08-19T13:21:06.459694+00:00",
+    "last_success_at": "2026-08-19T13:23:17.807781+00:00",
     "last_warning_epoch": 0
   },
   "last_started_by_kind": {
@@ -111,10 +134,10 @@
   "metrics": {
     "average_final_target_delay_seconds": 0.2,
     "final_missed": 0,
-    "final_sent": 177,
+    "final_sent": 178,
     "maximum_final_target_delay_seconds": 35,
-    "tracked_rounds": 177,
-    "updated_at": "2026-08-19T13:20:56.337133+00:00"
+    "tracked_rounds": 178,
+    "updated_at": "2026-08-19T13:27:14.979821+00:00"
   },
   "migrated_at": "2026-08-09T05:45:14.665727+00:00",
   "notification_mode": "final-only",
@@ -8613,8 +8636,56 @@
         ],
         "text": "Name + Time + Countdown + 2 Snapshots + 10m Cycle"
       }
+    },
+    "MOON-RAINBOW-20260819-202759": {
+      "anchor_epoch": 1787146079,
+      "clock_text": "8:28 PM",
+      "detection_lead_seconds": 282,
+      "discord_delivery_ms": 170,
+      "event_time_th": "20:27:59",
+      "final_lead_seconds": 45,
+      "final_sent_at": "2026-08-19T13:27:14+00:00",
+      "final_sent_epoch": 1787146034,
+      "final_target_at": "2026-08-19T13:27:14+00:00",
+      "final_target_delay_seconds": 0,
+      "final_target_epoch": 1787146034,
+      "first_seen_at": "2026-08-19T13:23:17+00:00",
+      "first_seen_epoch": 1787145797,
+      "kind": "rainbow",
+      "label": "Rainbow Moon",
+      "round_id": "MOON-RAINBOW-20260819-202759",
+      "slot_id": "rainbow|2026-08-19|20:28",
+      "status": "final_sent",
+      "timeline": [
+        {
+          "action": "detected",
+          "at": "2026-08-19T13:23:17+00:00",
+          "epoch": 1787145797,
+          "lead_seconds": 282
+        },
+        {
+          "action": "final_sent",
+          "at": "2026-08-19T13:27:14+00:00",
+          "discord_delivery_ms": 170,
+          "epoch": 1787146034,
+          "lead_seconds": 45,
+          "target_delay_seconds": 0
+        }
+      ],
+      "verification": {
+        "maximum": 5,
+        "score": 5,
+        "signals": [
+          "Name",
+          "Time",
+          "Countdown",
+          "2 Snapshots",
+          "10m Cycle"
+        ],
+        "text": "Name + Time + Countdown + 2 Snapshots + 10m Cycle"
+      }
     }
   },
-  "updated_at": "2026-08-19T13:21:06.464442+00:00",
+  "updated_at": "2026-08-19T13:27:14.984062+00:00",
   "version": 3
 }
