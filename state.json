@@ -1,7 +1,7 @@
 {
   "_integrity": {
     "schema": "gag2-stock-state-sha256-v1",
-    "sha256": "3255db1d5eb3d6054701fd7d011f1dbfe409e5259ec249ddd795d2b7df15e0a2"
+    "sha256": "4bed309228ab4d7222c2ede7339b6b25d047b9a4540ad399bcc16a7907b888d0"
   },
   "alert_logic_version": "6.4.4-image-alert-v1",
   "daily_stats": {
@@ -641,7 +641,7 @@
         }
       },
       "2026-08-20": {
-        "alerts_sent": 29,
+        "alerts_sent": 30,
         "magic_cycle_quantities": {
           "legendary": {
             "gear|timer:1787166900": 1,
@@ -663,16 +663,17 @@
             "gear|timer:1787207700": 2,
             "gear|timer:1787216700": 2,
             "gear|timer:1787217300": 1,
-            "gear|timer:1787219400": 1
+            "gear|timer:1787219400": 1,
+            "gear|timer:1787220000": 2
           }
         },
         "magic_mail": {
           "legendary": 2,
-          "rare": 16
+          "rare": 17
         },
         "magic_mail_pieces": {
           "legendary": 2,
-          "rare": 22
+          "rare": 24
         },
         "magic_seen_cycles": {
           "legendary": [
@@ -695,7 +696,8 @@
             "gear|timer:1787207700",
             "gear|timer:1787216700",
             "gear|timer:1787217300",
-            "gear|timer:1787219400"
+            "gear|timer:1787219400",
+            "gear|timer:1787220000"
           ]
         },
         "sell": {
@@ -756,20 +758,21 @@
             "gear|timer:1787178000": 1,
             "gear|timer:1787179800": 1,
             "gear|timer:1787194500": 2,
-            "gear|timer:1787205600": 2
+            "gear|timer:1787205600": 2,
+            "gear|timer:1787220000": 1
           }
         },
         "stock_occurrences": {
           "amber cranberry": 1,
           "atlantic giant pumpkin": 4,
           "super syrup sprinkler": 5,
-          "super syrup watering can": 5
+          "super syrup watering can": 6
         },
         "stock_pieces": {
           "amber cranberry": 1,
           "atlantic giant pumpkin": 4,
           "super syrup sprinkler": 7,
-          "super syrup watering can": 8
+          "super syrup watering can": 9
         },
         "stock_seen_cycles": {
           "amber cranberry": [
@@ -793,7 +796,8 @@
             "gear|timer:1787178000",
             "gear|timer:1787179800",
             "gear|timer:1787194500",
-            "gear|timer:1787205600"
+            "gear|timer:1787205600",
+            "gear|timer:1787220000"
           ]
         }
       }
@@ -811,46 +815,6 @@
   },
   "round_ledger": {
     "entries": [
-      {
-        "cycle_id": 1122,
-        "cycle_key": "timer:1786511100",
-        "cycle_source": "gag2-timer",
-        "entry_id": "ALERT-473134785f59fc12",
-        "evidence": {
-          "cycle_confidence": "MID_CYCLE_STABLE",
-          "snapshot_samples": 2,
-          "snapshot_stable": true,
-          "timer_wait_seconds": 6
-        },
-        "items": [
-          {
-            "name": "Legendary Magic Mail",
-            "qty": 1,
-            "rarity": "LEGENDARY",
-            "type": "gear"
-          }
-        ],
-        "kind": "stock",
-        "label": "Legendary Magic Mail",
-        "multi": null,
-        "reason": "Magic Mail ที่ต้องการอยู่ใน Stock",
-        "recorded_at": "2026-08-12T05:00:55.586031+00:00",
-        "recorded_epoch": 1786510855.5860312,
-        "round_id": "STOCK-GEAR-C1122",
-        "shop": "gear",
-        "status": "alert_sent",
-        "target_key": "legendary magic mail|legendary",
-        "timeline": {
-          "alert_sent_epoch": 1786510855.4317174,
-          "cycle_reset_epoch": 1786510800.0,
-          "cycle_to_send_seconds": 55,
-          "detected_epoch": 1786510848.3983727,
-          "detected_to_send_ms": 7033,
-          "discord_completed_epoch": 1786510855.5860312,
-          "discord_delivery_ms": 154
-        },
-        "ui_mode": "compact-embed"
-      },
       {
         "cycle_id": null,
         "cycle_key": null,
@@ -11746,6 +11710,46 @@
           "discord_delivery_ms": 256
         },
         "ui_mode": "compact-embed"
+      },
+      {
+        "cycle_id": 3468,
+        "cycle_key": "timer:1787220000",
+        "cycle_source": "gag2-timer",
+        "entry_id": "ALERT-edefb1a794e20869",
+        "evidence": {
+          "cycle_confidence": "MID_CYCLE_STABLE",
+          "snapshot_samples": 2,
+          "snapshot_stable": true,
+          "timer_wait_seconds": 10
+        },
+        "items": [
+          {
+            "name": "Super Syrup Watering Can",
+            "qty": 1,
+            "rarity": "COMMON",
+            "type": "gear"
+          }
+        ],
+        "kind": "stock",
+        "label": "Super Syrup Watering Can",
+        "multi": null,
+        "reason": "กลับเข้า Stock",
+        "recorded_at": "2026-08-20T09:55:40.283420+00:00",
+        "recorded_epoch": 1787219740.2834198,
+        "round_id": "STOCK-GEAR-C3468",
+        "shop": "gear",
+        "status": "alert_sent",
+        "target_key": "super syrup watering can",
+        "timeline": {
+          "alert_sent_epoch": 1787219740.0835805,
+          "cycle_reset_epoch": 1787219700.0,
+          "cycle_to_send_seconds": 40,
+          "detected_epoch": 1787219732.9815621,
+          "detected_to_send_ms": 7102,
+          "discord_completed_epoch": 1787219740.2834198,
+          "discord_delivery_ms": 200
+        },
+        "ui_mode": "compact-embed"
       }
     ],
     "max_entries": 300,
@@ -11754,25 +11758,25 @@
   },
   "shop_cycles": {
     "crate": {
-      "id": 3467,
-      "key": "timer:1787219700",
+      "id": 3468,
+      "key": "timer:1787220000",
       "source": "gag2-timer"
     },
     "gear": {
-      "id": 3467,
-      "key": "timer:1787219700",
+      "id": 3468,
+      "key": "timer:1787220000",
       "source": "gag2-timer"
     },
     "seed": {
-      "id": 3467,
-      "key": "timer:1787219700",
+      "id": 3468,
+      "key": "timer:1787220000",
       "source": "gag2-timer"
     }
   },
   "shop_fingerprints": {
-    "crate": "0b96d6467adc1632b63984ba0677d077fa6eebe2c47b7c921eee9b8ad22989ff",
-    "gear": "1d84958b255f306aad4066dd423ba70b96040f23b81d201b6a26f8ee82cd00e2",
-    "seed": "3130e398904d6f6091b663bde7608cc1e1522857cee47dc3dacf8538e41c67db",
+    "crate": "fd7b91ce9f40f926defdaf1c1db2b597daae4dfe9b19dffc4547bb8be99f4272",
+    "gear": "7a14255fd0057efa210cb5c6af02719d14815c22a240151560a3c9bdc80a7863",
+    "seed": "4cbc8479cfb5b0b931f1b36bc015b844e7513c40f21bffaae0ba3725aa92fe8f",
     "sell": "209144052838119b93c6906c642caa82486100ac6beacc2a362f799b98a71420",
     "unknown": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
   },
@@ -11813,12 +11817,19 @@
       },
       "super syrup watering can": {
         "image_url": "https://cdn.gag2.gg/items/super_syrup_watering_can.webp",
-        "items": [],
+        "items": [
+          {
+            "name": "Super Syrup Watering Can",
+            "qty": 1,
+            "rarity": "COMMON",
+            "type": "gear"
+          }
+        ],
         "label": "Super Syrup Watering Can",
-        "present": false
+        "present": true
       }
     }
   },
-  "updated_at": "2026-08-20T09:51:27.750774+00:00",
+  "updated_at": "2026-08-20T09:55:40.296992+00:00",
   "version": "6.5.12"
 }
