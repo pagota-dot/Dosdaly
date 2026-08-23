@@ -1,7 +1,7 @@
 {
   "_integrity": {
     "schema": "gag2-stock-state-sha256-v1",
-    "sha256": "93a5975b1eed0c90bdb727b5bbba4dc5d1310bdeae7ea7b7028957c4d27c36ab"
+    "sha256": "261143216e3fc238cc7df5dd02eb85420bf4ed66bd9a73c1b58b41c9c3dd5d8c"
   },
   "alert_logic_version": "6.4.4-image-alert-v1",
   "daily_stats": {
@@ -672,7 +672,7 @@
         }
       },
       "2026-08-23": {
-        "alerts_sent": 21,
+        "alerts_sent": 22,
         "magic_cycle_quantities": {
           "legendary": {
             "gear|timer:1787450100": 1
@@ -709,7 +709,7 @@
         },
         "sell": {
           "atlantic giant pumpkin": {
-            "2": 3,
+            "2": 4,
             "4": 0
           },
           "maple mushroom": {
@@ -722,7 +722,8 @@
             "2": [
               "sell|8e899478283bf304dc27b9151e7dd75fc34381d76d70a6912e4922ac788aa4c9|atlantic giant pumpkin|x2",
               "sell|f86ca95375ea5e3693e89b84f6f9bcf8b0f5c777080044afcf9c6cc15a16eb0f|atlantic giant pumpkin|x2",
-              "sell|c8fc8c55bbbbcfa005b0d7479d59f8e31888cef9176cda6f087741831a4fcac9|atlantic giant pumpkin|x2"
+              "sell|c8fc8c55bbbbcfa005b0d7479d59f8e31888cef9176cda6f087741831a4fcac9|atlantic giant pumpkin|x2",
+              "sell|036a6228a7cb6651a205bf6322624625e545c636be579431d241487eb93e7490|atlantic giant pumpkin|x2"
             ],
             "4": []
           },
@@ -799,46 +800,6 @@
   },
   "round_ledger": {
     "entries": [
-      {
-        "cycle_id": 1839,
-        "cycle_key": "timer:1786726200",
-        "cycle_source": "gag2-timer",
-        "entry_id": "ALERT-bbdfd3705c7363ec",
-        "evidence": {
-          "cycle_confidence": "MID_CYCLE_STABLE",
-          "snapshot_samples": 2,
-          "snapshot_stable": true,
-          "timer_wait_seconds": 6
-        },
-        "items": [
-          {
-            "name": "Atlantic Giant Pumpkin",
-            "qty": 1,
-            "rarity": "LEGENDARY",
-            "type": "seed"
-          }
-        ],
-        "kind": "stock",
-        "label": "Atlantic Giant Pumpkin",
-        "multi": null,
-        "reason": "กลับเข้า Stock",
-        "recorded_at": "2026-08-14T16:49:01.676515+00:00",
-        "recorded_epoch": 1786726141.6765153,
-        "round_id": "STOCK-SEED-C1839",
-        "shop": "seed",
-        "status": "alert_sent",
-        "target_key": "atlantic giant pumpkin",
-        "timeline": {
-          "alert_sent_epoch": 1786726141.1716955,
-          "cycle_reset_epoch": 1786725900.0,
-          "cycle_to_send_seconds": 241,
-          "detected_epoch": 1786726133.9935844,
-          "detected_to_send_ms": 7178,
-          "discord_completed_epoch": 1786726141.6765153,
-          "discord_delivery_ms": 505
-        },
-        "ui_mode": "compact-embed"
-      },
       {
         "cycle_id": 1846,
         "cycle_key": "timer:1786728300",
@@ -11741,6 +11702,39 @@
           "discord_delivery_ms": 230
         },
         "ui_mode": "compact-embed"
+      },
+      {
+        "cycle_id": null,
+        "cycle_key": null,
+        "cycle_source": null,
+        "entry_id": "ALERT-4ef2645e0cfa437a",
+        "evidence": {
+          "cycle_confidence": "MID_CYCLE_STABLE",
+          "snapshot_samples": 2,
+          "snapshot_stable": true,
+          "timer_wait_seconds": 6
+        },
+        "items": [],
+        "kind": "sell",
+        "label": "Atlantic Giant Pumpkin",
+        "multi": 2.0,
+        "reason": "Sell เปลี่ยนเป็น ×2",
+        "recorded_at": "2026-08-23T04:40:56.631694+00:00",
+        "recorded_epoch": 1787460056.6316936,
+        "round_id": "SELL-036a6228-X2",
+        "shop": "sell",
+        "status": "alert_sent",
+        "target_key": "atlantic giant pumpkin",
+        "timeline": {
+          "alert_sent_epoch": 1787460056.3886993,
+          "cycle_reset_epoch": null,
+          "cycle_to_send_seconds": null,
+          "detected_epoch": 1787460049.6852,
+          "detected_to_send_ms": 6703,
+          "discord_completed_epoch": 1787460056.6316936,
+          "discord_delivery_ms": 243
+        },
+        "ui_mode": "compact-embed"
       }
     ],
     "max_entries": 300,
@@ -11749,26 +11743,26 @@
   },
   "shop_cycles": {
     "crate": {
-      "id": 4266,
-      "key": "timer:1787460000",
+      "id": 4267,
+      "key": "timer:1787460300",
       "source": "gag2-timer"
     },
     "gear": {
-      "id": 4266,
-      "key": "timer:1787460000",
+      "id": 4267,
+      "key": "timer:1787460300",
       "source": "gag2-timer"
     },
     "seed": {
-      "id": 4266,
-      "key": "timer:1787460000",
+      "id": 4267,
+      "key": "timer:1787460300",
       "source": "gag2-timer"
     }
   },
   "shop_fingerprints": {
-    "crate": "1e13689121190b8df25e3d9d2b273797705730b8fbd2af043dfc2daff891c55b",
-    "gear": "061a6779f43a31bb76d5cb8dfe51b5e0e7bf5e6ea0cf9770bc8071116e59c7b9",
-    "seed": "7adf773b1751b315713e75d9f35cb7ee5e0403d8b89c045bd3e7646b4bf8e961",
-    "sell": "c1894c2bfc96d536df688456a0573f6ff90269b6eb2021f421f10d47d4d35076",
+    "crate": "782aaeff985b4456ed7fe0bb311f40a94acd3bd97e1ca50e2b882f8f7af8c99e",
+    "gear": "3086cce32abb43bab89ebfe1595543a37a9edc4a407fd2b0e4ce2794fb0a4175",
+    "seed": "e13ce49a3271f1294e847a7a40217978a3d28368cff353f133c46539c7fb04d2",
+    "sell": "036a6228a7cb6651a205bf6322624625e545c636be579431d241487eb93e7490",
     "unknown": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
   },
   "targets": {
@@ -11777,13 +11771,13 @@
       "atlantic giant pumpkin": {
         "image_url": "https://cdn.gag2.gg/items/atlantic_giant_pumpkin.webp",
         "label": "Atlantic Giant Pumpkin",
-        "multi": 0.97,
+        "multi": 2.0,
         "present": true
       },
       "maple mushroom": {
         "image_url": "https://cdn.gag2.gg/items/maple_mushroom.webp",
         "label": "Maple Mushroom",
-        "multi": 1.0,
+        "multi": 1.04,
         "present": true
       }
     },
@@ -11814,6 +11808,6 @@
       }
     }
   },
-  "updated_at": "2026-08-23T04:35:40.499337+00:00",
+  "updated_at": "2026-08-23T04:40:56.641775+00:00",
   "version": "6.5.12"
 }
