@@ -1,7 +1,7 @@
 {
   "_integrity": {
     "schema": "gag2-stock-state-sha256-v1",
-    "sha256": "766c27d84493ce2a48cf2413c9f4630a8610265bd0149aba9fa808be0cf53131"
+    "sha256": "c441e4a673cfb4faacc95bcc078d6f6fc65b85d5df03a2a3e1729eca80930e60"
   },
   "alert_logic_version": "6.4.4-image-alert-v1",
   "daily_stats": {
@@ -683,7 +683,7 @@
         }
       },
       "2026-08-24": {
-        "alerts_sent": 34,
+        "alerts_sent": 35,
         "magic_cycle_quantities": {
           "legendary": {
             "gear|timer:1787532300": 1,
@@ -809,18 +809,19 @@
             "gear|timer:1787541600": 2,
             "gear|timer:1787542800": 1,
             "gear|timer:1787546400": 1,
-            "gear|timer:1787553300": 2
+            "gear|timer:1787553300": 2,
+            "gear|timer:1787582700": 1
           }
         },
         "stock_occurrences": {
           "atlantic giant pumpkin": 2,
           "super syrup sprinkler": 4,
-          "super syrup watering can": 6
+          "super syrup watering can": 7
         },
         "stock_pieces": {
           "atlantic giant pumpkin": 2,
           "super syrup sprinkler": 5,
-          "super syrup watering can": 10
+          "super syrup watering can": 11
         },
         "stock_seen_cycles": {
           "atlantic giant pumpkin": [
@@ -839,7 +840,8 @@
             "gear|timer:1787541600",
             "gear|timer:1787542800",
             "gear|timer:1787546400",
-            "gear|timer:1787553300"
+            "gear|timer:1787553300",
+            "gear|timer:1787582700"
           ]
         }
       }
@@ -857,39 +859,6 @@
   },
   "round_ledger": {
     "entries": [
-      {
-        "cycle_id": null,
-        "cycle_key": null,
-        "cycle_source": null,
-        "entry_id": "ALERT-11ff61b7d998b36d",
-        "evidence": {
-          "cycle_confidence": "MID_CYCLE_STABLE",
-          "snapshot_samples": 2,
-          "snapshot_stable": true,
-          "timer_wait_seconds": 6
-        },
-        "items": [],
-        "kind": "sell",
-        "label": "Maple Mushroom",
-        "multi": 2.0,
-        "reason": "Sell เปลี่ยนเป็น ×2",
-        "recorded_at": "2026-08-15T22:31:18.004415+00:00",
-        "recorded_epoch": 1786833078.0044146,
-        "round_id": "SELL-308125cf-X2",
-        "shop": "sell",
-        "status": "alert_sent",
-        "target_key": "maple mushroom",
-        "timeline": {
-          "alert_sent_epoch": 1786833077.6935563,
-          "cycle_reset_epoch": null,
-          "cycle_to_send_seconds": null,
-          "detected_epoch": 1786833070.5933208,
-          "detected_to_send_ms": 7100,
-          "discord_completed_epoch": 1786833078.0044146,
-          "discord_delivery_ms": 311
-        },
-        "ui_mode": "compact-embed"
-      },
       {
         "cycle_id": 2204,
         "cycle_key": "timer:1786835700",
@@ -11806,6 +11775,46 @@
           "discord_delivery_ms": 293
         },
         "ui_mode": "compact-embed"
+      },
+      {
+        "cycle_id": 4671,
+        "cycle_key": "timer:1787582700",
+        "cycle_source": "gag2-timer",
+        "entry_id": "ALERT-0b8850081f806164",
+        "evidence": {
+          "cycle_confidence": "MID_CYCLE_STABLE",
+          "snapshot_samples": 2,
+          "snapshot_stable": true,
+          "timer_wait_seconds": 6
+        },
+        "items": [
+          {
+            "name": "Super Syrup Watering Can",
+            "qty": 1,
+            "rarity": "COMMON",
+            "type": "gear"
+          }
+        ],
+        "kind": "stock",
+        "label": "Super Syrup Watering Can",
+        "multi": null,
+        "reason": "กลับเข้า Stock",
+        "recorded_at": "2026-08-24T14:40:50.776825+00:00",
+        "recorded_epoch": 1787582450.7768254,
+        "round_id": "STOCK-GEAR-C4671",
+        "shop": "gear",
+        "status": "alert_sent",
+        "target_key": "super syrup watering can",
+        "timeline": {
+          "alert_sent_epoch": 1787582450.591325,
+          "cycle_reset_epoch": 1787582400.0,
+          "cycle_to_send_seconds": 51,
+          "detected_epoch": 1787582443.6186597,
+          "detected_to_send_ms": 6973,
+          "discord_completed_epoch": 1787582450.7768254,
+          "discord_delivery_ms": 185
+        },
+        "ui_mode": "compact-embed"
       }
     ],
     "max_entries": 300,
@@ -11814,26 +11823,26 @@
   },
   "shop_cycles": {
     "crate": {
-      "id": 4670,
-      "key": "timer:1787582400",
+      "id": 4671,
+      "key": "timer:1787582700",
       "source": "gag2-timer"
     },
     "gear": {
-      "id": 4670,
-      "key": "timer:1787582400",
+      "id": 4671,
+      "key": "timer:1787582700",
       "source": "gag2-timer"
     },
     "seed": {
-      "id": 4670,
-      "key": "timer:1787582400",
+      "id": 4671,
+      "key": "timer:1787582700",
       "source": "gag2-timer"
     }
   },
   "shop_fingerprints": {
-    "crate": "7f279cd0fbd72bf9d5cd2a208f88f502d630805dc430ffb5f6919af40fc72168",
-    "gear": "262e1f44726a0562bc95763f788b42da43b6b1f26fff2c0d7973f7ddac0d4d63",
-    "seed": "baa045685798438351b3b65c82b2860cfeef4cc70cebd713728eff1df175012d",
-    "sell": "4ec506a1076546e726de5d0d70e302701fbf5c6e8207db2c2b0934f0b9070fdf",
+    "crate": "073e1eaf616c43fa06fa3bd153671379438ec1ca6b6661419b9c70359b94d8e5",
+    "gear": "75edaf17e3d2005e70a36e0c6a1e077fa925a84950f3e25c320bdb8e0322fe80",
+    "seed": "1277a1a65943dc6cbad8ba1549a999c12354f7773ce351cf5607fa5e88376301",
+    "sell": "851e6061e098ca59438675ee62a61aeb8d066e852c139ad173953eac4672172d",
     "unknown": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
   },
   "targets": {
@@ -11842,13 +11851,13 @@
       "atlantic giant pumpkin": {
         "image_url": "https://cdn.gag2.gg/items/atlantic_giant_pumpkin.webp",
         "label": "Atlantic Giant Pumpkin",
-        "multi": 1.0,
+        "multi": 0.81,
         "present": true
       },
       "maple mushroom": {
         "image_url": "https://cdn.gag2.gg/items/maple_mushroom.webp",
         "label": "Maple Mushroom",
-        "multi": 0.88,
+        "multi": 1.05,
         "present": true
       }
     },
@@ -11873,12 +11882,19 @@
       },
       "super syrup watering can": {
         "image_url": "https://cdn.gag2.gg/items/super_syrup_watering_can.webp",
-        "items": [],
+        "items": [
+          {
+            "name": "Super Syrup Watering Can",
+            "qty": 1,
+            "rarity": "COMMON",
+            "type": "gear"
+          }
+        ],
         "label": "Super Syrup Watering Can",
-        "present": false
+        "present": true
       }
     }
   },
-  "updated_at": "2026-08-24T14:35:40.719303+00:00",
+  "updated_at": "2026-08-24T14:40:50.789664+00:00",
   "version": "6.5.12"
 }
