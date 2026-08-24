@@ -1,7 +1,7 @@
 {
   "_integrity": {
     "schema": "gag2-stock-state-sha256-v1",
-    "sha256": "1029771f2b52dd83e04e4c01eecc47d10086e233ba63b5770ad2ebd1278753d2"
+    "sha256": "4aa860a50b395b2917319cfffb59923955ced9721467878e9bf2bbc894b496fa"
   },
   "alert_logic_version": "6.4.4-image-alert-v1",
   "daily_stats": {
@@ -667,10 +667,22 @@
       },
       "2026-08-25": {
         "alerts_sent": 2,
-        "magic_cycle_quantities": {},
-        "magic_mail": {},
-        "magic_mail_pieces": {},
-        "magic_seen_cycles": {},
+        "magic_cycle_quantities": {
+          "rare": {
+            "gear|timer:1787593800": 2
+          }
+        },
+        "magic_mail": {
+          "rare": 1
+        },
+        "magic_mail_pieces": {
+          "rare": 2
+        },
+        "magic_seen_cycles": {
+          "rare": [
+            "gear|timer:1787593800"
+          ]
+        },
         "sell": {
           "atlantic giant pumpkin": {
             "2": 1,
@@ -11666,25 +11678,25 @@
   },
   "shop_cycles": {
     "crate": {
-      "id": 4707,
-      "key": "timer:1787593500",
+      "id": 4708,
+      "key": "timer:1787593800",
       "source": "gag2-timer"
     },
     "gear": {
-      "id": 4707,
-      "key": "timer:1787593500",
+      "id": 4708,
+      "key": "timer:1787593800",
       "source": "gag2-timer"
     },
     "seed": {
-      "id": 4707,
-      "key": "timer:1787593500",
+      "id": 4708,
+      "key": "timer:1787593800",
       "source": "gag2-timer"
     }
   },
   "shop_fingerprints": {
-    "crate": "21d805727cdb5f87ea967fd4b3ded56121bcb6305338a1a425fb643180e92dcd",
-    "gear": "25b13dd77afb2db5e742e50828ec70c0208a715400f58ff690ab482c9a7f2875",
-    "seed": "b56064773fd38b87e569eb4b41fb16ab177e2eb5d357ce277f7e67130e4d0b45",
+    "crate": "662b0324852bae62bfc429cd4622cf13b5849c58554f1341b8f188a86b552172",
+    "gear": "dbc1dea9d0c1ef80de54b35684004152523774b03db3f6a624638cdd70254fd4",
+    "seed": "6d1c06709c1f94fba26449195cbfa20fbf6dd84de3b58869dff9adf6f05d1460",
     "sell": "bf5c11461dcc8e789eda5c31f42a046684d410b1889634d33149c96efb9024f0",
     "unknown": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
   },
@@ -11731,6 +11743,6 @@
       }
     }
   },
-  "updated_at": "2026-08-24T17:40:49.023749+00:00",
+  "updated_at": "2026-08-24T17:45:40.067832+00:00",
   "version": "6.5.12"
 }
