@@ -1,7 +1,7 @@
 {
   "_integrity": {
     "schema": "gag2-stock-state-sha256-v1",
-    "sha256": "da2961e6ef1f8a969a693f164554e1fd7f913a53850843da114a52856dc6aafa"
+    "sha256": "dc69f9a4abc98c5c97eb33b3621038c07027cf4edef9111f9974b7657a0c4b67"
   },
   "alert_logic_version": "6.4.4-image-alert-v1",
   "daily_stats": {
@@ -666,17 +666,29 @@
         }
       },
       "2026-08-25": {
-        "alerts_sent": 0,
+        "alerts_sent": 1,
         "magic_cycle_quantities": {},
         "magic_mail": {},
         "magic_mail_pieces": {},
         "magic_seen_cycles": {},
         "sell": {},
         "sell_seen_rotations": {},
-        "stock_cycle_quantities": {},
-        "stock_occurrences": {},
-        "stock_pieces": {},
-        "stock_seen_cycles": {}
+        "stock_cycle_quantities": {
+          "super syrup sprinkler": {
+            "gear|timer:1787591400": 1
+          }
+        },
+        "stock_occurrences": {
+          "super syrup sprinkler": 1
+        },
+        "stock_pieces": {
+          "super syrup sprinkler": 1
+        },
+        "stock_seen_cycles": {
+          "super syrup sprinkler": [
+            "gear|timer:1787591400"
+          ]
+        }
       }
     },
     "last_summary_date": "2026-08-24",
@@ -692,46 +704,6 @@
   },
   "round_ledger": {
     "entries": [
-      {
-        "cycle_id": 2226,
-        "cycle_key": "timer:1786842300",
-        "cycle_source": "gag2-timer",
-        "entry_id": "ALERT-c45c96d8b1918e7f",
-        "evidence": {
-          "cycle_confidence": "MID_CYCLE_STABLE",
-          "snapshot_samples": 2,
-          "snapshot_stable": true,
-          "timer_wait_seconds": 6
-        },
-        "items": [
-          {
-            "name": "Super Syrup Watering Can",
-            "qty": 1,
-            "rarity": "COMMON",
-            "type": "gear"
-          }
-        ],
-        "kind": "stock",
-        "label": "Super Syrup Watering Can",
-        "multi": null,
-        "reason": "กลับเข้า Stock",
-        "recorded_at": "2026-08-16T01:01:25.478453+00:00",
-        "recorded_epoch": 1786842085.4784532,
-        "round_id": "STOCK-GEAR-C2226",
-        "shop": "gear",
-        "status": "alert_sent",
-        "target_key": "super syrup watering can",
-        "timeline": {
-          "alert_sent_epoch": 1786842085.0985067,
-          "cycle_reset_epoch": 1786842000.0,
-          "cycle_to_send_seconds": 85,
-          "detected_epoch": 1786842078.0255198,
-          "detected_to_send_ms": 7073,
-          "discord_completed_epoch": 1786842085.4784532,
-          "discord_delivery_ms": 380
-        },
-        "ui_mode": "compact-embed"
-      },
       {
         "cycle_id": 2233,
         "cycle_key": "timer:1786844400",
@@ -11641,6 +11613,46 @@
           "discord_delivery_ms": 429
         },
         "ui_mode": "compact-embed"
+      },
+      {
+        "cycle_id": 4700,
+        "cycle_key": "timer:1787591400",
+        "cycle_source": "gag2-timer",
+        "entry_id": "ALERT-0bf135f34e1573b1",
+        "evidence": {
+          "cycle_confidence": "MID_CYCLE_STABLE",
+          "snapshot_samples": 2,
+          "snapshot_stable": true,
+          "timer_wait_seconds": 9
+        },
+        "items": [
+          {
+            "name": "Super Syrup Sprinkler",
+            "qty": 1,
+            "rarity": "COMMON",
+            "type": "gear"
+          }
+        ],
+        "kind": "stock",
+        "label": "Super Syrup Sprinkler",
+        "multi": null,
+        "reason": "กลับเข้า Stock",
+        "recorded_at": "2026-08-24T17:05:39.547468+00:00",
+        "recorded_epoch": 1787591139.5474682,
+        "round_id": "STOCK-GEAR-C4700",
+        "shop": "gear",
+        "status": "alert_sent",
+        "target_key": "super syrup sprinkler",
+        "timeline": {
+          "alert_sent_epoch": 1787591139.2260225,
+          "cycle_reset_epoch": 1787591100.0,
+          "cycle_to_send_seconds": 39,
+          "detected_epoch": 1787591132.462552,
+          "detected_to_send_ms": 6763,
+          "discord_completed_epoch": 1787591139.5474682,
+          "discord_delivery_ms": 321
+        },
+        "ui_mode": "compact-embed"
       }
     ],
     "max_entries": 300,
@@ -11649,25 +11661,25 @@
   },
   "shop_cycles": {
     "crate": {
-      "id": 4699,
-      "key": "timer:1787591100",
+      "id": 4700,
+      "key": "timer:1787591400",
       "source": "gag2-timer"
     },
     "gear": {
-      "id": 4699,
-      "key": "timer:1787591100",
+      "id": 4700,
+      "key": "timer:1787591400",
       "source": "gag2-timer"
     },
     "seed": {
-      "id": 4699,
-      "key": "timer:1787591100",
+      "id": 4700,
+      "key": "timer:1787591400",
       "source": "gag2-timer"
     }
   },
   "shop_fingerprints": {
-    "crate": "7fe79c083b1d6f754fc48d16602bc94cadb2443bbf3c8d7beca5c588dc29ad2b",
-    "gear": "9d47c169585462149a29d1d861804e4bd5cbf0e3d3b340a854f8001fb509602b",
-    "seed": "23a617fbc51e31d6fe9435cf4dd55434014c3ccdb5d86ee0b8de9fc7e872802f",
+    "crate": "4e611f0c22e6687d5ae296a9c72bb30c5d88fa4fe03006c14e68bd233a6af155",
+    "gear": "554d536f7df396d27caf03068e4dfdfde1759b97aea2614c9623b9d1eba0ef8c",
+    "seed": "1f459eabe75437ae59cfbe1de76990c603f5e8db6a5784fdbeb9ff1a84fdd597",
     "sell": "635c793e4b2e8869b837c8bdd3e83931bda2170e43011986e5418b9cbddb0017",
     "unknown": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
   },
@@ -11702,9 +11714,16 @@
       },
       "super syrup sprinkler": {
         "image_url": "https://cdn.gag2.gg/items/super_syrup_sprinkler.webp",
-        "items": [],
+        "items": [
+          {
+            "name": "Super Syrup Sprinkler",
+            "qty": 1,
+            "rarity": "COMMON",
+            "type": "gear"
+          }
+        ],
         "label": "Super Syrup Sprinkler",
-        "present": false
+        "present": true
       },
       "super syrup watering can": {
         "image_url": "https://cdn.gag2.gg/items/super_syrup_watering_can.webp",
@@ -11714,6 +11733,6 @@
       }
     }
   },
-  "updated_at": "2026-08-24T17:01:03.565900+00:00",
+  "updated_at": "2026-08-24T17:05:39.557795+00:00",
   "version": "6.5.12"
 }
