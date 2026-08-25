@@ -1,7 +1,7 @@
 {
   "_integrity": {
     "schema": "gag2-stock-state-sha256-v1",
-    "sha256": "fd1c819a8a4f9ee497906c8980549035605bca379fbac6e7c31c62bc2d6a761a"
+    "sha256": "ce3f66d876d2d89d390c688d7621c11baacf7d5cffe9c7f24776b852f0a8dc0b"
   },
   "alert_logic_version": "6.4.4-image-alert-v1",
   "daily_stats": {
@@ -631,35 +631,39 @@
         }
       },
       "2026-08-26": {
-        "alerts_sent": 6,
+        "alerts_sent": 7,
         "magic_cycle_quantities": {
           "legendary": {
-            "gear|timer:1787680200": 1
+            "gear|timer:1787680200": 1,
+            "gear|timer:1787685000": 1
           },
           "rare": {
             "gear|timer:1787679000": 2,
             "gear|timer:1787681400": 2,
             "gear|timer:1787682000": 2,
-            "gear|timer:1787682600": 2
+            "gear|timer:1787682600": 2,
+            "gear|timer:1787685000": 2
           }
         },
         "magic_mail": {
-          "legendary": 1,
-          "rare": 4
+          "legendary": 2,
+          "rare": 5
         },
         "magic_mail_pieces": {
-          "legendary": 1,
-          "rare": 8
+          "legendary": 2,
+          "rare": 10
         },
         "magic_seen_cycles": {
           "legendary": [
-            "gear|timer:1787680200"
+            "gear|timer:1787680200",
+            "gear|timer:1787685000"
           ],
           "rare": [
             "gear|timer:1787679000",
             "gear|timer:1787681400",
             "gear|timer:1787682000",
-            "gear|timer:1787682600"
+            "gear|timer:1787682600",
+            "gear|timer:1787685000"
           ]
         },
         "sell": {
@@ -720,46 +724,6 @@
   },
   "round_ledger": {
     "entries": [
-      {
-        "cycle_id": 2456,
-        "cycle_key": "timer:1786911600",
-        "cycle_source": "gag2-timer",
-        "entry_id": "ALERT-16ef21b9f36595f2",
-        "evidence": {
-          "cycle_confidence": "MID_CYCLE_STABLE",
-          "snapshot_samples": 2,
-          "snapshot_stable": true,
-          "timer_wait_seconds": 10
-        },
-        "items": [
-          {
-            "name": "Super Syrup Watering Can",
-            "qty": 1,
-            "rarity": "COMMON",
-            "type": "gear"
-          }
-        ],
-        "kind": "stock",
-        "label": "Super Syrup Watering Can",
-        "multi": null,
-        "reason": "กลับเข้า Stock",
-        "recorded_at": "2026-08-16T20:15:39.964211+00:00",
-        "recorded_epoch": 1786911339.964211,
-        "round_id": "STOCK-GEAR-C2456",
-        "shop": "gear",
-        "status": "alert_sent",
-        "target_key": "super syrup watering can",
-        "timeline": {
-          "alert_sent_epoch": 1786911339.8393316,
-          "cycle_reset_epoch": 1786911300.0,
-          "cycle_to_send_seconds": 40,
-          "detected_epoch": 1786911332.8177845,
-          "detected_to_send_ms": 7022,
-          "discord_completed_epoch": 1786911339.964211,
-          "discord_delivery_ms": 125
-        },
-        "ui_mode": "compact-embed"
-      },
       {
         "cycle_id": null,
         "cycle_key": null,
@@ -11641,6 +11605,46 @@
           "discord_delivery_ms": 427
         },
         "ui_mode": "compact-embed"
+      },
+      {
+        "cycle_id": 5011,
+        "cycle_key": "timer:1787685000",
+        "cycle_source": "gag2-timer",
+        "entry_id": "ALERT-2a3ccd99cb59aba3",
+        "evidence": {
+          "cycle_confidence": "CHANGED_THEN_STABLE",
+          "snapshot_samples": 3,
+          "snapshot_stable": true,
+          "timer_wait_seconds": 20
+        },
+        "items": [
+          {
+            "name": "Legendary Magic Mail",
+            "qty": 1,
+            "rarity": "LEGENDARY",
+            "type": "gear"
+          }
+        ],
+        "kind": "stock",
+        "label": "Legendary Magic Mail",
+        "multi": null,
+        "reason": "Magic Mail ที่ต้องการอยู่ใน Stock",
+        "recorded_at": "2026-08-25T19:05:40.788618+00:00",
+        "recorded_epoch": 1787684740.7886176,
+        "round_id": "STOCK-GEAR-C5011",
+        "shop": "gear",
+        "status": "alert_sent",
+        "target_key": "legendary magic mail|legendary",
+        "timeline": {
+          "alert_sent_epoch": 1787684740.2031531,
+          "cycle_reset_epoch": 1787684700.0,
+          "cycle_to_send_seconds": 40,
+          "detected_epoch": 1787684733.500891,
+          "detected_to_send_ms": 6702,
+          "discord_completed_epoch": 1787684740.7886176,
+          "discord_delivery_ms": 585
+        },
+        "ui_mode": "compact-embed"
       }
     ],
     "max_entries": 300,
@@ -11649,30 +11653,39 @@
   },
   "shop_cycles": {
     "crate": {
-      "id": 5010,
-      "key": "timer:1787684700",
+      "id": 5011,
+      "key": "timer:1787685000",
       "source": "gag2-timer"
     },
     "gear": {
-      "id": 5010,
-      "key": "timer:1787684700",
+      "id": 5011,
+      "key": "timer:1787685000",
       "source": "gag2-timer"
     },
     "seed": {
-      "id": 5010,
-      "key": "timer:1787684700",
+      "id": 5011,
+      "key": "timer:1787685000",
       "source": "gag2-timer"
     }
   },
   "shop_fingerprints": {
-    "crate": "7f8544cfb27e265a87f521586207b1e320607063d406afafa71160e917702166",
-    "gear": "809c75b65d629fa1718e9e217ca1918a72e6997d608b446d4869c67a61aeec94",
-    "seed": "9caec7a7cc074ab73ca65830fcd3bd734613c6017893d5fc9976ad42924c1a4b",
+    "crate": "0dbcb818fe56f6ba7d120139b63c11c934439812c1dfddee80a302b4d40e3553",
+    "gear": "5cd97808a62eea5de502cda7635a096791563d47f524159da11ed36098c14307",
+    "seed": "5cc38c844b67bcc0fea521b82e183fb265ec068dbae5bbc71b6fe1cf2ae7bebd",
     "sell": "35264ec9d9d8b8a292f45ce2238714d359548895ad7789706906d035a3c7e84b",
     "unknown": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
   },
   "targets": {
-    "magic_mail": {},
+    "magic_mail": {
+      "legendary magic mail|legendary": {
+        "image_url": "https://cdn.gag2.gg/items/legendary_magic_mail.webp",
+        "name": "Legendary Magic Mail",
+        "present": true,
+        "qty": 1,
+        "rarity": "LEGENDARY",
+        "type": "gear"
+      }
+    },
     "sell": {
       "atlantic giant pumpkin": {
         "image_url": "https://cdn.gag2.gg/items/atlantic_giant_pumpkin.webp",
@@ -11714,6 +11727,6 @@
       }
     }
   },
-  "updated_at": "2026-08-25T19:00:54.902155+00:00",
+  "updated_at": "2026-08-25T19:05:40.798758+00:00",
   "version": "6.5.12"
 }
