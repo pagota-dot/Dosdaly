@@ -1,7 +1,7 @@
 {
   "_integrity": {
     "schema": "gag2-stock-state-sha256-v1",
-    "sha256": "081f50a57e8f5432d9544dcc0a0138b50205ee5fd9b6f32fcf1e9216e78bf7a5"
+    "sha256": "e984c7bd23dc91017ef4157a5151d2d7d1e74d97567efa6d5670998eff139118"
   },
   "alert_logic_version": "6.4.4-image-alert-v1",
   "daily_stats": {
@@ -631,7 +631,7 @@
         }
       },
       "2026-08-26": {
-        "alerts_sent": 18,
+        "alerts_sent": 19,
         "magic_cycle_quantities": {
           "legendary": {
             "gear|timer:1787680200": 1,
@@ -688,7 +688,7 @@
             "4": 1
           },
           "maple mushroom": {
-            "2": 5,
+            "2": 6,
             "4": 1
           }
         },
@@ -710,7 +710,8 @@
               "sell|44474cd09f0c45b10e46c966b8b1bb3f8d926b6284bbf21bd66e883de92dbad2|maple mushroom|x2",
               "sell|1ad4b433850ed360e43c079df339cbb5ec9c88f701f6dcd31232806cf3c6cb19|maple mushroom|x2",
               "sell|baa2c002d99decd23afeb5d3146dddc9ea2c9ed88902fe7ca210c2a623880ff8|maple mushroom|x2",
-              "sell|032ae74afbacb440c537c09644a9fe992cba9b1134b18fa331bac814e12168fd|maple mushroom|x2"
+              "sell|032ae74afbacb440c537c09644a9fe992cba9b1134b18fa331bac814e12168fd|maple mushroom|x2",
+              "sell|aea519f93c3ad12ba0ee93923fd42532e74e125db7e7fab43901453288911c5a|maple mushroom|x2"
             ],
             "4": [
               "sell|48047aeafd5fd24650741cc5a66d16a2b58355fa4e81e9fbc3bd0141a4d0f7d6|maple mushroom|x4"
@@ -762,39 +763,6 @@
   },
   "round_ledger": {
     "entries": [
-      {
-        "cycle_id": null,
-        "cycle_key": null,
-        "cycle_source": null,
-        "entry_id": "ALERT-1929a13d6df3f76c",
-        "evidence": {
-          "cycle_confidence": "MID_CYCLE_STABLE",
-          "snapshot_samples": 2,
-          "snapshot_stable": true,
-          "timer_wait_seconds": 6
-        },
-        "items": [],
-        "kind": "sell",
-        "label": "Atlantic Giant Pumpkin",
-        "multi": 2.0,
-        "reason": "Sell เปลี่ยนเป็น ×2",
-        "recorded_at": "2026-08-17T04:11:20.175413+00:00",
-        "recorded_epoch": 1786939880.1754127,
-        "round_id": "SELL-06517c83-X2",
-        "shop": "sell",
-        "status": "alert_sent",
-        "target_key": "atlantic giant pumpkin",
-        "timeline": {
-          "alert_sent_epoch": 1786939879.9265985,
-          "cycle_reset_epoch": null,
-          "cycle_to_send_seconds": null,
-          "detected_epoch": 1786939872.8174896,
-          "detected_to_send_ms": 7109,
-          "discord_completed_epoch": 1786939880.1754127,
-          "discord_delivery_ms": 249
-        },
-        "ui_mode": "compact-embed"
-      },
       {
         "cycle_id": 2561,
         "cycle_key": "timer:1786943100",
@@ -11683,6 +11651,39 @@
           "discord_delivery_ms": 550
         },
         "ui_mode": "compact-embed"
+      },
+      {
+        "cycle_id": null,
+        "cycle_key": null,
+        "cycle_source": null,
+        "entry_id": "ALERT-1bdb7af0d7fe355f",
+        "evidence": {
+          "cycle_confidence": "MID_CYCLE_STABLE",
+          "snapshot_samples": 2,
+          "snapshot_stable": true,
+          "timer_wait_seconds": 6
+        },
+        "items": [],
+        "kind": "sell",
+        "label": "Maple Mushroom",
+        "multi": 2.0,
+        "reason": "Sell เปลี่ยนเป็น ×2",
+        "recorded_at": "2026-08-26T01:21:04.782633+00:00",
+        "recorded_epoch": 1787707264.782633,
+        "round_id": "SELL-aea519f9-X2",
+        "shop": "sell",
+        "status": "alert_sent",
+        "target_key": "maple mushroom",
+        "timeline": {
+          "alert_sent_epoch": 1787707264.28676,
+          "cycle_reset_epoch": null,
+          "cycle_to_send_seconds": null,
+          "detected_epoch": 1787707257.539478,
+          "detected_to_send_ms": 6747,
+          "discord_completed_epoch": 1787707264.782633,
+          "discord_delivery_ms": 496
+        },
+        "ui_mode": "compact-embed"
       }
     ],
     "max_entries": 300,
@@ -11691,26 +11692,26 @@
   },
   "shop_cycles": {
     "crate": {
-      "id": 5084,
-      "key": "timer:1787707200",
+      "id": 5085,
+      "key": "timer:1787707500",
       "source": "gag2-timer"
     },
     "gear": {
-      "id": 5084,
-      "key": "timer:1787707200",
+      "id": 5085,
+      "key": "timer:1787707500",
       "source": "gag2-timer"
     },
     "seed": {
-      "id": 5084,
-      "key": "timer:1787707200",
+      "id": 5085,
+      "key": "timer:1787707500",
       "source": "gag2-timer"
     }
   },
   "shop_fingerprints": {
-    "crate": "21659b11a791e22b71b1a7ffc734cc5db497b2385171d0c66594b093ff6d3e17",
-    "gear": "ce43390c8c381fcdff788336a0c38c592a7b7f4754c7ee5405d94c5bede0919e",
-    "seed": "6956234d48f55039ecff5c962d896d479ba4769b0a43fd53b9971e1c842b4d86",
-    "sell": "682201631218a4db50fa51fe5e4e1bcf02732eba86e43b614b656a2c4f6a12b1",
+    "crate": "bc36e3b1b1424f4f58da8b6e509b09306dc3fb5ea727422f01147dcdb3fec18c",
+    "gear": "818111a65d4955a4d86405d8f76179800d75e7d09a369abe9410bae9ef9776c3",
+    "seed": "a26bfd185bccc46f1b49fc06bc6eb3e75a8a9363ca63ebbefa134406a6c8c5d0",
+    "sell": "aea519f93c3ad12ba0ee93923fd42532e74e125db7e7fab43901453288911c5a",
     "unknown": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
   },
   "targets": {
@@ -11719,13 +11720,13 @@
       "atlantic giant pumpkin": {
         "image_url": "https://cdn.gag2.gg/items/atlantic_giant_pumpkin.webp",
         "label": "Atlantic Giant Pumpkin",
-        "multi": 1.03,
+        "multi": 0.9,
         "present": true
       },
       "maple mushroom": {
         "image_url": "https://cdn.gag2.gg/items/maple_mushroom.webp",
         "label": "Maple Mushroom",
-        "multi": 0.86,
+        "multi": 2.0,
         "present": true
       }
     },
@@ -11750,19 +11751,12 @@
       },
       "super syrup watering can": {
         "image_url": "https://cdn.gag2.gg/items/super_syrup_watering_can.webp",
-        "items": [
-          {
-            "name": "Super Syrup Watering Can",
-            "qty": 1,
-            "rarity": "COMMON",
-            "type": "gear"
-          }
-        ],
+        "items": [],
         "label": "Super Syrup Watering Can",
-        "present": true
+        "present": false
       }
     }
   },
-  "updated_at": "2026-08-26T01:15:41.386233+00:00",
+  "updated_at": "2026-08-26T01:21:04.791386+00:00",
   "version": "6.5.12"
 }
