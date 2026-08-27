@@ -1,7 +1,7 @@
 {
   "_integrity": {
     "schema": "gag2-stock-state-sha256-v1",
-    "sha256": "8e862d13156fa08ba67211dab4a5efc60e61ca39865d9a8db2d13c257ef9d05d"
+    "sha256": "96289721725137a02b1404897cbc9e9397b907a42fe489fecba91fd857fca61b"
   },
   "alert_logic_version": "6.4.4-image-alert-v1",
   "daily_stats": {
@@ -664,10 +664,11 @@
         }
       },
       "2026-08-27": {
-        "alerts_sent": 33,
+        "alerts_sent": 34,
         "magic_cycle_quantities": {
           "legendary": {
-            "gear|timer:1787782500": 1
+            "gear|timer:1787782500": 1,
+            "gear|timer:1787842200": 1
           },
           "rare": {
             "gear|timer:1787766300": 1,
@@ -697,16 +698,17 @@
           }
         },
         "magic_mail": {
-          "legendary": 1,
+          "legendary": 2,
           "rare": 24
         },
         "magic_mail_pieces": {
-          "legendary": 1,
+          "legendary": 2,
           "rare": 37
         },
         "magic_seen_cycles": {
           "legendary": [
-            "gear|timer:1787782500"
+            "gear|timer:1787782500",
+            "gear|timer:1787842200"
           ],
           "rare": [
             "gear|timer:1787766300",
@@ -844,39 +846,6 @@
   },
   "round_ledger": {
     "entries": [
-      {
-        "cycle_id": null,
-        "cycle_key": null,
-        "cycle_source": null,
-        "entry_id": "ALERT-a8dcba093c7b1aa2",
-        "evidence": {
-          "cycle_confidence": "MID_CYCLE_STABLE",
-          "snapshot_samples": 2,
-          "snapshot_stable": true,
-          "timer_wait_seconds": 6
-        },
-        "items": [],
-        "kind": "sell",
-        "label": "Atlantic Giant Pumpkin",
-        "multi": 2.0,
-        "reason": "Sell เปลี่ยนเป็น ×2",
-        "recorded_at": "2026-08-19T11:31:13.324376+00:00",
-        "recorded_epoch": 1787139073.324376,
-        "round_id": "SELL-1bd6e3f4-X2",
-        "shop": "sell",
-        "status": "alert_sent",
-        "target_key": "atlantic giant pumpkin",
-        "timeline": {
-          "alert_sent_epoch": 1787139072.9639263,
-          "cycle_reset_epoch": null,
-          "cycle_to_send_seconds": null,
-          "detected_epoch": 1787139065.9604726,
-          "detected_to_send_ms": 7003,
-          "discord_completed_epoch": 1787139073.324376,
-          "discord_delivery_ms": 360
-        },
-        "ui_mode": "compact-embed"
-      },
       {
         "cycle_id": null,
         "cycle_key": null,
@@ -11793,6 +11762,46 @@
           "discord_delivery_ms": 690
         },
         "ui_mode": "compact-embed"
+      },
+      {
+        "cycle_id": 5522,
+        "cycle_key": "timer:1787842200",
+        "cycle_source": "gag2-timer",
+        "entry_id": "ALERT-d8309f22557166b8",
+        "evidence": {
+          "cycle_confidence": "MID_CYCLE_STABLE",
+          "snapshot_samples": 2,
+          "snapshot_stable": true,
+          "timer_wait_seconds": 5
+        },
+        "items": [
+          {
+            "name": "Legendary Magic Mail",
+            "qty": 1,
+            "rarity": "LEGENDARY",
+            "type": "gear"
+          }
+        ],
+        "kind": "stock",
+        "label": "Legendary Magic Mail",
+        "multi": null,
+        "reason": "Magic Mail ที่ต้องการอยู่ใน Stock",
+        "recorded_at": "2026-08-27T14:45:42.150395+00:00",
+        "recorded_epoch": 1787841942.1503952,
+        "round_id": "STOCK-GEAR-C5522",
+        "shop": "gear",
+        "status": "alert_sent",
+        "target_key": "legendary magic mail|legendary",
+        "timeline": {
+          "alert_sent_epoch": 1787841939.765279,
+          "cycle_reset_epoch": 1787841900.0,
+          "cycle_to_send_seconds": 40,
+          "detected_epoch": 1787841932.7648392,
+          "detected_to_send_ms": 7000,
+          "discord_completed_epoch": 1787841942.1503952,
+          "discord_delivery_ms": 2385
+        },
+        "ui_mode": "compact-embed"
       }
     ],
     "max_entries": 300,
@@ -11801,30 +11810,39 @@
   },
   "shop_cycles": {
     "crate": {
-      "id": 5521,
-      "key": "timer:1787841900",
+      "id": 5522,
+      "key": "timer:1787842200",
       "source": "gag2-timer"
     },
     "gear": {
-      "id": 5521,
-      "key": "timer:1787841900",
+      "id": 5522,
+      "key": "timer:1787842200",
       "source": "gag2-timer"
     },
     "seed": {
-      "id": 5521,
-      "key": "timer:1787841900",
+      "id": 5522,
+      "key": "timer:1787842200",
       "source": "gag2-timer"
     }
   },
   "shop_fingerprints": {
-    "crate": "eb4b94a2babe6b78244ed063bb44a3fc98bbac686a6f5ed80f5e54f6708a17f7",
-    "gear": "16aeeeb64593dc262427522b62903267b008418a13a935301eaad5e412a430f4",
-    "seed": "f47ff7489b8214f2f537b23665507c24899029699c3d916aee1942da76f754e6",
+    "crate": "2812476f11e09e197407f23117b17387dead7712da06c38bd674b60e0bd3111a",
+    "gear": "91e053eaf3ab3e757ded4dff066f6178565ecd3b718675cd7c349adea21039dc",
+    "seed": "435f349560db7274ef89a9132c5fda1deaae09008c44ec855a05b8e966203597",
     "sell": "3ebc8b6e738195ef8532393406e5a2bb41012d550934591f9ff04f867acaf6b6",
     "unknown": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
   },
   "targets": {
-    "magic_mail": {},
+    "magic_mail": {
+      "legendary magic mail|legendary": {
+        "image_url": "https://cdn.gag2.gg/items/legendary_magic_mail.webp",
+        "name": "Legendary Magic Mail",
+        "present": true,
+        "qty": 1,
+        "rarity": "LEGENDARY",
+        "type": "gear"
+      }
+    },
     "sell": {
       "atlantic giant pumpkin": {
         "image_url": "https://cdn.gag2.gg/items/atlantic_giant_pumpkin.webp",
@@ -11866,6 +11884,6 @@
       }
     }
   },
-  "updated_at": "2026-08-27T14:40:40.346526+00:00",
+  "updated_at": "2026-08-27T14:45:42.163624+00:00",
   "version": "6.5.12"
 }
