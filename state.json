@@ -1,7 +1,7 @@
 {
   "_integrity": {
     "schema": "gag2-stock-state-sha256-v1",
-    "sha256": "63916e426b7f5ae4ad9620b372f76e3091899c9191e36975330d8f04693babca"
+    "sha256": "f8b000043d567a50017edfbd08010b456817e61c74cb9207b785ed9671d18671"
   },
   "alert_logic_version": "6.4.4-image-alert-v1",
   "daily_stats": {
@@ -691,7 +691,7 @@
         }
       },
       "2026-08-29": {
-        "alerts_sent": 5,
+        "alerts_sent": 6,
         "magic_cycle_quantities": {
           "legendary": {
             "gear|timer:1787941800": 1,
@@ -730,8 +730,20 @@
             "gear|timer:1787959800"
           ]
         },
-        "sell": {},
-        "sell_seen_rotations": {},
+        "sell": {
+          "atlantic giant pumpkin": {
+            "2": 1,
+            "4": 0
+          }
+        },
+        "sell_seen_rotations": {
+          "atlantic giant pumpkin": {
+            "2": [
+              "sell|6e2899f73a4c90666cba3ed86c6b86ae7adee1cb2a71f6f356f09600c910207e|atlantic giant pumpkin|x2"
+            ],
+            "4": []
+          }
+        },
         "stock_cycle_quantities": {
           "amber cranberry": {
             "seed|timer:1787943300": 1
@@ -779,46 +791,6 @@
   },
   "round_ledger": {
     "entries": [
-      {
-        "cycle_id": 3634,
-        "cycle_key": "timer:1787269800",
-        "cycle_source": "gag2-timer",
-        "entry_id": "ALERT-fed59d57f536c8bc",
-        "evidence": {
-          "cycle_confidence": "MID_CYCLE_STABLE",
-          "snapshot_samples": 2,
-          "snapshot_stable": true,
-          "timer_wait_seconds": 9
-        },
-        "items": [
-          {
-            "name": "Legendary Magic Mail",
-            "qty": 1,
-            "rarity": "LEGENDARY",
-            "type": "gear"
-          }
-        ],
-        "kind": "stock",
-        "label": "Legendary Magic Mail",
-        "multi": null,
-        "reason": "Magic Mail ที่ต้องการอยู่ใน Stock",
-        "recorded_at": "2026-08-20T23:45:40.611394+00:00",
-        "recorded_epoch": 1787269540.6113937,
-        "round_id": "STOCK-GEAR-C3634",
-        "shop": "gear",
-        "status": "alert_sent",
-        "target_key": "legendary magic mail|legendary",
-        "timeline": {
-          "alert_sent_epoch": 1787269540.3779798,
-          "cycle_reset_epoch": 1787269500.0,
-          "cycle_to_send_seconds": 40,
-          "detected_epoch": 1787269533.3473806,
-          "detected_to_send_ms": 7031,
-          "discord_completed_epoch": 1787269540.6113937,
-          "discord_delivery_ms": 233
-        },
-        "ui_mode": "compact-embed"
-      },
       {
         "cycle_id": 3644,
         "cycle_key": "timer:1787272800",
@@ -11714,6 +11686,39 @@
           "discord_delivery_ms": 549
         },
         "ui_mode": "compact-embed"
+      },
+      {
+        "cycle_id": null,
+        "cycle_key": null,
+        "cycle_source": null,
+        "entry_id": "ALERT-ecb2d98f8577dcca",
+        "evidence": {
+          "cycle_confidence": "MID_CYCLE_STABLE",
+          "snapshot_samples": 2,
+          "snapshot_stable": true,
+          "timer_wait_seconds": 16
+        },
+        "items": [],
+        "kind": "sell",
+        "label": "Atlantic Giant Pumpkin",
+        "multi": 2.0,
+        "reason": "Sell เปลี่ยนเป็น ×2",
+        "recorded_at": "2026-08-28T23:30:39.874402+00:00",
+        "recorded_epoch": 1787959839.8744018,
+        "round_id": "SELL-6e2899f7-X2",
+        "shop": "sell",
+        "status": "alert_sent",
+        "target_key": "atlantic giant pumpkin",
+        "timeline": {
+          "alert_sent_epoch": 1787959839.4318507,
+          "cycle_reset_epoch": null,
+          "cycle_to_send_seconds": null,
+          "detected_epoch": 1787959832.516115,
+          "detected_to_send_ms": 6916,
+          "discord_completed_epoch": 1787959839.8744018,
+          "discord_delivery_ms": 442
+        },
+        "ui_mode": "compact-embed"
       }
     ],
     "max_entries": 300,
@@ -11722,26 +11727,26 @@
   },
   "shop_cycles": {
     "crate": {
-      "id": 5912,
-      "key": "timer:1787959800",
+      "id": 5913,
+      "key": "timer:1787960100",
       "source": "gag2-timer"
     },
     "gear": {
-      "id": 5912,
-      "key": "timer:1787959800",
+      "id": 5913,
+      "key": "timer:1787960100",
       "source": "gag2-timer"
     },
     "seed": {
-      "id": 5912,
-      "key": "timer:1787959800",
+      "id": 5913,
+      "key": "timer:1787960100",
       "source": "gag2-timer"
     }
   },
   "shop_fingerprints": {
-    "crate": "baccba42c6392c76f4862403e828eeac478147aef210c34dfadb45e3255639d4",
-    "gear": "f17bf6a84ffa1ed013201cf9347544fbf0689f7822111fa92ffc1beb3db7bbfb",
-    "seed": "c383a1623ba99e6a563b3bb746562ce4ca88817382350e9b03d2efbfbfa7158b",
-    "sell": "d10ff88ff401ad823407769e49659fdaa6beb29f4e944ae1a92b6c20a7aee7eb",
+    "crate": "904f7feb4dd783cf4f11bfacf63aa7d4bd9848fc115de2097e5c10621e45a051",
+    "gear": "48351d4a0b86d0212b3eb0b07aad4c545c2d9214b1f31b6870f3fbf1c03e9bd1",
+    "seed": "c8aa1e929c03cd79df0f1cebe33318f923956d1975051650c61a12f232a92dd4",
+    "sell": "6e2899f73a4c90666cba3ed86c6b86ae7adee1cb2a71f6f356f09600c910207e",
     "unknown": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
   },
   "targets": {
@@ -11750,13 +11755,13 @@
       "atlantic giant pumpkin": {
         "image_url": "https://cdn.gag2.gg/items/atlantic_giant_pumpkin.webp",
         "label": "Atlantic Giant Pumpkin",
-        "multi": 0.99,
+        "multi": 2.0,
         "present": true
       },
       "maple mushroom": {
         "image_url": "https://cdn.gag2.gg/items/maple_mushroom.webp",
         "label": "Maple Mushroom",
-        "multi": 1.1,
+        "multi": 0.91,
         "present": true
       }
     },
@@ -11787,6 +11792,6 @@
       }
     }
   },
-  "updated_at": "2026-08-28T23:25:39.906092+00:00",
+  "updated_at": "2026-08-28T23:30:39.887482+00:00",
   "version": "6.5.12"
 }
