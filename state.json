@@ -1,7 +1,7 @@
 {
   "_integrity": {
     "schema": "gag2-stock-state-sha256-v1",
-    "sha256": "a28005e8e591e527a93d4be061524772939714c034894f24c6e4a157dcfa3449"
+    "sha256": "69ce972df1f10c35e2558d739fb2898f4f0625be4132a6370d456515ac246295"
   },
   "alert_logic_version": "6.4.4-image-alert-v1",
   "daily_stats": {
@@ -684,7 +684,7 @@
         }
       },
       "2026-08-28": {
-        "alerts_sent": 20,
+        "alerts_sent": 21,
         "magic_cycle_quantities": {
           "rare": {
             "gear|timer:1787850900": 2,
@@ -717,7 +717,7 @@
             "4": 1
           },
           "maple mushroom": {
-            "2": 5,
+            "2": 6,
             "4": 2
           }
         },
@@ -740,7 +740,8 @@
               "sell|c257752ba670cce48b7b791a642f3746616c3dc9e34204ef8825ca8dcecf641c|maple mushroom|x2",
               "sell|f9adc1ace8f55b1f3f865770ead9cf98dd34e86152d2ebecb6c0e2ba81bb88f8|maple mushroom|x2",
               "sell|f98d58bab6161998bb8e9f1bfedd33dd32d0c825b619fffa7114a3791bec8549|maple mushroom|x2",
-              "sell|acd80c92063d74cfd62796c9894ff688b7bf907dc01b407abe9adef2529a9875|maple mushroom|x2"
+              "sell|acd80c92063d74cfd62796c9894ff688b7bf907dc01b407abe9adef2529a9875|maple mushroom|x2",
+              "sell|72f4cd59489fb7735b64bcd43db1fd1217e3108174b6ece33a0a8049de11f987|maple mushroom|x2"
             ],
             "4": [
               "sell|e96870b817f86786a0ab57dbaac731fef7a5d8886d03b35d6e1037adf2c4199c|maple mushroom|x4",
@@ -803,46 +804,6 @@
   },
   "round_ledger": {
     "entries": [
-      {
-        "cycle_id": 3376,
-        "cycle_key": "timer:1787192100",
-        "cycle_source": "gag2-timer",
-        "entry_id": "ALERT-c5be5164f2328f9a",
-        "evidence": {
-          "cycle_confidence": "MID_CYCLE_STABLE",
-          "snapshot_samples": 2,
-          "snapshot_stable": true,
-          "timer_wait_seconds": 6
-        },
-        "items": [
-          {
-            "name": "Super Syrup Sprinkler",
-            "qty": 2,
-            "rarity": "COMMON",
-            "type": "gear"
-          }
-        ],
-        "kind": "stock",
-        "label": "Super Syrup Sprinkler",
-        "multi": null,
-        "reason": "กลับเข้า Stock",
-        "recorded_at": "2026-08-20T02:11:21.850615+00:00",
-        "recorded_epoch": 1787191881.850615,
-        "round_id": "STOCK-GEAR-C3376",
-        "shop": "gear",
-        "status": "alert_sent",
-        "target_key": "super syrup sprinkler",
-        "timeline": {
-          "alert_sent_epoch": 1787191881.6017845,
-          "cycle_reset_epoch": 1787191800.0,
-          "cycle_to_send_seconds": 82,
-          "detected_epoch": 1787191874.4897113,
-          "detected_to_send_ms": 7112,
-          "discord_completed_epoch": 1787191881.850615,
-          "discord_delivery_ms": 249
-        },
-        "ui_mode": "compact-embed"
-      },
       {
         "cycle_id": 3377,
         "cycle_key": "timer:1787192400",
@@ -11738,6 +11699,39 @@
           "discord_delivery_ms": 379
         },
         "ui_mode": "compact-embed"
+      },
+      {
+        "cycle_id": null,
+        "cycle_key": null,
+        "cycle_source": null,
+        "entry_id": "ALERT-394df16cda55d4b5",
+        "evidence": {
+          "cycle_confidence": "MID_CYCLE_STABLE",
+          "snapshot_samples": 2,
+          "snapshot_stable": true,
+          "timer_wait_seconds": 20
+        },
+        "items": [],
+        "kind": "sell",
+        "label": "Maple Mushroom",
+        "multi": 2.0,
+        "reason": "Sell เปลี่ยนเป็น ×2",
+        "recorded_at": "2026-08-28T01:40:39.974205+00:00",
+        "recorded_epoch": 1787881239.9742048,
+        "round_id": "SELL-72f4cd59-X2",
+        "shop": "sell",
+        "status": "alert_sent",
+        "target_key": "maple mushroom",
+        "timeline": {
+          "alert_sent_epoch": 1787881239.6351473,
+          "cycle_reset_epoch": null,
+          "cycle_to_send_seconds": null,
+          "detected_epoch": 1787881232.7056754,
+          "detected_to_send_ms": 6929,
+          "discord_completed_epoch": 1787881239.9742048,
+          "discord_delivery_ms": 339
+        },
+        "ui_mode": "compact-embed"
       }
     ],
     "max_entries": 300,
@@ -11746,26 +11740,26 @@
   },
   "shop_cycles": {
     "crate": {
-      "id": 5651,
-      "key": "timer:1787881200",
+      "id": 5652,
+      "key": "timer:1787881500",
       "source": "gag2-timer"
     },
     "gear": {
-      "id": 5651,
-      "key": "timer:1787881200",
+      "id": 5652,
+      "key": "timer:1787881500",
       "source": "gag2-timer"
     },
     "seed": {
-      "id": 5651,
-      "key": "timer:1787881200",
+      "id": 5652,
+      "key": "timer:1787881500",
       "source": "gag2-timer"
     }
   },
   "shop_fingerprints": {
-    "crate": "adb1b4a424a4b100d3d6f1bb8d8eac18ede4983da79aea75209c745d8166afbe",
-    "gear": "b1fe304c8010117e63250227d384cf8b4ab38f3dd580a50446afa35fdd2bf452",
-    "seed": "d55a5ad9fb066600d5a7e0023a03f65111d5a56dd21400af504ee168a61a1ec3",
-    "sell": "c30efcb4edbc681832b514847984319f11985eb51e698b410dcc0373ca95c7f4",
+    "crate": "78ebd88b7b427adc9b7f667c6c9262c1f084f3ed70becedd9ed750e4e2d90116",
+    "gear": "ef54ad667dac9c65e06bfa2dfc415c27b74d7c79c5d4d9e4ccf671b579c04fed",
+    "seed": "9d2f33064026c4516a1af023bfdb5dabdadf6cfd2dc66bc9cbb3cb9777096b2a",
+    "sell": "72f4cd59489fb7735b64bcd43db1fd1217e3108174b6ece33a0a8049de11f987",
     "unknown": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
   },
   "targets": {
@@ -11774,13 +11768,13 @@
       "atlantic giant pumpkin": {
         "image_url": "https://cdn.gag2.gg/items/atlantic_giant_pumpkin.webp",
         "label": "Atlantic Giant Pumpkin",
-        "multi": 4.0,
+        "multi": 0.87,
         "present": true
       },
       "maple mushroom": {
         "image_url": "https://cdn.gag2.gg/items/maple_mushroom.webp",
         "label": "Maple Mushroom",
-        "multi": 1.13,
+        "multi": 2.0,
         "present": true
       }
     },
@@ -11811,6 +11805,6 @@
       }
     }
   },
-  "updated_at": "2026-08-28T01:35:39.696410+00:00",
+  "updated_at": "2026-08-28T01:40:39.987417+00:00",
   "version": "6.5.12"
 }
