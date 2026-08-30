@@ -1,7 +1,7 @@
 {
   "_integrity": {
     "schema": "gag2-stock-state-sha256-v1",
-    "sha256": "c7017626d94f74623c360507faee149a88839fe4b3e5e6b27f0ff3d9269a979b"
+    "sha256": "6b35bd845b22a90a761d6141468c0ca7c1f666c78b1b9c0ca0cbe87da9044ed7"
   },
   "alert_logic_version": "6.4.4-image-alert-v1",
   "daily_stats": {
@@ -707,7 +707,7 @@
         }
       },
       "2026-08-31": {
-        "alerts_sent": 5,
+        "alerts_sent": 6,
         "magic_cycle_quantities": {
           "legendary": {
             "gear|timer:1788119700": 1
@@ -769,17 +769,25 @@
         "stock_cycle_quantities": {
           "super syrup sprinkler": {
             "gear|timer:1788112500": 1
+          },
+          "super syrup watering can": {
+            "gear|timer:1788122400": 1
           }
         },
         "stock_occurrences": {
-          "super syrup sprinkler": 1
+          "super syrup sprinkler": 1,
+          "super syrup watering can": 1
         },
         "stock_pieces": {
-          "super syrup sprinkler": 1
+          "super syrup sprinkler": 1,
+          "super syrup watering can": 1
         },
         "stock_seen_cycles": {
           "super syrup sprinkler": [
             "gear|timer:1788112500"
+          ],
+          "super syrup watering can": [
+            "gear|timer:1788122400"
           ]
         }
       }
@@ -797,46 +805,6 @@
   },
   "round_ledger": {
     "entries": [
-      {
-        "cycle_id": 4162,
-        "cycle_key": "timer:1787428200",
-        "cycle_source": "gag2-timer",
-        "entry_id": "ALERT-a228a9218c7a0b28",
-        "evidence": {
-          "cycle_confidence": "CHANGED_THEN_STABLE",
-          "snapshot_samples": 3,
-          "snapshot_stable": true,
-          "timer_wait_seconds": 21
-        },
-        "items": [
-          {
-            "name": "Super Syrup Watering Can",
-            "qty": 1,
-            "rarity": "COMMON",
-            "type": "gear"
-          }
-        ],
-        "kind": "stock",
-        "label": "Super Syrup Watering Can",
-        "multi": null,
-        "reason": "กลับเข้า Stock",
-        "recorded_at": "2026-08-22T19:45:41.385551+00:00",
-        "recorded_epoch": 1787427941.3855507,
-        "round_id": "STOCK-GEAR-C4162",
-        "shop": "gear",
-        "status": "alert_sent",
-        "target_key": "super syrup watering can",
-        "timeline": {
-          "alert_sent_epoch": 1787427941.1443825,
-          "cycle_reset_epoch": 1787427900.0,
-          "cycle_to_send_seconds": 41,
-          "detected_epoch": 1787427934.1856413,
-          "detected_to_send_ms": 6959,
-          "discord_completed_epoch": 1787427941.3855507,
-          "discord_delivery_ms": 241
-        },
-        "ui_mode": "compact-embed"
-      },
       {
         "cycle_id": null,
         "cycle_key": null,
@@ -11711,6 +11679,46 @@
           "discord_delivery_ms": 269
         },
         "ui_mode": "compact-embed"
+      },
+      {
+        "cycle_id": 6452,
+        "cycle_key": "timer:1788122400",
+        "cycle_source": "gag2-timer",
+        "entry_id": "ALERT-1c6471432192635a",
+        "evidence": {
+          "cycle_confidence": "MID_CYCLE_STABLE",
+          "snapshot_samples": 2,
+          "snapshot_stable": true,
+          "timer_wait_seconds": 6
+        },
+        "items": [
+          {
+            "name": "Super Syrup Watering Can",
+            "qty": 1,
+            "rarity": "COMMON",
+            "type": "gear"
+          }
+        ],
+        "kind": "stock",
+        "label": "Super Syrup Watering Can",
+        "multi": null,
+        "reason": "กลับเข้า Stock",
+        "recorded_at": "2026-08-30T20:35:51.651077+00:00",
+        "recorded_epoch": 1788122151.6510768,
+        "round_id": "STOCK-GEAR-C6452",
+        "shop": "gear",
+        "status": "alert_sent",
+        "target_key": "super syrup watering can",
+        "timeline": {
+          "alert_sent_epoch": 1788122151.040057,
+          "cycle_reset_epoch": 1788122100.0,
+          "cycle_to_send_seconds": 51,
+          "detected_epoch": 1788122144.2667894,
+          "detected_to_send_ms": 6773,
+          "discord_completed_epoch": 1788122151.6510768,
+          "discord_delivery_ms": 611
+        },
+        "ui_mode": "compact-embed"
       }
     ],
     "max_entries": 300,
@@ -11719,25 +11727,25 @@
   },
   "shop_cycles": {
     "crate": {
-      "id": 6451,
-      "key": "timer:1788122100",
+      "id": 6452,
+      "key": "timer:1788122400",
       "source": "gag2-timer"
     },
     "gear": {
-      "id": 6451,
-      "key": "timer:1788122100",
+      "id": 6452,
+      "key": "timer:1788122400",
       "source": "gag2-timer"
     },
     "seed": {
-      "id": 6451,
-      "key": "timer:1788122100",
+      "id": 6452,
+      "key": "timer:1788122400",
       "source": "gag2-timer"
     }
   },
   "shop_fingerprints": {
-    "crate": "23f717cd96348eaf3bc904ec01e7fa141a950bd783e204be8020c96ba84c186e",
-    "gear": "9fe1d1bf13ae9af3a6c498d22f1424a48625e2a142c25f60d2b39653e6d3e02a",
-    "seed": "f9b06d0d972fa23d5c6a34ccf9e320b8c21f6a22c00412afb7cab69846399fb9",
+    "crate": "c3d5b408ed778fcf4a8805f2dda6bd267c536983dc7cae4275e9a465a8046fb8",
+    "gear": "d1d50476b08a464e79707e397d14bd7b1fcde4db800f576a18de65f93c4a0434",
+    "seed": "b363a96c18cf0ab626e5ea7ecfa50e4c327de846a25ab7ea5232868c3e3031d0",
     "sell": "e3a0f6bf0c215e6003c4ff20be906b27194245ad7fe0831f6969dd016ffb3a87",
     "unknown": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
   },
@@ -11778,12 +11786,19 @@
       },
       "super syrup watering can": {
         "image_url": "https://cdn.gag2.gg/items/super_syrup_watering_can.webp",
-        "items": [],
+        "items": [
+          {
+            "name": "Super Syrup Watering Can",
+            "qty": 1,
+            "rarity": "COMMON",
+            "type": "gear"
+          }
+        ],
         "label": "Super Syrup Watering Can",
-        "present": false
+        "present": true
       }
     }
   },
-  "updated_at": "2026-08-30T20:30:40.974871+00:00",
+  "updated_at": "2026-08-30T20:35:51.659725+00:00",
   "version": "6.5.12"
 }
