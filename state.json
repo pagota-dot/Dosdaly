@@ -1,7 +1,7 @@
 {
   "_integrity": {
     "schema": "gag2-stock-state-sha256-v1",
-    "sha256": "730f0f659d34dafd222458d35554bbd2c0200eaefdad04bce617871e108f903c"
+    "sha256": "0b16ab9da1b526368ac93991412e7f6cf087983b5c441c63a5f83327edaf20fb"
   },
   "alert_logic_version": "6.4.4-image-alert-v1",
   "daily_stats": {
@@ -717,7 +717,7 @@
         }
       },
       "2026-09-01": {
-        "alerts_sent": 30,
+        "alerts_sent": 31,
         "magic_cycle_quantities": {
           "legendary": {
             "gear|timer:1788207600": 1,
@@ -831,18 +831,19 @@
             "gear|timer:1788197700": 1,
             "gear|timer:1788222900": 1,
             "gear|timer:1788231600": 2,
-            "gear|timer:1788253800": 2
+            "gear|timer:1788253800": 2,
+            "gear|timer:1788267600": 1
           }
         },
         "stock_occurrences": {
           "atlantic giant pumpkin": 4,
           "super syrup sprinkler": 3,
-          "super syrup watering can": 4
+          "super syrup watering can": 5
         },
         "stock_pieces": {
           "atlantic giant pumpkin": 4,
           "super syrup sprinkler": 5,
-          "super syrup watering can": 6
+          "super syrup watering can": 7
         },
         "stock_seen_cycles": {
           "atlantic giant pumpkin": [
@@ -860,7 +861,8 @@
             "gear|timer:1788197700",
             "gear|timer:1788222900",
             "gear|timer:1788231600",
-            "gear|timer:1788253800"
+            "gear|timer:1788253800",
+            "gear|timer:1788267600"
           ]
         }
       }
@@ -878,46 +880,6 @@
   },
   "round_ledger": {
     "entries": [
-      {
-        "cycle_id": 4700,
-        "cycle_key": "timer:1787591400",
-        "cycle_source": "gag2-timer",
-        "entry_id": "ALERT-0bf135f34e1573b1",
-        "evidence": {
-          "cycle_confidence": "MID_CYCLE_STABLE",
-          "snapshot_samples": 2,
-          "snapshot_stable": true,
-          "timer_wait_seconds": 9
-        },
-        "items": [
-          {
-            "name": "Super Syrup Sprinkler",
-            "qty": 1,
-            "rarity": "COMMON",
-            "type": "gear"
-          }
-        ],
-        "kind": "stock",
-        "label": "Super Syrup Sprinkler",
-        "multi": null,
-        "reason": "กลับเข้า Stock",
-        "recorded_at": "2026-08-24T17:05:39.547468+00:00",
-        "recorded_epoch": 1787591139.5474682,
-        "round_id": "STOCK-GEAR-C4700",
-        "shop": "gear",
-        "status": "alert_sent",
-        "target_key": "super syrup sprinkler",
-        "timeline": {
-          "alert_sent_epoch": 1787591139.2260225,
-          "cycle_reset_epoch": 1787591100.0,
-          "cycle_to_send_seconds": 39,
-          "detected_epoch": 1787591132.462552,
-          "detected_to_send_ms": 6763,
-          "discord_completed_epoch": 1787591139.5474682,
-          "discord_delivery_ms": 321
-        },
-        "ui_mode": "compact-embed"
-      },
       {
         "cycle_id": null,
         "cycle_key": null,
@@ -11785,6 +11747,46 @@
           "discord_delivery_ms": 300
         },
         "ui_mode": "compact-embed"
+      },
+      {
+        "cycle_id": 6935,
+        "cycle_key": "timer:1788267600",
+        "cycle_source": "gag2-timer",
+        "entry_id": "ALERT-4ef1ce5812ecebab",
+        "evidence": {
+          "cycle_confidence": "MID_CYCLE_STABLE",
+          "snapshot_samples": 2,
+          "snapshot_stable": true,
+          "timer_wait_seconds": 3
+        },
+        "items": [
+          {
+            "name": "Super Syrup Watering Can",
+            "qty": 1,
+            "rarity": "COMMON",
+            "type": "gear"
+          }
+        ],
+        "kind": "stock",
+        "label": "Super Syrup Watering Can",
+        "multi": null,
+        "reason": "กลับเข้า Stock",
+        "recorded_at": "2026-09-01T12:55:40.874292+00:00",
+        "recorded_epoch": 1788267340.874292,
+        "round_id": "STOCK-GEAR-C6935",
+        "shop": "gear",
+        "status": "alert_sent",
+        "target_key": "super syrup watering can",
+        "timeline": {
+          "alert_sent_epoch": 1788267340.5893388,
+          "cycle_reset_epoch": 1788267300.0,
+          "cycle_to_send_seconds": 41,
+          "detected_epoch": 1788267333.529912,
+          "detected_to_send_ms": 7059,
+          "discord_completed_epoch": 1788267340.874292,
+          "discord_delivery_ms": 285
+        },
+        "ui_mode": "compact-embed"
       }
     ],
     "max_entries": 300,
@@ -11793,25 +11795,25 @@
   },
   "shop_cycles": {
     "crate": {
-      "id": 6934,
-      "key": "timer:1788267300",
+      "id": 6935,
+      "key": "timer:1788267600",
       "source": "gag2-timer"
     },
     "gear": {
-      "id": 6934,
-      "key": "timer:1788267300",
+      "id": 6935,
+      "key": "timer:1788267600",
       "source": "gag2-timer"
     },
     "seed": {
-      "id": 6934,
-      "key": "timer:1788267300",
+      "id": 6935,
+      "key": "timer:1788267600",
       "source": "gag2-timer"
     }
   },
   "shop_fingerprints": {
-    "crate": "6d2c2e0b30753317a1920893b495b71a857374bc164e3ffb0b44d9bc2b6c2974",
-    "gear": "3499bf06b93a6d4c42c30ff46fa37a50a4ad1f6448ea33124cdeecaa7fc49888",
-    "seed": "5f35d5ac697b59943177d463d927ac44ca406813ea543759a2276863785dac1a",
+    "crate": "57105d8632b1af492e4e6ea06d250c4e148e5b5378d43cb4a0c2a61c6e96381a",
+    "gear": "f35f6dcb5b9e8b2d2497452c7c011b4b9291e2ab7b3eb69b72fdc52b42f70dcf",
+    "seed": "699d5718dbaa9018e701978366c279dbf14b0c9131c23c110fe5b5e724e33fe6",
     "sell": "90b824b6efc413912b8211a2010aae6a0f15b236e6cfb649c1266325e6914d6f",
     "unknown": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
   },
@@ -11852,12 +11854,19 @@
       },
       "super syrup watering can": {
         "image_url": "https://cdn.gag2.gg/items/super_syrup_watering_can.webp",
-        "items": [],
+        "items": [
+          {
+            "name": "Super Syrup Watering Can",
+            "qty": 1,
+            "rarity": "COMMON",
+            "type": "gear"
+          }
+        ],
         "label": "Super Syrup Watering Can",
-        "present": false
+        "present": true
       }
     }
   },
-  "updated_at": "2026-09-01T12:50:40.409247+00:00",
+  "updated_at": "2026-09-01T12:55:40.887286+00:00",
   "version": "6.5.12"
 }
