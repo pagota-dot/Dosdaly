@@ -1,7 +1,7 @@
 {
   "_integrity": {
     "schema": "gag2-stock-state-sha256-v1",
-    "sha256": "f7ca54b8e2d019e03dde112af38082295be2d32478de8af338a19892c06d9385"
+    "sha256": "7549aaedd535f64d47a0b2e17ff07bfd44677ecc63a41e88b2b4c0706290ead3"
   },
   "alert_logic_version": "6.4.4-image-alert-v1",
   "daily_stats": {
@@ -715,7 +715,7 @@
         }
       },
       "2026-09-02": {
-        "alerts_sent": 22,
+        "alerts_sent": 23,
         "magic_cycle_quantities": {
           "legendary": {
             "gear|timer:1788324000": 1
@@ -769,7 +769,7 @@
         "sell": {
           "atlantic giant pumpkin": {
             "2": 3,
-            "4": 0
+            "4": 1
           },
           "maple mushroom": {
             "2": 5,
@@ -783,7 +783,9 @@
               "sell|8a9838d920fe40feeefc52d5be66aee7c75571928012ec883e624b2f151e1264|atlantic giant pumpkin|x2",
               "sell|62c154c44091b2b1202fbd940018fa4a5fe5d17d893156d2cb7f54c491dff18d|atlantic giant pumpkin|x2"
             ],
-            "4": []
+            "4": [
+              "sell|ab3e8b1e9aa74c675e6bc9cf586f375315b25f6e17d8f6986e877221af9d35bf|atlantic giant pumpkin|x4"
+            ]
           },
           "maple mushroom": {
             "2": [
@@ -860,39 +862,6 @@
   },
   "round_ledger": {
     "entries": [
-      {
-        "cycle_id": null,
-        "cycle_key": null,
-        "cycle_source": null,
-        "entry_id": "ALERT-75d5c48a516228e1",
-        "evidence": {
-          "cycle_confidence": "MID_CYCLE_STABLE",
-          "snapshot_samples": 2,
-          "snapshot_stable": true,
-          "timer_wait_seconds": 6
-        },
-        "items": [],
-        "kind": "sell",
-        "label": "Maple Mushroom",
-        "multi": 2.0,
-        "reason": "Sell เปลี่ยนเป็น ×2",
-        "recorded_at": "2026-08-25T23:00:51.010268+00:00",
-        "recorded_epoch": 1787698851.010268,
-        "round_id": "SELL-1ad4b433-X2",
-        "shop": "sell",
-        "status": "alert_sent",
-        "target_key": "maple mushroom",
-        "timeline": {
-          "alert_sent_epoch": 1787698850.6348286,
-          "cycle_reset_epoch": null,
-          "cycle_to_send_seconds": null,
-          "detected_epoch": 1787698843.5080457,
-          "detected_to_send_ms": 7127,
-          "discord_completed_epoch": 1787698851.010268,
-          "discord_delivery_ms": 375
-        },
-        "ui_mode": "compact-embed"
-      },
       {
         "cycle_id": null,
         "cycle_key": null,
@@ -11802,6 +11771,39 @@
           "discord_delivery_ms": 514
         },
         "ui_mode": "compact-embed"
+      },
+      {
+        "cycle_id": null,
+        "cycle_key": null,
+        "cycle_source": null,
+        "entry_id": "ALERT-50a567dfbfccac0c",
+        "evidence": {
+          "cycle_confidence": "MID_CYCLE_STABLE",
+          "snapshot_samples": 2,
+          "snapshot_stable": true,
+          "timer_wait_seconds": 6
+        },
+        "items": [],
+        "kind": "sell",
+        "label": "Atlantic Giant Pumpkin",
+        "multi": 4.0,
+        "reason": "Sell เปลี่ยนเป็น ×4",
+        "recorded_at": "2026-09-02T06:50:40.482243+00:00",
+        "recorded_epoch": 1788331840.482243,
+        "round_id": "SELL-ab3e8b1e-X4",
+        "shop": "sell",
+        "status": "alert_sent",
+        "target_key": "atlantic giant pumpkin",
+        "timeline": {
+          "alert_sent_epoch": 1788331840.0216112,
+          "cycle_reset_epoch": null,
+          "cycle_to_send_seconds": null,
+          "detected_epoch": 1788331832.7834437,
+          "detected_to_send_ms": 7238,
+          "discord_completed_epoch": 1788331840.482243,
+          "discord_delivery_ms": 461
+        },
+        "ui_mode": "compact-embed"
       }
     ],
     "max_entries": 300,
@@ -11810,26 +11812,26 @@
   },
   "shop_cycles": {
     "crate": {
-      "id": 7149,
-      "key": "timer:1788331800",
+      "id": 7150,
+      "key": "timer:1788332100",
       "source": "gag2-timer"
     },
     "gear": {
-      "id": 7149,
-      "key": "timer:1788331800",
+      "id": 7150,
+      "key": "timer:1788332100",
       "source": "gag2-timer"
     },
     "seed": {
-      "id": 7149,
-      "key": "timer:1788331800",
+      "id": 7150,
+      "key": "timer:1788332100",
       "source": "gag2-timer"
     }
   },
   "shop_fingerprints": {
-    "crate": "c8efb31cf6c4a5ddbf2e6e18b75a141d34a1647357ee7b9ac1a0b99f0be89926",
-    "gear": "e96ba2f235ec653bf7f150463a4876d55ab204444bf0e4955a1fc09f9afbe3b2",
-    "seed": "6bf366b459b35fd222fb81d7fae1b73c3583c914d107acc6aaee3f6bc7a73474",
-    "sell": "7ead9cb8a5fc3a11c25bdbeec524df89402bd534ebb498fff8f7a5ef2a36f7d4",
+    "crate": "844488ef92601ddab9ca2f4e4231ec7c54032ba19840215aa13816924f082c84",
+    "gear": "1b066e92995e9100f4a899e0f3f007057b68503a719d1da44171fcf8998355e1",
+    "seed": "1cc3ff9fd27e9368dad1c35c0a286d1c11d140cb768cad906fcbb8da7f9eb71b",
+    "sell": "ab3e8b1e9aa74c675e6bc9cf586f375315b25f6e17d8f6986e877221af9d35bf",
     "unknown": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
   },
   "targets": {
@@ -11838,13 +11840,13 @@
       "atlantic giant pumpkin": {
         "image_url": "https://cdn.gag2.gg/items/atlantic_giant_pumpkin.webp",
         "label": "Atlantic Giant Pumpkin",
-        "multi": 1.18,
+        "multi": 4.0,
         "present": true
       },
       "maple mushroom": {
         "image_url": "https://cdn.gag2.gg/items/maple_mushroom.webp",
         "label": "Maple Mushroom",
-        "multi": 0.97,
+        "multi": 0.83,
         "present": true
       }
     },
@@ -11875,6 +11877,6 @@
       }
     }
   },
-  "updated_at": "2026-09-02T06:45:40.360913+00:00",
+  "updated_at": "2026-09-02T06:50:40.494989+00:00",
   "version": "6.5.12"
 }
