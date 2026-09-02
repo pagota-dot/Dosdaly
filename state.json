@@ -1,7 +1,7 @@
 {
   "_integrity": {
     "schema": "gag2-stock-state-sha256-v1",
-    "sha256": "5aaa47038cb886957472a523e1fba29eb93c9e2833bfa4f936cc5e2ce5e93f6d"
+    "sha256": "02e5206c3e05fd8a28ffa329df3c64edd9d17ce02c407c5e508b6e0952225150"
   },
   "alert_logic_version": "6.4.4-image-alert-v1",
   "daily_stats": {
@@ -875,17 +875,30 @@
   "health": {
     "last_block_kind": null,
     "last_block_status_code": null,
-    "last_checked_at": "2026-09-02T15:38:21.920651+00:00",
+    "last_checked_at": "2026-09-02T15:41:14.253936+00:00",
     "last_diagnostics": [
       {
         "attempt": 1,
         "cycle_confidence": "NO_TIMER",
         "first_to_final_diff": {
-          "added": 0,
-          "examples": [],
-          "qty_changed": 0,
-          "removed": 0,
-          "total_changes": 0
+          "added": 20,
+          "examples": [
+            "+ crate:Bridge Crate [EPIC] ×3",
+            "+ crate:Conveyor Crate [EPIC] ×4",
+            "+ crate:Ladder Crate [COMMON] ×1",
+            "+ crate:Light Crate [UNCOMMON] ×3",
+            "+ crate:Picture Frame Crate [RARE] ×3",
+            "+ crate:Roleplay Crate [RARE] ×1",
+            "- crate:Fall Structure Crate [RARE] ×2",
+            "- gear:Syrup Sprinkler [COMMON] ×2",
+            "- gear:Syrup Watering Can [COMMON] ×3",
+            "~ seed:Bamboo [RARE] ×10→×9",
+            "~ seed:Tomato [UNCOMMON] ×3→×2",
+            "~ seed:Tulip [UNCOMMON] ×4→×3"
+          ],
+          "qty_changed": 3,
+          "removed": 3,
+          "total_changes": 26
         },
         "multi_snapshot_stable": true,
         "rollover_seen": false,
@@ -894,40 +907,71 @@
         "sell_targets": {
           "atlantic giant pumpkin": {
             "contexts_found": 3,
-            "multiplier": 1.08
+            "multiplier": 1.18
           },
           "maple mushroom": {
             "contexts_found": 3,
-            "multiplier": 0.9
+            "multiplier": 1.12
           }
         },
         "shop_timers": {},
         "snapshot_diffs": [
           {
+            "added": 20,
+            "examples": [
+              "+ crate:Bridge Crate [EPIC] ×3",
+              "+ crate:Conveyor Crate [EPIC] ×4",
+              "+ crate:Ladder Crate [COMMON] ×1",
+              "+ crate:Light Crate [UNCOMMON] ×3",
+              "+ crate:Picture Frame Crate [RARE] ×3",
+              "+ crate:Roleplay Crate [RARE] ×1",
+              "- crate:Fall Structure Crate [RARE] ×2",
+              "- gear:Syrup Sprinkler [COMMON] ×2",
+              "- gear:Syrup Watering Can [COMMON] ×3",
+              "~ seed:Bamboo [RARE] ×10→×9",
+              "~ seed:Tomato [UNCOMMON] ×3→×2",
+              "~ seed:Tulip [UNCOMMON] ×4→×3"
+            ],
+            "from_sample": 1,
+            "qty_changed": 3,
+            "removed": 3,
+            "to_sample": 2,
+            "total_changes": 26
+          },
+          {
             "added": 0,
             "examples": [],
-            "from_sample": 1,
+            "from_sample": 2,
             "qty_changed": 0,
             "removed": 0,
-            "to_sample": 2,
+            "to_sample": 3,
             "total_changes": 0
           }
         ],
         "stable_pairs": 1,
-        "stock_changed_during_sync": false,
-        "stock_count": 10,
+        "stock_changed_during_sync": true,
+        "stock_count": 27,
         "stock_min_timer_seconds": null,
         "stock_ok": false,
         "stock_sample_counts": [
           10,
-          10
+          27,
+          27
         ],
-        "stock_sync_samples": 2,
+        "stock_sync_samples": 3,
         "timer_available": false,
-        "timer_guard_log": [],
+        "timer_guard_log": [
+          {
+            "changes": 0,
+            "pass": 1,
+            "phase": "multi-snapshot",
+            "reason": "Full Stock ตรงกัน ยืนยันว่าหน้านิ่ง",
+            "wait_seconds": 8
+          }
+        ],
         "timer_safe": true,
         "timer_source": "generic",
-        "timer_wait_seconds": 6
+        "timer_wait_seconds": 14
       },
       {
         "attempt": 2,
@@ -946,11 +990,11 @@
         "sell_targets": {
           "atlantic giant pumpkin": {
             "contexts_found": 3,
-            "multiplier": 1.08
+            "multiplier": 1.18
           },
           "maple mushroom": {
             "contexts_found": 3,
-            "multiplier": 0.9
+            "multiplier": 1.12
           }
         },
         "shop_timers": {},
@@ -967,12 +1011,12 @@
         ],
         "stable_pairs": 1,
         "stock_changed_during_sync": false,
-        "stock_count": 10,
+        "stock_count": 27,
         "stock_min_timer_seconds": null,
         "stock_ok": false,
         "stock_sample_counts": [
-          10,
-          10
+          27,
+          27
         ],
         "stock_sync_samples": 2,
         "timer_available": false,
@@ -998,11 +1042,11 @@
         "sell_targets": {
           "atlantic giant pumpkin": {
             "contexts_found": 3,
-            "multiplier": 1.08
+            "multiplier": 1.18
           },
           "maple mushroom": {
             "contexts_found": 3,
-            "multiplier": 0.9
+            "multiplier": 1.12
           }
         },
         "shop_timers": {},
@@ -1019,12 +1063,12 @@
         ],
         "stable_pairs": 1,
         "stock_changed_during_sync": false,
-        "stock_count": 10,
+        "stock_count": 27,
         "stock_min_timer_seconds": null,
         "stock_ok": false,
         "stock_sample_counts": [
-          10,
-          10
+          27,
+          27
         ],
         "stock_sync_samples": 2,
         "timer_available": false,
@@ -1035,7 +1079,7 @@
       }
     ],
     "last_error_alert_at": "2026-09-01T19:10:40.950415+00:00",
-    "no_timer_cloudflare_streak": 6,
+    "no_timer_cloudflare_streak": 7,
     "no_timer_warning_sent": true,
     "status": "no_timer_wait"
   },
