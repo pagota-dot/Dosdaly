@@ -1,7 +1,7 @@
 {
   "_integrity": {
     "schema": "gag2-stock-state-sha256-v1",
-    "sha256": "306d66af4ab51da3e84fcb29a371a9d1651cbd077833611857f9e13077f37805"
+    "sha256": "c48e6e6d69ab6beba4b853909a7e3f3c1609bf47ff97b3ff67307fc53bd35b13"
   },
   "alert_logic_version": "6.4.4-image-alert-v1",
   "daily_stats": {
@@ -715,7 +715,7 @@
         }
       },
       "2026-09-02": {
-        "alerts_sent": 27,
+        "alerts_sent": 28,
         "magic_cycle_quantities": {
           "legendary": {
             "gear|timer:1788324000": 1,
@@ -778,7 +778,7 @@
         },
         "sell": {
           "atlantic giant pumpkin": {
-            "2": 5,
+            "2": 6,
             "4": 1
           },
           "maple mushroom": {
@@ -793,7 +793,8 @@
               "sell|8a9838d920fe40feeefc52d5be66aee7c75571928012ec883e624b2f151e1264|atlantic giant pumpkin|x2",
               "sell|62c154c44091b2b1202fbd940018fa4a5fe5d17d893156d2cb7f54c491dff18d|atlantic giant pumpkin|x2",
               "sell|81a43e07ea8bcef2560bd4f67c47a894f46402e0f296ce91db1babcf32ab8488|atlantic giant pumpkin|x2",
-              "sell|40b6e0ec81879918716b99da2a9cce4cf111be9e48712fc2670a4231f30eed49|atlantic giant pumpkin|x2"
+              "sell|40b6e0ec81879918716b99da2a9cce4cf111be9e48712fc2670a4231f30eed49|atlantic giant pumpkin|x2",
+              "sell|89c709fa4d4809a87a8625904ca6dfb8ef741f59361e4c7b2d67fd2be01fd645|atlantic giant pumpkin|x2"
             ],
             "4": [
               "sell|ab3e8b1e9aa74c675e6bc9cf586f375315b25f6e17d8f6986e877221af9d35bf|atlantic giant pumpkin|x4"
@@ -875,46 +876,6 @@
   },
   "round_ledger": {
     "entries": [
-      {
-        "cycle_id": 5084,
-        "cycle_key": "timer:1787707200",
-        "cycle_source": "gag2-timer",
-        "entry_id": "ALERT-b3e91c0574f111d9",
-        "evidence": {
-          "cycle_confidence": "CHANGED_THEN_STABLE",
-          "snapshot_samples": 3,
-          "snapshot_stable": true,
-          "timer_wait_seconds": 21
-        },
-        "items": [
-          {
-            "name": "Super Syrup Watering Can",
-            "qty": 1,
-            "rarity": "COMMON",
-            "type": "gear"
-          }
-        ],
-        "kind": "stock",
-        "label": "Super Syrup Watering Can",
-        "multi": null,
-        "reason": "รอบร้านใหม่",
-        "recorded_at": "2026-08-26T01:15:41.373034+00:00",
-        "recorded_epoch": 1787706941.3730335,
-        "round_id": "STOCK-GEAR-C5084",
-        "shop": "gear",
-        "status": "alert_sent",
-        "target_key": "super syrup watering can",
-        "timeline": {
-          "alert_sent_epoch": 1787706940.8230257,
-          "cycle_reset_epoch": 1787706900.0,
-          "cycle_to_send_seconds": 41,
-          "detected_epoch": 1787706933.8935354,
-          "detected_to_send_ms": 6929,
-          "discord_completed_epoch": 1787706941.3730335,
-          "discord_delivery_ms": 550
-        },
-        "ui_mode": "compact-embed"
-      },
       {
         "cycle_id": null,
         "cycle_key": null,
@@ -11817,6 +11778,39 @@
           "discord_delivery_ms": 777
         },
         "ui_mode": "compact-embed"
+      },
+      {
+        "cycle_id": null,
+        "cycle_key": null,
+        "cycle_source": null,
+        "entry_id": "ALERT-7fcda4194f1cc0c7",
+        "evidence": {
+          "cycle_confidence": "CHANGED_THEN_STABLE",
+          "snapshot_samples": 3,
+          "snapshot_stable": true,
+          "timer_wait_seconds": 23
+        },
+        "items": [],
+        "kind": "sell",
+        "label": "Atlantic Giant Pumpkin",
+        "multi": 2.0,
+        "reason": "Sell เปลี่ยนเป็น ×2",
+        "recorded_at": "2026-09-02T12:40:41.322150+00:00",
+        "recorded_epoch": 1788352841.3221502,
+        "round_id": "SELL-89c709fa-X2",
+        "shop": "sell",
+        "status": "alert_sent",
+        "target_key": "atlantic giant pumpkin",
+        "timeline": {
+          "alert_sent_epoch": 1788352840.845862,
+          "cycle_reset_epoch": null,
+          "cycle_to_send_seconds": null,
+          "detected_epoch": 1788352833.8220146,
+          "detected_to_send_ms": 7024,
+          "discord_completed_epoch": 1788352841.3221502,
+          "discord_delivery_ms": 476
+        },
+        "ui_mode": "compact-embed"
       }
     ],
     "max_entries": 300,
@@ -11825,26 +11819,26 @@
   },
   "shop_cycles": {
     "crate": {
-      "id": 7219,
-      "key": "timer:1788352800",
+      "id": 7220,
+      "key": "timer:1788353100",
       "source": "gag2-timer"
     },
     "gear": {
-      "id": 7219,
-      "key": "timer:1788352800",
+      "id": 7220,
+      "key": "timer:1788353100",
       "source": "gag2-timer"
     },
     "seed": {
-      "id": 7219,
-      "key": "timer:1788352800",
+      "id": 7220,
+      "key": "timer:1788353100",
       "source": "gag2-timer"
     }
   },
   "shop_fingerprints": {
-    "crate": "651ff144214e8b2ebce74fd87a213a68b97ea0521ff41af813eb1b2a690eae80",
-    "gear": "da2ff817993fb451a5b28032b91e44a0a8dd7c760ed2ca9780ab96cc3fb44f58",
-    "seed": "3c9ac7d0554862fb6264e9a6081660507243b6fd4768da1e0dd37c438cc5bb0c",
-    "sell": "0965bc242dacf9966f69fe4dfe5e28f9e71727caceba0ce0f0fda7e384f0c10d",
+    "crate": "710ddf500e00339e0055cfcc0b08f42ec0952b44a00cd91aef8b08878d066349",
+    "gear": "b15de998ffa99e206842ebb4c564cce35e582d992c6ced07d100702505bf0def",
+    "seed": "87f550bb8dfe90b789d2ba298f00eefdc21c0e584db85deed9fbec8df74abc50",
+    "sell": "89c709fa4d4809a87a8625904ca6dfb8ef741f59361e4c7b2d67fd2be01fd645",
     "unknown": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
   },
   "targets": {
@@ -11853,13 +11847,13 @@
       "atlantic giant pumpkin": {
         "image_url": "https://cdn.gag2.gg/items/atlantic_giant_pumpkin.webp",
         "label": "Atlantic Giant Pumpkin",
-        "multi": 0.88,
+        "multi": 2.0,
         "present": true
       },
       "maple mushroom": {
         "image_url": "https://cdn.gag2.gg/items/maple_mushroom.webp",
         "label": "Maple Mushroom",
-        "multi": 1.06,
+        "multi": 0.82,
         "present": true
       }
     },
@@ -11890,6 +11884,6 @@
       }
     }
   },
-  "updated_at": "2026-09-02T12:35:40.371431+00:00",
+  "updated_at": "2026-09-02T12:40:41.335530+00:00",
   "version": "6.5.12"
 }
