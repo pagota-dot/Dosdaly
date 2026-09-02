@@ -1,7 +1,7 @@
 {
   "_integrity": {
     "schema": "gag2-stock-state-sha256-v1",
-    "sha256": "af2c0f2d2f618792d6885940439e99b4e70eda2a4b993d3ff5851a437ffeb1b6"
+    "sha256": "7f5e54d413be0a2562038be5fc2e1329324b5ad6fdb05823ececf2a29bc5796b"
   },
   "alert_logic_version": "6.4.4-image-alert-v1",
   "daily_stats": {
@@ -875,7 +875,7 @@
   "health": {
     "last_block_kind": null,
     "last_block_status_code": null,
-    "last_checked_at": "2026-09-02T15:52:19.061354+00:00",
+    "last_checked_at": "2026-09-02T15:55:25.655448+00:00",
     "last_diagnostics": [
       {
         "attempt": 1,
@@ -985,11 +985,22 @@
         "attempt": 3,
         "cycle_confidence": "NO_TIMER",
         "first_to_final_diff": {
-          "added": 0,
-          "examples": [],
-          "qty_changed": 0,
-          "removed": 0,
-          "total_changes": 0
+          "added": 5,
+          "examples": [
+            "+ crate:Cobblestone Crate [RARE] ×1",
+            "+ gear:Harp [RARE] ×1",
+            "+ seed:Maple Apple [UNCOMMON] ×1",
+            "+ seed:Maple Cactus [RARE] ×2",
+            "+ seed:Maple Tomato [UNCOMMON] ×3",
+            "- crate:Fall Cosmetic Crate [UNCOMMON] ×1",
+            "- crate:Lantern Crate [UNCOMMON] ×1",
+            "~ seed:Maple Bamboo [RARE] ×8→×10",
+            "~ seed:Maple Carrot [COMMON] ×3→×4",
+            "~ seed:Maple Strawberry [COMMON] ×4→×5"
+          ],
+          "qty_changed": 3,
+          "removed": 2,
+          "total_changes": 10
         },
         "multi_snapshot_stable": true,
         "rollover_seen": false,
@@ -1008,34 +1019,63 @@
         "shop_timers": {},
         "snapshot_diffs": [
           {
+            "added": 5,
+            "examples": [
+              "+ crate:Cobblestone Crate [RARE] ×1",
+              "+ gear:Harp [RARE] ×1",
+              "+ seed:Maple Apple [UNCOMMON] ×1",
+              "+ seed:Maple Cactus [RARE] ×2",
+              "+ seed:Maple Tomato [UNCOMMON] ×3",
+              "- crate:Fall Cosmetic Crate [UNCOMMON] ×1",
+              "- crate:Lantern Crate [UNCOMMON] ×1",
+              "~ seed:Maple Bamboo [RARE] ×8→×10",
+              "~ seed:Maple Carrot [COMMON] ×3→×4",
+              "~ seed:Maple Strawberry [COMMON] ×4→×5"
+            ],
+            "from_sample": 1,
+            "qty_changed": 3,
+            "removed": 2,
+            "to_sample": 2,
+            "total_changes": 10
+          },
+          {
             "added": 0,
             "examples": [],
-            "from_sample": 1,
+            "from_sample": 2,
             "qty_changed": 0,
             "removed": 0,
-            "to_sample": 2,
+            "to_sample": 3,
             "total_changes": 0
           }
         ],
         "stable_pairs": 1,
-        "stock_changed_during_sync": false,
-        "stock_count": 8,
+        "stock_changed_during_sync": true,
+        "stock_count": 11,
         "stock_min_timer_seconds": null,
         "stock_ok": false,
         "stock_sample_counts": [
           8,
-          8
+          11,
+          11
         ],
-        "stock_sync_samples": 2,
+        "stock_sync_samples": 3,
         "timer_available": false,
-        "timer_guard_log": [],
+        "timer_guard_log": [
+          {
+            "changes": 0,
+            "pass": 1,
+            "phase": "multi-snapshot",
+            "reason": "Full Stock ตรงกัน ยืนยันว่าหน้านิ่ง",
+            "wait_seconds": 8
+          }
+        ],
         "timer_safe": true,
         "timer_source": "generic",
-        "timer_wait_seconds": 6
+        "timer_wait_seconds": 14
       }
     ],
     "last_error_alert_at": "2026-09-01T19:10:40.950415+00:00",
-    "no_timer_cloudflare_streak": 12,
+    "no_timer_cloudflare_streak": 13,
     "no_timer_warning_sent": true,
     "status": "no_timer_wait"
   },
