@@ -1,7 +1,7 @@
 {
   "_integrity": {
     "schema": "gag2-stock-state-sha256-v1",
-    "sha256": "3edd843b5eb4954cf12218589d3c511210c9bc3bff017febc1484fe190dfe1f4"
+    "sha256": "8c475ea25eaeebba8168538626e6fb22e66e50797bc29e09f32da607226d2f71"
   },
   "alert_logic_version": "6.4.4-image-alert-v1",
   "daily_stats": {
@@ -875,7 +875,7 @@
   "health": {
     "last_block_kind": null,
     "last_block_status_code": null,
-    "last_checked_at": "2026-09-02T15:48:34.262425+00:00",
+    "last_checked_at": "2026-09-02T15:50:30.587944+00:00",
     "last_diagnostics": [
       {
         "attempt": 1,
@@ -985,11 +985,24 @@
         "attempt": 3,
         "cycle_confidence": "NO_TIMER",
         "first_to_final_diff": {
-          "added": 0,
-          "examples": [],
+          "added": 7,
+          "examples": [
+            "+ crate:Fall Cosmetic Crate [UNCOMMON] ×1",
+            "+ crate:Lantern Crate [UNCOMMON] ×1",
+            "+ seed:Maple Bamboo [RARE] ×8",
+            "+ seed:Maple Blueberry [COMMON] ×1",
+            "+ seed:Maple Carrot [COMMON] ×3",
+            "+ seed:Maple Strawberry [COMMON] ×4",
+            "- crate:Bench Crate [UNCOMMON] ×2",
+            "- crate:Bridge Crate [EPIC] ×2",
+            "- crate:Ladder Crate [COMMON] ×1",
+            "- crate:Light Crate [UNCOMMON] ×2",
+            "- crate:Roleplay Crate [RARE] ×3",
+            "- crate:Sign Crate [RARE] ×1"
+          ],
           "qty_changed": 0,
-          "removed": 0,
-          "total_changes": 0
+          "removed": 18,
+          "total_changes": 25
         },
         "multi_snapshot_stable": true,
         "rollover_seen": false,
@@ -997,45 +1010,76 @@
         "sell_ok": true,
         "sell_targets": {
           "atlantic giant pumpkin": {
-            "contexts_found": 3,
-            "multiplier": 1.18
+            "contexts_found": 2,
+            "multiplier": 0.99
           },
           "maple mushroom": {
-            "contexts_found": 3,
-            "multiplier": 1.12
+            "contexts_found": 2,
+            "multiplier": 1.08
           }
         },
         "shop_timers": {},
         "snapshot_diffs": [
           {
-            "added": 0,
-            "examples": [],
+            "added": 7,
+            "examples": [
+              "+ crate:Fall Cosmetic Crate [UNCOMMON] ×1",
+              "+ crate:Lantern Crate [UNCOMMON] ×1",
+              "+ seed:Maple Bamboo [RARE] ×8",
+              "+ seed:Maple Blueberry [COMMON] ×1",
+              "+ seed:Maple Carrot [COMMON] ×3",
+              "+ seed:Maple Strawberry [COMMON] ×4",
+              "- crate:Bench Crate [UNCOMMON] ×2",
+              "- crate:Bridge Crate [EPIC] ×2",
+              "- crate:Ladder Crate [COMMON] ×1",
+              "- crate:Light Crate [UNCOMMON] ×2",
+              "- crate:Roleplay Crate [RARE] ×3",
+              "- crate:Sign Crate [RARE] ×1"
+            ],
             "from_sample": 1,
             "qty_changed": 0,
-            "removed": 0,
+            "removed": 18,
             "to_sample": 2,
+            "total_changes": 25
+          },
+          {
+            "added": 0,
+            "examples": [],
+            "from_sample": 2,
+            "qty_changed": 0,
+            "removed": 0,
+            "to_sample": 3,
             "total_changes": 0
           }
         ],
         "stable_pairs": 1,
-        "stock_changed_during_sync": false,
-        "stock_count": 19,
+        "stock_changed_during_sync": true,
+        "stock_count": 8,
         "stock_min_timer_seconds": null,
         "stock_ok": false,
         "stock_sample_counts": [
           19,
-          19
+          8,
+          8
         ],
-        "stock_sync_samples": 2,
+        "stock_sync_samples": 3,
         "timer_available": false,
-        "timer_guard_log": [],
+        "timer_guard_log": [
+          {
+            "changes": 0,
+            "pass": 1,
+            "phase": "multi-snapshot",
+            "reason": "Full Stock ตรงกัน ยืนยันว่าหน้านิ่ง",
+            "wait_seconds": 8
+          }
+        ],
         "timer_safe": true,
         "timer_source": "generic",
-        "timer_wait_seconds": 6
+        "timer_wait_seconds": 14
       }
     ],
     "last_error_alert_at": "2026-09-01T19:10:40.950415+00:00",
-    "no_timer_cloudflare_streak": 10,
+    "no_timer_cloudflare_streak": 11,
     "no_timer_warning_sent": true,
     "status": "no_timer_wait"
   },
