@@ -1,7 +1,7 @@
 {
   "_integrity": {
     "schema": "gag2-stock-state-sha256-v1",
-    "sha256": "a68f810ad7078491ee63a4ec4045d0fba752baa5f22455b1656dd08a965c3279"
+    "sha256": "baf5c39536b28f8071651c31d27c759c3a7a29d7c0c68e5d147484220d5bdc1d"
   },
   "alert_logic_version": "6.4.4-image-alert-v1",
   "daily_stats": {
@@ -874,17 +874,31 @@
   "health": {
     "last_block_kind": null,
     "last_block_status_code": null,
-    "last_checked_at": "2026-09-02T14:58:26.585205+00:00",
+    "last_checked_at": "2026-09-02T15:01:10.069019+00:00",
     "last_diagnostics": [
       {
         "attempt": 1,
         "cycle_confidence": "NO_TIMER",
         "first_to_final_diff": {
-          "added": 0,
-          "examples": [],
-          "qty_changed": 0,
-          "removed": 0,
-          "total_changes": 0
+          "added": 12,
+          "examples": [
+            "+ crate:Cobblestone Crate [RARE] ×1",
+            "+ crate:Lantern Crate [UNCOMMON] ×3",
+            "+ crate:Rake Crate [LEGENDARY] ×1",
+            "+ gear:Syrup Watering Can [COMMON] ×4",
+            "+ seed:Maple Apple [UNCOMMON] ×1",
+            "+ seed:Maple Bamboo [RARE] ×11",
+            "- crate:Ladder Crate [COMMON] ×1",
+            "- crate:Light Crate [UNCOMMON] ×3",
+            "- crate:Spring Crate [EPIC] ×3",
+            "- gear:Common Watering Can [COMMON] ×4",
+            "- gear:Rare Sprinkler [RARE] ×1",
+            "- seed:Apple [UNCOMMON] ×1",
+            "~ gear:Trowel [RARE] ×3→×2"
+          ],
+          "qty_changed": 1,
+          "removed": 20,
+          "total_changes": 33
         },
         "multi_snapshot_stable": true,
         "rollover_seen": false,
@@ -892,41 +906,73 @@
         "sell_ok": true,
         "sell_targets": {
           "atlantic giant pumpkin": {
-            "contexts_found": 2,
-            "multiplier": 0.96
+            "contexts_found": 3,
+            "multiplier": 0.93
           },
           "maple mushroom": {
-            "contexts_found": 2,
-            "multiplier": 0.9
+            "contexts_found": 3,
+            "multiplier": 0.92
           }
         },
         "shop_timers": {},
         "snapshot_diffs": [
           {
+            "added": 12,
+            "examples": [
+              "+ crate:Cobblestone Crate [RARE] ×1",
+              "+ crate:Lantern Crate [UNCOMMON] ×3",
+              "+ crate:Rake Crate [LEGENDARY] ×1",
+              "+ gear:Syrup Watering Can [COMMON] ×4",
+              "+ seed:Maple Apple [UNCOMMON] ×1",
+              "+ seed:Maple Bamboo [RARE] ×11",
+              "- crate:Ladder Crate [COMMON] ×1",
+              "- crate:Light Crate [UNCOMMON] ×3",
+              "- crate:Spring Crate [EPIC] ×3",
+              "- gear:Common Watering Can [COMMON] ×4",
+              "- gear:Rare Sprinkler [RARE] ×1",
+              "- seed:Apple [UNCOMMON] ×1",
+              "~ gear:Trowel [RARE] ×3→×2"
+            ],
+            "from_sample": 1,
+            "qty_changed": 1,
+            "removed": 20,
+            "to_sample": 2,
+            "total_changes": 33
+          },
+          {
             "added": 0,
             "examples": [],
-            "from_sample": 1,
+            "from_sample": 2,
             "qty_changed": 0,
             "removed": 0,
-            "to_sample": 2,
+            "to_sample": 3,
             "total_changes": 0
           }
         ],
         "stable_pairs": 1,
-        "stock_changed_during_sync": false,
-        "stock_count": 21,
+        "stock_changed_during_sync": true,
+        "stock_count": 13,
         "stock_min_timer_seconds": null,
         "stock_ok": false,
         "stock_sample_counts": [
           21,
-          21
+          13,
+          13
         ],
-        "stock_sync_samples": 2,
+        "stock_sync_samples": 3,
         "timer_available": false,
-        "timer_guard_log": [],
+        "timer_guard_log": [
+          {
+            "changes": 0,
+            "pass": 1,
+            "phase": "multi-snapshot",
+            "reason": "Full Stock ตรงกัน ยืนยันว่าหน้านิ่ง",
+            "wait_seconds": 8
+          }
+        ],
         "timer_safe": true,
         "timer_source": "generic",
-        "timer_wait_seconds": 6
+        "timer_wait_seconds": 14
       },
       {
         "attempt": 2,
@@ -944,12 +990,12 @@
         "sell_ok": true,
         "sell_targets": {
           "atlantic giant pumpkin": {
-            "contexts_found": 2,
-            "multiplier": 0.96
+            "contexts_found": 3,
+            "multiplier": 0.93
           },
           "maple mushroom": {
-            "contexts_found": 2,
-            "multiplier": 0.9
+            "contexts_found": 3,
+            "multiplier": 0.92
           }
         },
         "shop_timers": {},
@@ -966,12 +1012,12 @@
         ],
         "stable_pairs": 1,
         "stock_changed_during_sync": false,
-        "stock_count": 21,
+        "stock_count": 13,
         "stock_min_timer_seconds": null,
         "stock_ok": false,
         "stock_sample_counts": [
-          21,
-          21
+          13,
+          13
         ],
         "stock_sync_samples": 2,
         "timer_available": false,
@@ -996,12 +1042,12 @@
         "sell_ok": true,
         "sell_targets": {
           "atlantic giant pumpkin": {
-            "contexts_found": 2,
-            "multiplier": 0.96
+            "contexts_found": 3,
+            "multiplier": 0.93
           },
           "maple mushroom": {
-            "contexts_found": 2,
-            "multiplier": 0.9
+            "contexts_found": 3,
+            "multiplier": 0.92
           }
         },
         "shop_timers": {},
@@ -1018,12 +1064,12 @@
         ],
         "stable_pairs": 1,
         "stock_changed_during_sync": false,
-        "stock_count": 21,
+        "stock_count": 13,
         "stock_min_timer_seconds": null,
         "stock_ok": false,
         "stock_sample_counts": [
-          21,
-          21
+          13,
+          13
         ],
         "stock_sync_samples": 2,
         "timer_available": false,
@@ -1034,8 +1080,8 @@
       }
     ],
     "last_error_alert_at": "2026-09-01T19:10:40.950415+00:00",
-    "no_timer_cloudflare_streak": 2,
-    "no_timer_warning_sent": false,
+    "no_timer_cloudflare_streak": 3,
+    "no_timer_warning_sent": true,
     "status": "no_timer_wait"
   },
   "round_ledger": {
