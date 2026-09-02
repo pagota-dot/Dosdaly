@@ -1,7 +1,7 @@
 {
   "_integrity": {
     "schema": "gag2-stock-state-sha256-v1",
-    "sha256": "8314baa9021baaffd1f146702b6a4d37b081019cce2d381211dc87b38e84b8c1"
+    "sha256": "7ac8177c501428804584af4beac154f9c5196e3859bc8662a6005f805066abdc"
   },
   "alert_logic_version": "6.4.4-image-alert-v1",
   "daily_stats": {
@@ -875,7 +875,7 @@
   "health": {
     "last_block_kind": null,
     "last_block_status_code": null,
-    "last_checked_at": "2026-09-02T15:27:03.809098+00:00",
+    "last_checked_at": "2026-09-02T15:29:00.903867+00:00",
     "last_diagnostics": [
       {
         "attempt": 1,
@@ -985,11 +985,18 @@
         "attempt": 3,
         "cycle_confidence": "NO_TIMER",
         "first_to_final_diff": {
-          "added": 0,
-          "examples": [],
+          "added": 17,
+          "examples": [
+            "+ crate:Ladder Crate [COMMON] ×1",
+            "+ crate:Light Crate [UNCOMMON] ×2",
+            "+ crate:Picture Frame Crate [RARE] ×2",
+            "+ gear:Common Sprinkler [COMMON] ×1",
+            "+ gear:Common Watering Can [COMMON] ×4",
+            "+ gear:Jump Mushroom [RARE] ×4"
+          ],
           "qty_changed": 0,
           "removed": 0,
-          "total_changes": 0
+          "total_changes": 17
         },
         "multi_snapshot_stable": true,
         "rollover_seen": false,
@@ -1008,34 +1015,59 @@
         "shop_timers": {},
         "snapshot_diffs": [
           {
-            "added": 0,
-            "examples": [],
+            "added": 17,
+            "examples": [
+              "+ crate:Ladder Crate [COMMON] ×1",
+              "+ crate:Light Crate [UNCOMMON] ×2",
+              "+ crate:Picture Frame Crate [RARE] ×2",
+              "+ gear:Common Sprinkler [COMMON] ×1",
+              "+ gear:Common Watering Can [COMMON] ×4",
+              "+ gear:Jump Mushroom [RARE] ×4"
+            ],
             "from_sample": 1,
             "qty_changed": 0,
             "removed": 0,
             "to_sample": 2,
+            "total_changes": 17
+          },
+          {
+            "added": 0,
+            "examples": [],
+            "from_sample": 2,
+            "qty_changed": 0,
+            "removed": 0,
+            "to_sample": 3,
             "total_changes": 0
           }
         ],
         "stable_pairs": 1,
-        "stock_changed_during_sync": false,
+        "stock_changed_during_sync": true,
         "stock_count": 17,
         "stock_min_timer_seconds": null,
         "stock_ok": false,
         "stock_sample_counts": [
+          0,
           17,
           17
         ],
-        "stock_sync_samples": 2,
+        "stock_sync_samples": 3,
         "timer_available": false,
-        "timer_guard_log": [],
+        "timer_guard_log": [
+          {
+            "changes": 0,
+            "pass": 1,
+            "phase": "multi-snapshot",
+            "reason": "Full Stock ตรงกัน ยืนยันว่าหน้านิ่ง",
+            "wait_seconds": 8
+          }
+        ],
         "timer_safe": true,
         "timer_source": "generic",
-        "timer_wait_seconds": 6
+        "timer_wait_seconds": 14
       }
     ],
     "last_error_alert_at": "2026-09-01T19:10:40.950415+00:00",
-    "no_timer_cloudflare_streak": 1,
+    "no_timer_cloudflare_streak": 2,
     "no_timer_warning_sent": false,
     "status": "no_timer_wait"
   },
