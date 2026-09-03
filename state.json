@@ -1,7 +1,7 @@
 {
   "_integrity": {
     "schema": "gag2-stock-state-sha256-v1",
-    "sha256": "19391248140feb9ffb6f53479696160da19d12596cf6480382f63a25c150ec2b"
+    "sha256": "00f7f7c5e5a62dfe9359285625846a6824d64766ff6f2d7902080cd4a4945b4d"
   },
   "alert_logic_version": "6.4.4-image-alert-v1",
   "daily_stats": {
@@ -737,7 +737,7 @@
   "health": {
     "last_block_kind": null,
     "last_block_status_code": null,
-    "last_checked_at": "2026-09-03T00:50:29.739358+00:00",
+    "last_checked_at": "2026-09-03T00:52:27.524788+00:00",
     "last_diagnostics": [
       {
         "attempt": 1,
@@ -756,11 +756,11 @@
         "sell_targets": {
           "atlantic giant pumpkin": {
             "contexts_found": 2,
-            "multiplier": 1.12
+            "multiplier": 1.1
           },
           "maple mushroom": {
             "contexts_found": 2,
-            "multiplier": 1.19
+            "multiplier": 1.01
           }
         },
         "shop_timers": {},
@@ -777,12 +777,12 @@
         ],
         "stable_pairs": 1,
         "stock_changed_during_sync": false,
-        "stock_count": 21,
+        "stock_count": 13,
         "stock_min_timer_seconds": null,
         "stock_ok": false,
         "stock_sample_counts": [
-          21,
-          21
+          13,
+          13
         ],
         "stock_sync_samples": 2,
         "timer_available": false,
@@ -808,11 +808,11 @@
         "sell_targets": {
           "atlantic giant pumpkin": {
             "contexts_found": 2,
-            "multiplier": 1.12
+            "multiplier": 1.1
           },
           "maple mushroom": {
             "contexts_found": 2,
-            "multiplier": 1.19
+            "multiplier": 1.01
           }
         },
         "shop_timers": {},
@@ -829,12 +829,12 @@
         ],
         "stable_pairs": 1,
         "stock_changed_during_sync": false,
-        "stock_count": 21,
+        "stock_count": 13,
         "stock_min_timer_seconds": null,
         "stock_ok": false,
         "stock_sample_counts": [
-          21,
-          21
+          13,
+          13
         ],
         "stock_sync_samples": 2,
         "timer_available": false,
@@ -847,24 +847,11 @@
         "attempt": 3,
         "cycle_confidence": "NO_TIMER",
         "first_to_final_diff": {
-          "added": 11,
-          "examples": [
-            "+ gear:Harp [RARE] ×1",
-            "+ gear:Syrup Sprinkler [COMMON] ×2",
-            "+ gear:Syrup Watering Can [COMMON] ×5",
-            "+ seed:Maple Apple [UNCOMMON] ×1",
-            "+ seed:Maple Banana [EPIC] ×1",
-            "+ seed:Maple Blueberry [COMMON] ×2",
-            "- gear:Legendary Sprinkler [LEGENDARY] ×2",
-            "- gear:Speed Mushroom [RARE] ×3",
-            "- gear:Uncommon Sprinkler [UNCOMMON] ×1",
-            "- seed:Apple [UNCOMMON] ×1",
-            "- seed:Bamboo [RARE] ×10",
-            "- seed:Banana [EPIC] ×1"
-          ],
+          "added": 0,
+          "examples": [],
           "qty_changed": 0,
-          "removed": 19,
-          "total_changes": 30
+          "removed": 0,
+          "total_changes": 0
         },
         "multi_snapshot_stable": true,
         "rollover_seen": false,
@@ -883,65 +870,34 @@
         "shop_timers": {},
         "snapshot_diffs": [
           {
-            "added": 11,
-            "examples": [
-              "+ gear:Harp [RARE] ×1",
-              "+ gear:Syrup Sprinkler [COMMON] ×2",
-              "+ gear:Syrup Watering Can [COMMON] ×5",
-              "+ seed:Maple Apple [UNCOMMON] ×1",
-              "+ seed:Maple Banana [EPIC] ×1",
-              "+ seed:Maple Blueberry [COMMON] ×2",
-              "- gear:Legendary Sprinkler [LEGENDARY] ×2",
-              "- gear:Speed Mushroom [RARE] ×3",
-              "- gear:Uncommon Sprinkler [UNCOMMON] ×1",
-              "- seed:Apple [UNCOMMON] ×1",
-              "- seed:Bamboo [RARE] ×10",
-              "- seed:Banana [EPIC] ×1"
-            ],
-            "from_sample": 1,
-            "qty_changed": 0,
-            "removed": 19,
-            "to_sample": 2,
-            "total_changes": 30
-          },
-          {
             "added": 0,
             "examples": [],
-            "from_sample": 2,
+            "from_sample": 1,
             "qty_changed": 0,
             "removed": 0,
-            "to_sample": 3,
+            "to_sample": 2,
             "total_changes": 0
           }
         ],
         "stable_pairs": 1,
-        "stock_changed_during_sync": true,
+        "stock_changed_during_sync": false,
         "stock_count": 13,
         "stock_min_timer_seconds": null,
         "stock_ok": false,
         "stock_sample_counts": [
-          21,
           13,
           13
         ],
-        "stock_sync_samples": 3,
+        "stock_sync_samples": 2,
         "timer_available": false,
-        "timer_guard_log": [
-          {
-            "changes": 0,
-            "pass": 1,
-            "phase": "multi-snapshot",
-            "reason": "Full Stock ตรงกัน ยืนยันว่าหน้านิ่ง",
-            "wait_seconds": 8
-          }
-        ],
+        "timer_guard_log": [],
         "timer_safe": true,
         "timer_source": "generic",
-        "timer_wait_seconds": 14
+        "timer_wait_seconds": 6
       }
     ],
     "last_error_alert_at": "2026-09-01T19:10:40.950415+00:00",
-    "no_timer_cloudflare_streak": 1,
+    "no_timer_cloudflare_streak": 2,
     "no_timer_warning_sent": false,
     "status": "no_timer_wait"
   },
