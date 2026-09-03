@@ -1,7 +1,7 @@
 {
   "_integrity": {
     "schema": "gag2-stock-state-sha256-v1",
-    "sha256": "6ed6450f274ec1b790fb942502e583ac86ffbf27e20ffb22653586575d317260"
+    "sha256": "90f6643be74dd5c596a5f0322425e21de2e15c306b397469738ad89139d9b42e"
   },
   "alert_logic_version": "6.4.4-image-alert-v1",
   "daily_stats": {
@@ -737,7 +737,7 @@
   "health": {
     "last_block_kind": null,
     "last_block_status_code": null,
-    "last_checked_at": "2026-09-03T01:08:30.409807+00:00",
+    "last_checked_at": "2026-09-03T01:10:54.882674+00:00",
     "last_diagnostics": [
       {
         "attempt": 1,
@@ -795,11 +795,31 @@
         "attempt": 2,
         "cycle_confidence": "NO_TIMER",
         "first_to_final_diff": {
-          "added": 0,
-          "examples": [],
-          "qty_changed": 0,
-          "removed": 0,
-          "total_changes": 0
+          "added": 5,
+          "examples": [
+            "+ crate:Arch Crate [RARE] ×1",
+            "+ crate:Fence Crate [LEGENDARY] ×2",
+            "+ crate:Picture Frame Crate [RARE] ×3",
+            "+ gear:Trowel [RARE] ×3",
+            "+ seed:Venus Fly Trap [MYTHIC] ×1",
+            "- crate:Bench Crate [UNCOMMON] ×3",
+            "- crate:Bridge Crate [EPIC] ×1",
+            "- crate:Light Crate [UNCOMMON] ×3",
+            "- crate:Roleplay Crate [RARE] ×3",
+            "- gear:Common Watering Can [COMMON] ×4",
+            "- gear:Jump Mushroom [RARE] ×1",
+            "~ crate:Ladder Crate [COMMON] ×1→×2",
+            "~ gear:Common Sprinkler [COMMON] ×2→×1",
+            "~ seed:Bamboo [RARE] ×7→×11",
+            "~ seed:Blueberry [COMMON] ×2→×1",
+            "~ seed:Spirit Bamboo [RARE] ×7→×10",
+            "~ seed:Spirit Blueberry [COMMON] ×1→×2",
+            "~ seed:Spirit Carrot [COMMON] ×4→×3",
+            "~ seed:Tomato [UNCOMMON] ×3→×2"
+          ],
+          "qty_changed": 9,
+          "removed": 11,
+          "total_changes": 25
         },
         "multi_snapshot_stable": true,
         "rollover_seen": false,
@@ -808,40 +828,78 @@
         "sell_targets": {
           "atlantic giant pumpkin": {
             "contexts_found": 2,
-            "multiplier": 0.99
+            "multiplier": 1.12
           },
           "maple mushroom": {
             "contexts_found": 2,
-            "multiplier": 1.13
+            "multiplier": 0.92
           }
         },
         "shop_timers": {},
         "snapshot_diffs": [
           {
+            "added": 5,
+            "examples": [
+              "+ crate:Arch Crate [RARE] ×1",
+              "+ crate:Fence Crate [LEGENDARY] ×2",
+              "+ crate:Picture Frame Crate [RARE] ×3",
+              "+ gear:Trowel [RARE] ×3",
+              "+ seed:Venus Fly Trap [MYTHIC] ×1",
+              "- crate:Bench Crate [UNCOMMON] ×3",
+              "- crate:Bridge Crate [EPIC] ×1",
+              "- crate:Light Crate [UNCOMMON] ×3",
+              "- crate:Roleplay Crate [RARE] ×3",
+              "- gear:Common Watering Can [COMMON] ×4",
+              "- gear:Jump Mushroom [RARE] ×1",
+              "~ crate:Ladder Crate [COMMON] ×1→×2",
+              "~ gear:Common Sprinkler [COMMON] ×2→×1",
+              "~ seed:Bamboo [RARE] ×7→×11",
+              "~ seed:Blueberry [COMMON] ×2→×1",
+              "~ seed:Spirit Bamboo [RARE] ×7→×10",
+              "~ seed:Spirit Blueberry [COMMON] ×1→×2",
+              "~ seed:Spirit Carrot [COMMON] ×4→×3",
+              "~ seed:Tomato [UNCOMMON] ×3→×2"
+            ],
+            "from_sample": 1,
+            "qty_changed": 9,
+            "removed": 11,
+            "to_sample": 2,
+            "total_changes": 25
+          },
+          {
             "added": 0,
             "examples": [],
-            "from_sample": 1,
+            "from_sample": 2,
             "qty_changed": 0,
             "removed": 0,
-            "to_sample": 2,
+            "to_sample": 3,
             "total_changes": 0
           }
         ],
         "stable_pairs": 1,
-        "stock_changed_during_sync": false,
-        "stock_count": 24,
+        "stock_changed_during_sync": true,
+        "stock_count": 18,
         "stock_min_timer_seconds": null,
         "stock_ok": false,
         "stock_sample_counts": [
           24,
-          24
+          18,
+          18
         ],
-        "stock_sync_samples": 2,
+        "stock_sync_samples": 3,
         "timer_available": false,
-        "timer_guard_log": [],
+        "timer_guard_log": [
+          {
+            "changes": 0,
+            "pass": 1,
+            "phase": "multi-snapshot",
+            "reason": "Full Stock ตรงกัน ยืนยันว่าหน้านิ่ง",
+            "wait_seconds": 8
+          }
+        ],
         "timer_safe": true,
         "timer_source": "generic",
-        "timer_wait_seconds": 6
+        "timer_wait_seconds": 14
       },
       {
         "attempt": 3,
@@ -860,11 +918,11 @@
         "sell_targets": {
           "atlantic giant pumpkin": {
             "contexts_found": 2,
-            "multiplier": 0.99
+            "multiplier": 1.12
           },
           "maple mushroom": {
             "contexts_found": 2,
-            "multiplier": 1.13
+            "multiplier": 0.92
           }
         },
         "shop_timers": {},
@@ -881,12 +939,12 @@
         ],
         "stable_pairs": 1,
         "stock_changed_during_sync": false,
-        "stock_count": 24,
+        "stock_count": 18,
         "stock_min_timer_seconds": null,
         "stock_ok": false,
         "stock_sample_counts": [
-          24,
-          24
+          18,
+          18
         ],
         "stock_sync_samples": 2,
         "timer_available": false,
@@ -897,8 +955,8 @@
       }
     ],
     "last_error_alert_at": "2026-09-01T19:10:40.950415+00:00",
-    "no_timer_cloudflare_streak": 2,
-    "no_timer_warning_sent": false,
+    "no_timer_cloudflare_streak": 3,
+    "no_timer_warning_sent": true,
     "status": "no_timer_wait"
   },
   "round_ledger": {
