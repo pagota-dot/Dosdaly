@@ -1,7 +1,7 @@
 {
   "_integrity": {
     "schema": "gag2-stock-state-sha256-v1",
-    "sha256": "67dc551469308e1619383d858bdb374cc8092e2edc91a1d247d4429f98e37a81"
+    "sha256": "028154795387384df0f7613c65ba23e94d489ec32b6937b1b74ec4201d109bd2"
   },
   "alert_logic_version": "6.4.4-image-alert-v1",
   "daily_stats": {
@@ -737,7 +737,7 @@
   "health": {
     "last_block_kind": null,
     "last_block_status_code": null,
-    "last_checked_at": "2026-09-03T01:20:47.707130+00:00",
+    "last_checked_at": "2026-09-03T01:22:30.834125+00:00",
     "last_diagnostics": [
       {
         "attempt": 1,
@@ -756,11 +756,11 @@
         "sell_targets": {
           "atlantic giant pumpkin": {
             "contexts_found": 2,
-            "multiplier": 1.12
+            "multiplier": 0.92
           },
           "maple mushroom": {
             "contexts_found": 2,
-            "multiplier": 0.92
+            "multiplier": 0.98
           }
         },
         "shop_timers": {},
@@ -777,12 +777,12 @@
         ],
         "stable_pairs": 1,
         "stock_changed_during_sync": false,
-        "stock_count": 9,
+        "stock_count": 19,
         "stock_min_timer_seconds": null,
         "stock_ok": false,
         "stock_sample_counts": [
-          9,
-          9
+          19,
+          19
         ],
         "stock_sync_samples": 2,
         "timer_available": false,
@@ -795,24 +795,11 @@
         "attempt": 2,
         "cycle_confidence": "NO_TIMER",
         "first_to_final_diff": {
-          "added": 19,
-          "examples": [
-            "+ crate:Arch Crate [RARE] ×1",
-            "+ crate:Bench Crate [UNCOMMON] ×2",
-            "+ crate:Ladder Crate [COMMON] ×2",
-            "+ crate:Light Crate [UNCOMMON] ×3",
-            "+ gear:Common Watering Can [COMMON] ×4",
-            "+ gear:Speed Mushroom [RARE] ×3",
-            "- crate:Lantern Crate [UNCOMMON] ×1",
-            "- gear:Syrup Sprinkler [COMMON] ×1",
-            "- gear:Syrup Watering Can [COMMON] ×5",
-            "- seed:Maple Bamboo [RARE] ×7",
-            "- seed:Maple Blueberry [COMMON] ×1",
-            "- seed:Maple Carrot [COMMON] ×3"
-          ],
+          "added": 0,
+          "examples": [],
           "qty_changed": 0,
-          "removed": 9,
-          "total_changes": 28
+          "removed": 0,
+          "total_changes": 0
         },
         "multi_snapshot_stable": true,
         "rollover_seen": false,
@@ -831,61 +818,30 @@
         "shop_timers": {},
         "snapshot_diffs": [
           {
-            "added": 19,
-            "examples": [
-              "+ crate:Arch Crate [RARE] ×1",
-              "+ crate:Bench Crate [UNCOMMON] ×2",
-              "+ crate:Ladder Crate [COMMON] ×2",
-              "+ crate:Light Crate [UNCOMMON] ×3",
-              "+ gear:Common Watering Can [COMMON] ×4",
-              "+ gear:Speed Mushroom [RARE] ×3",
-              "- crate:Lantern Crate [UNCOMMON] ×1",
-              "- gear:Syrup Sprinkler [COMMON] ×1",
-              "- gear:Syrup Watering Can [COMMON] ×5",
-              "- seed:Maple Bamboo [RARE] ×7",
-              "- seed:Maple Blueberry [COMMON] ×1",
-              "- seed:Maple Carrot [COMMON] ×3"
-            ],
-            "from_sample": 1,
-            "qty_changed": 0,
-            "removed": 9,
-            "to_sample": 2,
-            "total_changes": 28
-          },
-          {
             "added": 0,
             "examples": [],
-            "from_sample": 2,
+            "from_sample": 1,
             "qty_changed": 0,
             "removed": 0,
-            "to_sample": 3,
+            "to_sample": 2,
             "total_changes": 0
           }
         ],
         "stable_pairs": 1,
-        "stock_changed_during_sync": true,
+        "stock_changed_during_sync": false,
         "stock_count": 19,
         "stock_min_timer_seconds": null,
         "stock_ok": false,
         "stock_sample_counts": [
-          9,
           19,
           19
         ],
-        "stock_sync_samples": 3,
+        "stock_sync_samples": 2,
         "timer_available": false,
-        "timer_guard_log": [
-          {
-            "changes": 0,
-            "pass": 1,
-            "phase": "multi-snapshot",
-            "reason": "Full Stock ตรงกัน ยืนยันว่าหน้านิ่ง",
-            "wait_seconds": 8
-          }
-        ],
+        "timer_guard_log": [],
         "timer_safe": true,
         "timer_source": "generic",
-        "timer_wait_seconds": 14
+        "timer_wait_seconds": 6
       },
       {
         "attempt": 3,
