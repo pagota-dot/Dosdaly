@@ -1,7 +1,7 @@
 {
   "_integrity": {
     "schema": "gag2-stock-state-sha256-v1",
-    "sha256": "618c8c5ad8ca33f006fdbc284a8a1b490f918eca77c3f25e24e6366176e7414a"
+    "sha256": "e4a32e844b3f0879194f938559a8692e5e469c9cd12af0a7c18445d336504b01"
   },
   "alert_logic_version": "6.4.4-image-alert-v1",
   "daily_stats": {
@@ -737,7 +737,7 @@
   "health": {
     "last_block_kind": null,
     "last_block_status_code": null,
-    "last_checked_at": "2026-09-03T02:10:29.074512+00:00",
+    "last_checked_at": "2026-09-03T02:12:25.832456+00:00",
     "last_diagnostics": [
       {
         "attempt": 1,
@@ -760,7 +760,7 @@
           },
           "maple mushroom": {
             "contexts_found": 2,
-            "multiplier": 0.9
+            "multiplier": 1.17
           }
         },
         "shop_timers": {},
@@ -777,12 +777,12 @@
         ],
         "stable_pairs": 1,
         "stock_changed_during_sync": false,
-        "stock_count": 14,
+        "stock_count": 11,
         "stock_min_timer_seconds": null,
         "stock_ok": false,
         "stock_sample_counts": [
-          14,
-          14
+          11,
+          11
         ],
         "stock_sync_samples": 2,
         "timer_available": false,
@@ -812,7 +812,7 @@
           },
           "maple mushroom": {
             "contexts_found": 2,
-            "multiplier": 0.9
+            "multiplier": 1.17
           }
         },
         "shop_timers": {},
@@ -829,12 +829,12 @@
         ],
         "stable_pairs": 1,
         "stock_changed_during_sync": false,
-        "stock_count": 14,
+        "stock_count": 11,
         "stock_min_timer_seconds": null,
         "stock_ok": false,
         "stock_sample_counts": [
-          14,
-          14
+          11,
+          11
         ],
         "stock_sync_samples": 2,
         "timer_available": false,
@@ -847,23 +847,11 @@
         "attempt": 3,
         "cycle_confidence": "NO_TIMER",
         "first_to_final_diff": {
-          "added": 1,
-          "examples": [
-            "+ gear:Trowel [RARE] ×2",
-            "- crate:Cobblestone Crate [RARE] ×2",
-            "- crate:Lantern Crate [UNCOMMON] ×3",
-            "- gear:Rare Magic Mail [RARE] ×1",
-            "- seed:Maple Apple [UNCOMMON] ×1",
-            "~ crate:Fall Structure Crate [RARE] ×1→×2",
-            "~ gear:Syrup Watering Can [COMMON] ×4→×5",
-            "~ seed:Maple Bamboo [RARE] ×8→×7",
-            "~ seed:Maple Cactus [RARE] ×2→×1",
-            "~ seed:Maple Carrot [COMMON] ×3→×4",
-            "~ seed:Maple Tulip [UNCOMMON] ×4→×3"
-          ],
-          "qty_changed": 6,
-          "removed": 4,
-          "total_changes": 11
+          "added": 0,
+          "examples": [],
+          "qty_changed": 0,
+          "removed": 0,
+          "total_changes": 0
         },
         "multi_snapshot_stable": true,
         "rollover_seen": false,
@@ -882,64 +870,34 @@
         "shop_timers": {},
         "snapshot_diffs": [
           {
-            "added": 1,
-            "examples": [
-              "+ gear:Trowel [RARE] ×2",
-              "- crate:Cobblestone Crate [RARE] ×2",
-              "- crate:Lantern Crate [UNCOMMON] ×3",
-              "- gear:Rare Magic Mail [RARE] ×1",
-              "- seed:Maple Apple [UNCOMMON] ×1",
-              "~ crate:Fall Structure Crate [RARE] ×1→×2",
-              "~ gear:Syrup Watering Can [COMMON] ×4→×5",
-              "~ seed:Maple Bamboo [RARE] ×8→×7",
-              "~ seed:Maple Cactus [RARE] ×2→×1",
-              "~ seed:Maple Carrot [COMMON] ×3→×4",
-              "~ seed:Maple Tulip [UNCOMMON] ×4→×3"
-            ],
-            "from_sample": 1,
-            "qty_changed": 6,
-            "removed": 4,
-            "to_sample": 2,
-            "total_changes": 11
-          },
-          {
             "added": 0,
             "examples": [],
-            "from_sample": 2,
+            "from_sample": 1,
             "qty_changed": 0,
             "removed": 0,
-            "to_sample": 3,
+            "to_sample": 2,
             "total_changes": 0
           }
         ],
         "stable_pairs": 1,
-        "stock_changed_during_sync": true,
+        "stock_changed_during_sync": false,
         "stock_count": 11,
         "stock_min_timer_seconds": null,
         "stock_ok": false,
         "stock_sample_counts": [
-          14,
           11,
           11
         ],
-        "stock_sync_samples": 3,
+        "stock_sync_samples": 2,
         "timer_available": false,
-        "timer_guard_log": [
-          {
-            "changes": 0,
-            "pass": 1,
-            "phase": "multi-snapshot",
-            "reason": "Full Stock ตรงกัน ยืนยันว่าหน้านิ่ง",
-            "wait_seconds": 8
-          }
-        ],
+        "timer_guard_log": [],
         "timer_safe": true,
         "timer_source": "generic",
-        "timer_wait_seconds": 14
+        "timer_wait_seconds": 6
       }
     ],
     "last_error_alert_at": "2026-09-01T19:10:40.950415+00:00",
-    "no_timer_cloudflare_streak": 8,
+    "no_timer_cloudflare_streak": 9,
     "no_timer_warning_sent": true,
     "status": "no_timer_wait"
   },
