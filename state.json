@@ -1,7 +1,7 @@
 {
   "_integrity": {
     "schema": "gag2-stock-state-sha256-v1",
-    "sha256": "14fd8ac8db38495f0370e08fa2113ba0b8b30f5b757d7784aba1e77c086a36d6"
+    "sha256": "4f6fc1e486af0ee31c4aadfc205869a62f92d9a40bb8a25acf1da1de3a9e6964"
   },
   "alert_logic_version": "6.4.4-image-alert-v1",
   "daily_stats": {
@@ -648,10 +648,22 @@
       },
       "2026-09-05": {
         "alerts_sent": 0,
-        "magic_cycle_quantities": {},
-        "magic_mail": {},
-        "magic_mail_pieces": {},
-        "magic_seen_cycles": {},
+        "magic_cycle_quantities": {
+          "rare": {
+            "gear|timer:1788542400": 2
+          }
+        },
+        "magic_mail": {
+          "rare": 1
+        },
+        "magic_mail_pieces": {
+          "rare": 2
+        },
+        "magic_seen_cycles": {
+          "rare": [
+            "gear|timer:1788542400"
+          ]
+        },
         "sell": {},
         "sell_seen_rotations": {},
         "stock_cycle_quantities": {},
@@ -11553,25 +11565,25 @@
   },
   "shop_cycles": {
     "crate": {
-      "id": 7724,
-      "key": "timer:1788542100",
+      "id": 7725,
+      "key": "timer:1788542400",
       "source": "gag2-timer"
     },
     "gear": {
-      "id": 7724,
-      "key": "timer:1788542100",
+      "id": 7725,
+      "key": "timer:1788542400",
       "source": "gag2-timer"
     },
     "seed": {
-      "id": 7724,
-      "key": "timer:1788542100",
+      "id": 7725,
+      "key": "timer:1788542400",
       "source": "gag2-timer"
     }
   },
   "shop_fingerprints": {
-    "crate": "cb27549fa931a419e2c72777a2017bce589d7ca57a72f18a53f29ae21812c709",
-    "gear": "5be6df36b78b130e3023f35613466e225b51e042943160b2caded2a2e09d2f11",
-    "seed": "641440c1d69c71daeb9eb9e9db76332325371c3f6fbaeeb64f0a152625f0d4b7",
+    "crate": "074d87317bf67c5924a40886841d18140ab61bea05afdd442fbd88258a78d7eb",
+    "gear": "f808bf7464ae405a12dc477aef3a87e60c75d90d9c9eb9126149138e2e441b4e",
+    "seed": "f6a64a2b24a9b1a4cd76e76f1a5c5db4e39cf96c99640b8b9ce15b442b46ed36",
     "sell": "126a4b73b94ad6001b033d55f7b4f0d53ff0eed8f0d4f2b8f6cd8c755da1859e",
     "unknown": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
   },
@@ -11618,6 +11630,6 @@
       }
     }
   },
-  "updated_at": "2026-09-04T17:11:45.873890+00:00",
+  "updated_at": "2026-09-04T17:16:07.876447+00:00",
   "version": "6.5.12"
 }
