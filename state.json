@@ -1,7 +1,7 @@
 {
   "_integrity": {
     "schema": "gag2-stock-state-sha256-v1",
-    "sha256": "98de4c55d9128c75ae7d1cd547e08647257250767f27764bc3f329568faaba8e"
+    "sha256": "4bc581b942318aa1e4c8d7e1d442e82264dd88bc9c1a6281b515785d2a0a0895"
   },
   "alert_logic_version": "6.4.4-image-alert-v1",
   "daily_stats": {
@@ -647,7 +647,7 @@
         }
       },
       "2026-09-05": {
-        "alerts_sent": 38,
+        "alerts_sent": 39,
         "magic_cycle_quantities": {
           "legendary": {
             "gear|timer:1788576900": 1,
@@ -804,46 +804,6 @@
   },
   "round_ledger": {
     "entries": [
-      {
-        "cycle_id": 5771,
-        "cycle_key": "timer:1787917200",
-        "cycle_source": "gag2-timer",
-        "entry_id": "ALERT-ab3466f43db0f7bc",
-        "evidence": {
-          "cycle_confidence": "MID_CYCLE_STABLE",
-          "snapshot_samples": 2,
-          "snapshot_stable": true,
-          "timer_wait_seconds": 11
-        },
-        "items": [
-          {
-            "name": "Super Syrup Watering Can",
-            "qty": 1,
-            "rarity": "COMMON",
-            "type": "gear"
-          }
-        ],
-        "kind": "stock",
-        "label": "Super Syrup Watering Can",
-        "multi": null,
-        "reason": "กลับเข้า Stock",
-        "recorded_at": "2026-08-28T11:35:40.874710+00:00",
-        "recorded_epoch": 1787916940.8747098,
-        "round_id": "STOCK-GEAR-C5771",
-        "shop": "gear",
-        "status": "alert_sent",
-        "target_key": "super syrup watering can",
-        "timeline": {
-          "alert_sent_epoch": 1787916940.404629,
-          "cycle_reset_epoch": 1787916900.0,
-          "cycle_to_send_seconds": 40,
-          "detected_epoch": 1787916933.355243,
-          "detected_to_send_ms": 7049,
-          "discord_completed_epoch": 1787916940.8747098,
-          "discord_delivery_ms": 470
-        },
-        "ui_mode": "compact-embed"
-      },
       {
         "cycle_id": 5772,
         "cycle_key": "timer:1787917500",
@@ -11655,6 +11615,39 @@
           "discord_delivery_ms": 208
         },
         "ui_mode": "compact-embed"
+      },
+      {
+        "cycle_id": null,
+        "cycle_key": null,
+        "cycle_source": null,
+        "entry_id": "ALERT-c765a70d81f5d2d5",
+        "evidence": {
+          "cycle_confidence": "MID_CYCLE_STABLE",
+          "snapshot_samples": 2,
+          "snapshot_stable": true,
+          "timer_wait_seconds": 6
+        },
+        "items": [],
+        "kind": "sell",
+        "label": "Maple Mushroom",
+        "multi": 2.0,
+        "reason": "Sell เปลี่ยนเป็น ×2",
+        "recorded_at": "2026-09-05T14:11:05.216937+00:00",
+        "recorded_epoch": 1788617465.2169373,
+        "round_id": "SELL-15fb7e10-X2",
+        "shop": "sell",
+        "status": "alert_sent",
+        "target_key": "maple mushroom",
+        "timeline": {
+          "alert_sent_epoch": 1788617464.7446218,
+          "cycle_reset_epoch": null,
+          "cycle_to_send_seconds": null,
+          "detected_epoch": 1788617457.676827,
+          "detected_to_send_ms": 7068,
+          "discord_completed_epoch": 1788617465.2169373,
+          "discord_delivery_ms": 472
+        },
+        "ui_mode": "compact-embed"
       }
     ],
     "max_entries": 300,
@@ -11663,26 +11656,26 @@
   },
   "shop_cycles": {
     "crate": {
-      "id": 7962,
-      "key": "timer:1788617400",
+      "id": 7963,
+      "key": "timer:1788617700",
       "source": "gag2-timer"
     },
     "gear": {
-      "id": 7962,
-      "key": "timer:1788617400",
+      "id": 7963,
+      "key": "timer:1788617700",
       "source": "gag2-timer"
     },
     "seed": {
-      "id": 7962,
-      "key": "timer:1788617400",
+      "id": 7963,
+      "key": "timer:1788617700",
       "source": "gag2-timer"
     }
   },
   "shop_fingerprints": {
-    "crate": "99f644084e359b3a8d9c25501bc2d277f1e2b317d618b2c01a1c160cdc0abff8",
-    "gear": "e46422a08dae467120d5a4dc6805a6cc632b745332d06ca1b7db08b9992f5e44",
-    "seed": "e2ecc44cfaca440cf03856588bc6758dae62d584b59e0ab1adf4ade2d86d6aa8",
-    "sell": "17f1a3d3ac33b005b054ba49d35f7c2f388c44233edc7be05cb63fd9b5546b19",
+    "crate": "871fa22e5a5cd4ae56908dcf3646c24117e6f883bd8b5035595f81fb50312e31",
+    "gear": "e847ac756277aefd9a2e8b03c249230abd1fa8a5db5e9e2baa0542653949b7c1",
+    "seed": "f6bffc1795825d7460148ffaaf76993fa23a0b2078382e86e3764be1a2f7764f",
+    "sell": "15fb7e109cffd0aaf16e9eda80ec1f4b02765d9f40e1771922a58f3d032a5522",
     "unknown": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
   },
   "targets": {
@@ -11691,13 +11684,13 @@
       "atlantic giant pumpkin": {
         "image_url": "https://cdn.gag2.gg/items/atlantic_giant_pumpkin.webp",
         "label": "Atlantic Giant Pumpkin",
-        "multi": 1.1,
+        "multi": 0.99,
         "present": true
       },
       "maple mushroom": {
         "image_url": "https://cdn.gag2.gg/items/maple_mushroom.webp",
         "label": "Maple Mushroom",
-        "multi": 1.12,
+        "multi": 2.0,
         "present": true
       }
     },
@@ -11728,6 +11721,6 @@
       }
     }
   },
-  "updated_at": "2026-09-05T14:05:40.183545+00:00",
+  "updated_at": "2026-09-05T14:11:05.229781+00:00",
   "version": "6.5.12"
 }
