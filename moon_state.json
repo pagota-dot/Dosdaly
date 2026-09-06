@@ -1,7 +1,7 @@
 {
   "_integrity": {
     "schema": "gag2-moon-state-sha256-v1",
-    "sha256": "95eb2313c8ac4268fd474686c529f6f111da9c3204a8529042bd30f76cb9c311"
+    "sha256": "2d6662b0d31c7691551ef1e4c4ab1ff22e90de50671bd2f1ad0f29ad24df82af"
   },
   "events": {
     "gold|2026-09-06|12:18": {
@@ -119,6 +119,29 @@
       "slot_time_th": "15:38:00",
       "snapshot_verified": true
     },
+    "gold|2026-09-06|17:28": {
+      "anchor_epoch": 1788690479,
+      "clock_text": "5:28 PM",
+      "discord_delivery_ms": 393,
+      "event_epoch": 1788690479,
+      "final": true,
+      "final_remaining_by_anchor": 45,
+      "final_sent_at": "2026-09-06T10:27:14+00:00",
+      "final_sent_epoch": 1788690434,
+      "final_target_delay_seconds": 0,
+      "final_target_epoch": 1788690434,
+      "first_seen_at": "2026-09-06T10:25:03+00:00",
+      "first_seen_epoch": 1788690303,
+      "first_seen_remaining": 176,
+      "game_cycle_phase": 8,
+      "game_cycle_verified": true,
+      "kind": "gold",
+      "round_id": "MOON-GOLD-20260906-172759",
+      "row_quality": "NAME_CLOCK_COUNTDOWN",
+      "slot_id": "gold|2026-09-06|17:28",
+      "slot_time_th": "17:27:59",
+      "snapshot_verified": true
+    },
     "rainbow|2026-09-06|15:48": {
       "anchor_epoch": 1788684479,
       "clock_text": "3:48 PM",
@@ -144,7 +167,7 @@
     }
   },
   "health": {
-    "last_success_at": "2026-09-06T10:22:54.030504+00:00",
+    "last_success_at": "2026-09-06T10:25:03.413787+00:00",
     "last_warning_epoch": 0
   },
   "last_started_by_kind": {
@@ -157,10 +180,10 @@
   "metrics": {
     "average_final_target_delay_seconds": 0.0,
     "final_missed": 0,
-    "final_sent": 200,
+    "final_sent": 201,
     "maximum_final_target_delay_seconds": 0,
-    "tracked_rounds": 200,
-    "updated_at": "2026-09-06T10:22:36.234069+00:00"
+    "tracked_rounds": 201,
+    "updated_at": "2026-09-06T10:27:14.808957+00:00"
   },
   "migrated_at": "2026-08-09T05:45:14.665727+00:00",
   "notification_mode": "final-only",
@@ -6644,6 +6667,54 @@
         "text": "Name + Time + Countdown + 2 Snapshots + 10m Cycle"
       }
     },
+    "MOON-GOLD-20260906-172759": {
+      "anchor_epoch": 1788690479,
+      "clock_text": "5:28 PM",
+      "detection_lead_seconds": 176,
+      "discord_delivery_ms": 393,
+      "event_time_th": "17:27:59",
+      "final_lead_seconds": 45,
+      "final_sent_at": "2026-09-06T10:27:14+00:00",
+      "final_sent_epoch": 1788690434,
+      "final_target_at": "2026-09-06T10:27:14+00:00",
+      "final_target_delay_seconds": 0,
+      "final_target_epoch": 1788690434,
+      "first_seen_at": "2026-09-06T10:25:03+00:00",
+      "first_seen_epoch": 1788690303,
+      "kind": "gold",
+      "label": "Gold Moon",
+      "round_id": "MOON-GOLD-20260906-172759",
+      "slot_id": "gold|2026-09-06|17:28",
+      "status": "final_sent",
+      "timeline": [
+        {
+          "action": "detected",
+          "at": "2026-09-06T10:25:03+00:00",
+          "epoch": 1788690303,
+          "lead_seconds": 176
+        },
+        {
+          "action": "final_sent",
+          "at": "2026-09-06T10:27:14+00:00",
+          "discord_delivery_ms": 393,
+          "epoch": 1788690434,
+          "lead_seconds": 45,
+          "target_delay_seconds": 0
+        }
+      ],
+      "verification": {
+        "maximum": 5,
+        "score": 5,
+        "signals": [
+          "Name",
+          "Time",
+          "Countdown",
+          "2 Snapshots",
+          "10m Cycle"
+        ],
+        "text": "Name + Time + Countdown + 2 Snapshots + 10m Cycle"
+      }
+    },
     "MOON-MEGA-20260828-033759": {
       "anchor_epoch": 1787863079,
       "clock_text": "3:38 AM",
@@ -9765,6 +9836,6 @@
       }
     }
   },
-  "updated_at": "2026-09-06T10:22:54.039096+00:00",
+  "updated_at": "2026-09-06T10:27:14.812562+00:00",
   "version": 3
 }
