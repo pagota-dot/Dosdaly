@@ -1,7 +1,7 @@
 {
   "_integrity": {
     "schema": "gag2-stock-state-sha256-v1",
-    "sha256": "3f36402feaf1dea3625c454b67d6a74f9ec37110dea618fabedc7270f3520410"
+    "sha256": "64b109cbd72bc9ae31c9ff73ffa80f88328b7cc27af2110f087fe4cc7ee38d6d"
   },
   "alert_logic_version": "6.4.4-image-alert-v1",
   "daily_stats": {
@@ -638,7 +638,7 @@
         }
       },
       "2026-09-07": {
-        "alerts_sent": 10,
+        "alerts_sent": 11,
         "magic_cycle_quantities": {
           "rare": {
             "gear|timer:1788717900": 2,
@@ -688,6 +688,9 @@
           }
         },
         "stock_cycle_quantities": {
+          "amber cranberry": {
+            "seed|timer:1788736800": 1
+          },
           "atlantic giant pumpkin": {
             "seed|timer:1788717900": 1,
             "seed|timer:1788718500": 1
@@ -699,14 +702,19 @@
           }
         },
         "stock_occurrences": {
+          "amber cranberry": 1,
           "atlantic giant pumpkin": 2,
           "super syrup watering can": 3
         },
         "stock_pieces": {
+          "amber cranberry": 1,
           "atlantic giant pumpkin": 2,
           "super syrup watering can": 5
         },
         "stock_seen_cycles": {
+          "amber cranberry": [
+            "seed|timer:1788736800"
+          ],
           "atlantic giant pumpkin": [
             "seed|timer:1788717900",
             "seed|timer:1788718500"
@@ -732,39 +740,6 @@
   },
   "round_ledger": {
     "entries": [
-      {
-        "cycle_id": null,
-        "cycle_key": null,
-        "cycle_source": null,
-        "entry_id": "ALERT-fc253bcaa6dc3387",
-        "evidence": {
-          "cycle_confidence": "CHANGED_THEN_STABLE",
-          "snapshot_samples": 3,
-          "snapshot_stable": true,
-          "timer_wait_seconds": 20
-        },
-        "items": [],
-        "kind": "sell",
-        "label": "Maple Mushroom",
-        "multi": 2.0,
-        "reason": "Sell เปลี่ยนเป็น ×2",
-        "recorded_at": "2026-08-30T02:10:41.448996+00:00",
-        "recorded_epoch": 1788055841.448996,
-        "round_id": "SELL-afd78420-X2",
-        "shop": "sell",
-        "status": "alert_sent",
-        "target_key": "maple mushroom",
-        "timeline": {
-          "alert_sent_epoch": 1788055840.81401,
-          "cycle_reset_epoch": null,
-          "cycle_to_send_seconds": null,
-          "detected_epoch": 1788055833.942698,
-          "detected_to_send_ms": 6871,
-          "discord_completed_epoch": 1788055841.448996,
-          "discord_delivery_ms": 635
-        },
-        "ui_mode": "compact-embed"
-      },
       {
         "cycle_id": null,
         "cycle_key": null,
@@ -11583,6 +11558,46 @@
           "discord_delivery_ms": 577
         },
         "ui_mode": "compact-embed"
+      },
+      {
+        "cycle_id": 8360,
+        "cycle_key": "timer:1788736800",
+        "cycle_source": "gag2-timer",
+        "entry_id": "ALERT-6800a5aa1ce9ca47",
+        "evidence": {
+          "cycle_confidence": "MID_CYCLE_STABLE",
+          "snapshot_samples": 2,
+          "snapshot_stable": true,
+          "timer_wait_seconds": 12
+        },
+        "items": [
+          {
+            "name": "Amber Cranberry",
+            "qty": 1,
+            "rarity": "COMMON",
+            "type": "seed"
+          }
+        ],
+        "kind": "stock",
+        "label": "Amber Cranberry",
+        "multi": null,
+        "reason": "กลับเข้า Stock",
+        "recorded_at": "2026-09-06T23:15:39.935010+00:00",
+        "recorded_epoch": 1788736539.9350102,
+        "round_id": "STOCK-SEED-C8360",
+        "shop": "seed",
+        "status": "alert_sent",
+        "target_key": "amber cranberry",
+        "timeline": {
+          "alert_sent_epoch": 1788736539.7164965,
+          "cycle_reset_epoch": 1788736500.0,
+          "cycle_to_send_seconds": 40,
+          "detected_epoch": 1788736532.8099444,
+          "detected_to_send_ms": 6907,
+          "discord_completed_epoch": 1788736539.9350102,
+          "discord_delivery_ms": 218
+        },
+        "ui_mode": "compact-embed"
       }
     ],
     "max_entries": 300,
@@ -11591,25 +11606,25 @@
   },
   "shop_cycles": {
     "crate": {
-      "id": 8359,
-      "key": "timer:1788736500",
+      "id": 8360,
+      "key": "timer:1788736800",
       "source": "gag2-timer"
     },
     "gear": {
-      "id": 8359,
-      "key": "timer:1788736500",
+      "id": 8360,
+      "key": "timer:1788736800",
       "source": "gag2-timer"
     },
     "seed": {
-      "id": 8359,
-      "key": "timer:1788736500",
+      "id": 8360,
+      "key": "timer:1788736800",
       "source": "gag2-timer"
     }
   },
   "shop_fingerprints": {
-    "crate": "35ff8bd9742e6db1fdcfd53fe7e2fc123c91294f59f6eb269253c387966afd0d",
-    "gear": "38a036510b110b24d07d74b47fc065d2f03badbe04f9f2ec61465c43898609ed",
-    "seed": "dad6a8c103eac4f66723cc13970cde8c2f934fcbdb9b77706e2cee5b38dce550",
+    "crate": "9c880d918699a7880d27c0fee802484d656a190dc321935c4c6cbbc9350e02f8",
+    "gear": "90b8ec2f64f0d25019f08a14e329ed4e30e14cc78cd0d0f9cec9e7ac1ef8ade1",
+    "seed": "50eec905d244c2f4210889c114fa3f79f6b0edcc89aed6a91f6c3db51b678e45",
     "sell": "9d62f89ceb0b82120c4616cabe2ea25c162c4c9e8995858c8e136e397b4c496e",
     "unknown": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
   },
@@ -11632,9 +11647,16 @@
     "stock": {
       "amber cranberry": {
         "image_url": "https://cdn.gag2.gg/items/amber_cranberry.webp",
-        "items": [],
+        "items": [
+          {
+            "name": "Amber Cranberry",
+            "qty": 1,
+            "rarity": "COMMON",
+            "type": "seed"
+          }
+        ],
         "label": "Amber Cranberry",
-        "present": false
+        "present": true
       },
       "atlantic giant pumpkin": {
         "image_url": "https://cdn.gag2.gg/items/atlantic_giant_pumpkin.webp",
@@ -11656,6 +11678,6 @@
       }
     }
   },
-  "updated_at": "2026-09-06T23:11:19.267535+00:00",
+  "updated_at": "2026-09-06T23:15:39.945779+00:00",
   "version": "6.5.12"
 }
