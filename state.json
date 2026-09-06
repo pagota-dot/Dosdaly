@@ -1,7 +1,7 @@
 {
   "_integrity": {
     "schema": "gag2-stock-state-sha256-v1",
-    "sha256": "17c568d709c4dc53ee41cbc718077abb3568648f642b1a262e586f06255ef0c8"
+    "sha256": "3aa227dfa9360c5bd664e66087d854d4ac84ff661b4f9bf7c2b4c5f01c8de295"
   },
   "alert_logic_version": "6.4.4-image-alert-v1",
   "daily_stats": {
@@ -629,8 +629,11 @@
         }
       },
       "2026-09-06": {
-        "alerts_sent": 22,
+        "alerts_sent": 24,
         "magic_cycle_quantities": {
+          "legendary": {
+            "gear|timer:1788684300": 1
+          },
           "rare": {
             "gear|timer:1788634200": 2,
             "gear|timer:1788645300": 1,
@@ -648,12 +651,17 @@
           }
         },
         "magic_mail": {
+          "legendary": 1,
           "rare": 13
         },
         "magic_mail_pieces": {
+          "legendary": 1,
           "rare": 21
         },
         "magic_seen_cycles": {
+          "legendary": [
+            "gear|timer:1788684300"
+          ],
           "rare": [
             "gear|timer:1788634200",
             "gear|timer:1788645300",
@@ -676,7 +684,7 @@
             "4": 1
           },
           "maple mushroom": {
-            "2": 3,
+            "2": 4,
             "4": 3
           }
         },
@@ -696,7 +704,8 @@
             "2": [
               "sell|14a30539ec04f01be90535a0dbcd33fe1d7c99d0c30cdbad24406b2db2ac3d66|maple mushroom|x2",
               "sell|44474cd09f0c45b10e46c966b8b1bb3f8d926b6284bbf21bd66e883de92dbad2|maple mushroom|x2",
-              "sell|55be91bd7595f946f96e4dab829ffd32f5aa5280ba91b84fc89db4f49f1e611f|maple mushroom|x2"
+              "sell|55be91bd7595f946f96e4dab829ffd32f5aa5280ba91b84fc89db4f49f1e611f|maple mushroom|x2",
+              "sell|0ba7d1668ec69be464de4769374d827ef9bd446799cb27f042e33c3cab43c3e1|maple mushroom|x2"
             ],
             "4": [
               "sell|9c5d7a4f07dd9fb8f0692942d93a8f2193af8292f4638d47f3c64f71062e32e7|maple mushroom|x4",
@@ -768,79 +777,6 @@
   },
   "round_ledger": {
     "entries": [
-      {
-        "cycle_id": 6041,
-        "cycle_key": "timer:1787998500",
-        "cycle_source": "gag2-timer",
-        "entry_id": "ALERT-30edd26e405d188b",
-        "evidence": {
-          "cycle_confidence": "MID_CYCLE_STABLE",
-          "snapshot_samples": 2,
-          "snapshot_stable": true,
-          "timer_wait_seconds": 10
-        },
-        "items": [
-          {
-            "name": "Super Syrup Watering Can",
-            "qty": 2,
-            "rarity": "COMMON",
-            "type": "gear"
-          }
-        ],
-        "kind": "stock",
-        "label": "Super Syrup Watering Can",
-        "multi": null,
-        "reason": "กลับเข้า Stock",
-        "recorded_at": "2026-08-29T10:10:40.322554+00:00",
-        "recorded_epoch": 1787998240.322554,
-        "round_id": "STOCK-GEAR-C6041",
-        "shop": "gear",
-        "status": "alert_sent",
-        "target_key": "super syrup watering can",
-        "timeline": {
-          "alert_sent_epoch": 1787998239.8675864,
-          "cycle_reset_epoch": 1787998200.0,
-          "cycle_to_send_seconds": 40,
-          "detected_epoch": 1787998233.156544,
-          "detected_to_send_ms": 6711,
-          "discord_completed_epoch": 1787998240.322554,
-          "discord_delivery_ms": 455
-        },
-        "ui_mode": "compact-embed"
-      },
-      {
-        "cycle_id": null,
-        "cycle_key": null,
-        "cycle_source": null,
-        "entry_id": "ALERT-2cdf98a20ee7f0d2",
-        "evidence": {
-          "cycle_confidence": "MID_CYCLE_STABLE",
-          "snapshot_samples": 2,
-          "snapshot_stable": true,
-          "timer_wait_seconds": 6
-        },
-        "items": [],
-        "kind": "sell",
-        "label": "Maple Mushroom",
-        "multi": 2.0,
-        "reason": "Sell เปลี่ยนเป็น ×2",
-        "recorded_at": "2026-08-29T10:31:37.680729+00:00",
-        "recorded_epoch": 1787999497.6807292,
-        "round_id": "SELL-afd78420-X2",
-        "shop": "sell",
-        "status": "alert_sent",
-        "target_key": "maple mushroom",
-        "timeline": {
-          "alert_sent_epoch": 1787999497.1138082,
-          "cycle_reset_epoch": null,
-          "cycle_to_send_seconds": null,
-          "detected_epoch": 1787999490.2151933,
-          "detected_to_send_ms": 6899,
-          "discord_completed_epoch": 1787999497.6807292,
-          "discord_delivery_ms": 567
-        },
-        "ui_mode": "compact-embed"
-      },
       {
         "cycle_id": 6048,
         "cycle_key": "timer:1788000600",
@@ -11605,6 +11541,79 @@
           "discord_delivery_ms": 407
         },
         "ui_mode": "compact-embed"
+      },
+      {
+        "cycle_id": 8185,
+        "cycle_key": "timer:1788684300",
+        "cycle_source": "gag2-timer",
+        "entry_id": "ALERT-3dea776fe5c1ae42",
+        "evidence": {
+          "cycle_confidence": "CHANGED_THEN_STABLE",
+          "snapshot_samples": 3,
+          "snapshot_stable": true,
+          "timer_wait_seconds": 25
+        },
+        "items": [
+          {
+            "name": "Legendary Magic Mail",
+            "qty": 1,
+            "rarity": "LEGENDARY",
+            "type": "gear"
+          }
+        ],
+        "kind": "stock",
+        "label": "Legendary Magic Mail",
+        "multi": null,
+        "reason": "Magic Mail ที่ต้องการอยู่ใน Stock",
+        "recorded_at": "2026-09-06T08:40:41.141258+00:00",
+        "recorded_epoch": 1788684041.1412582,
+        "round_id": "STOCK-GEAR-C8185",
+        "shop": "gear",
+        "status": "alert_sent",
+        "target_key": "legendary magic mail|legendary",
+        "timeline": {
+          "alert_sent_epoch": 1788684040.8999326,
+          "cycle_reset_epoch": 1788684000.0,
+          "cycle_to_send_seconds": 41,
+          "detected_epoch": 1788684033.7162292,
+          "detected_to_send_ms": 7184,
+          "discord_completed_epoch": 1788684041.1412582,
+          "discord_delivery_ms": 241
+        },
+        "ui_mode": "compact-embed"
+      },
+      {
+        "cycle_id": null,
+        "cycle_key": null,
+        "cycle_source": null,
+        "entry_id": "ALERT-5ffeab5672c78a42",
+        "evidence": {
+          "cycle_confidence": "CHANGED_THEN_STABLE",
+          "snapshot_samples": 3,
+          "snapshot_stable": true,
+          "timer_wait_seconds": 25
+        },
+        "items": [],
+        "kind": "sell",
+        "label": "Maple Mushroom",
+        "multi": 2.0,
+        "reason": "Sell เปลี่ยนเป็น ×2",
+        "recorded_at": "2026-09-06T08:40:41.343046+00:00",
+        "recorded_epoch": 1788684041.3430462,
+        "round_id": "SELL-0ba7d166-X2",
+        "shop": "sell",
+        "status": "alert_sent",
+        "target_key": "maple mushroom",
+        "timeline": {
+          "alert_sent_epoch": 1788684041.1418116,
+          "cycle_reset_epoch": null,
+          "cycle_to_send_seconds": null,
+          "detected_epoch": 1788684033.7162292,
+          "detected_to_send_ms": 7426,
+          "discord_completed_epoch": 1788684041.3430462,
+          "discord_delivery_ms": 201
+        },
+        "ui_mode": "compact-embed"
       }
     ],
     "max_entries": 300,
@@ -11613,41 +11622,50 @@
   },
   "shop_cycles": {
     "crate": {
-      "id": 8184,
-      "key": "timer:1788684000",
+      "id": 8185,
+      "key": "timer:1788684300",
       "source": "gag2-timer"
     },
     "gear": {
-      "id": 8184,
-      "key": "timer:1788684000",
+      "id": 8185,
+      "key": "timer:1788684300",
       "source": "gag2-timer"
     },
     "seed": {
-      "id": 8184,
-      "key": "timer:1788684000",
+      "id": 8185,
+      "key": "timer:1788684300",
       "source": "gag2-timer"
     }
   },
   "shop_fingerprints": {
-    "crate": "d8223bd87995fd2e38738a913fb3f87609a5e81c52610fefa62f35315a3b0d05",
-    "gear": "0d03829bb115dd6a17e61c5164c06c4b9b46eca0205ab6b2c6cea03298853b20",
-    "seed": "a5c8ef3b31fd5b81c46a81477f7846984e9142f8e44176181692a18453fe5225",
-    "sell": "222da5dd2a9c1ca9db8ed1df1a1e575ff1a43ae9f989a10e2b6dbf85f37c211c",
+    "crate": "ee7f8083b55755a4bdfa1962e1007f8e7b90de1e2328f83393579fc6773c0a81",
+    "gear": "f4773e9b3bb4d16c6a8321a179b9590b8db783d79fdce66f5cc01c6cea2e4282",
+    "seed": "7aacaccaa429bc9226ec926e6bba0b71c83f59a32a0d9372253356e074fa46c8",
+    "sell": "0ba7d1668ec69be464de4769374d827ef9bd446799cb27f042e33c3cab43c3e1",
     "unknown": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
   },
   "targets": {
-    "magic_mail": {},
+    "magic_mail": {
+      "legendary magic mail|legendary": {
+        "image_url": "https://cdn.gag2.gg/items/legendary_magic_mail.webp",
+        "name": "Legendary Magic Mail",
+        "present": true,
+        "qty": 1,
+        "rarity": "LEGENDARY",
+        "type": "gear"
+      }
+    },
     "sell": {
       "atlantic giant pumpkin": {
         "image_url": "https://cdn.gag2.gg/items/atlantic_giant_pumpkin.webp",
         "label": "Atlantic Giant Pumpkin",
-        "multi": 1.01,
+        "multi": 1.03,
         "present": true
       },
       "maple mushroom": {
         "image_url": "https://cdn.gag2.gg/items/maple_mushroom.webp",
         "label": "Maple Mushroom",
-        "multi": 1.0,
+        "multi": 2.0,
         "present": true
       }
     },
@@ -11678,6 +11696,6 @@
       }
     }
   },
-  "updated_at": "2026-09-06T08:35:39.913959+00:00",
+  "updated_at": "2026-09-06T08:40:41.355675+00:00",
   "version": "6.5.12"
 }
