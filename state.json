@@ -1,7 +1,7 @@
 {
   "_integrity": {
     "schema": "gag2-stock-state-sha256-v1",
-    "sha256": "2c02eeaada05b1cdeecbc5ea9ee58c4e482eaa15d3747cbb873b517df8827668"
+    "sha256": "310fa1226df086f364a6a344023bdc4a9e1a4456e5570ad5dfc3d337ddb8b8cb"
   },
   "alert_logic_version": "6.4.4-image-alert-v1",
   "daily_stats": {
@@ -680,10 +680,22 @@
       },
       "2026-09-08": {
         "alerts_sent": 2,
-        "magic_cycle_quantities": {},
-        "magic_mail": {},
-        "magic_mail_pieces": {},
-        "magic_seen_cycles": {},
+        "magic_cycle_quantities": {
+          "rare": {
+            "gear|timer:1788804000": 2
+          }
+        },
+        "magic_mail": {
+          "rare": 1
+        },
+        "magic_mail_pieces": {
+          "rare": 2
+        },
+        "magic_seen_cycles": {
+          "rare": [
+            "gear|timer:1788804000"
+          ]
+        },
         "sell": {},
         "sell_seen_rotations": {},
         "stock_cycle_quantities": {
@@ -11584,25 +11596,25 @@
   },
   "shop_cycles": {
     "crate": {
-      "id": 8583,
-      "key": "timer:1788803700",
+      "id": 8584,
+      "key": "timer:1788804000",
       "source": "gag2-timer"
     },
     "gear": {
-      "id": 8583,
-      "key": "timer:1788803700",
+      "id": 8584,
+      "key": "timer:1788804000",
       "source": "gag2-timer"
     },
     "seed": {
-      "id": 8583,
-      "key": "timer:1788803700",
+      "id": 8584,
+      "key": "timer:1788804000",
       "source": "gag2-timer"
     }
   },
   "shop_fingerprints": {
-    "crate": "b1d2a9590a46e0e8e66e67a53164c90a00af40f35baeb5572e43cf8860c9b2b9",
-    "gear": "4c332602f20940fd005120c44acfe759505451db0a568aca51e8dc2baff4aac6",
-    "seed": "2527de1cf2d066a24f276c6f03bf3832327f4b7c7f938627c92efa6d5cf4873c",
+    "crate": "8356f440b37fdd892b4114e97c217ef19fa68b4cd597b2f36022f1bb09f05589",
+    "gear": "e3fcb9c5104a38ce5aa0f5b98768b4ba8449fa36dcde65103891834127972b00",
+    "seed": "2f75bd0e4a25b81a0d5bc17d45a1020601deda45c4febd7435bbfaf126ff2db1",
     "sell": "ed058bf26d6a4298054e960bce30e45ac72d443c07f051421466f6f4ced518dd",
     "unknown": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
   },
@@ -11637,16 +11649,9 @@
       },
       "super syrup sprinkler": {
         "image_url": "https://cdn.gag2.gg/items/super_syrup_sprinkler.webp",
-        "items": [
-          {
-            "name": "Super Syrup Sprinkler",
-            "qty": 1,
-            "rarity": "COMMON",
-            "type": "gear"
-          }
-        ],
+        "items": [],
         "label": "Super Syrup Sprinkler",
-        "present": true
+        "present": false
       },
       "super syrup watering can": {
         "image_url": "https://cdn.gag2.gg/items/super_syrup_watering_can.webp",
@@ -11656,6 +11661,6 @@
       }
     }
   },
-  "updated_at": "2026-09-07T17:51:08.297827+00:00",
+  "updated_at": "2026-09-07T17:55:40.283878+00:00",
   "version": "6.5.12"
 }
