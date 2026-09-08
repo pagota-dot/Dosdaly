@@ -1,7 +1,7 @@
 {
   "_integrity": {
     "schema": "gag2-stock-state-sha256-v1",
-    "sha256": "c20497bf015c8211657c5a8e003f318b4306f8454365bd7491077cda7ee244f7"
+    "sha256": "40679a9af6399463e15f55fcc1ebd166aee7500dd1d5f5ad4e093b103d612d4d"
   },
   "alert_logic_version": "6.4.4-image-alert-v1",
   "daily_stats": {
@@ -651,20 +651,28 @@
         }
       },
       "2026-09-09": {
-        "alerts_sent": 2,
+        "alerts_sent": 3,
         "magic_cycle_quantities": {
+          "legendary": {
+            "gear|timer:1788897900": 1
+          },
           "rare": {
             "gear|timer:1788888600": 1,
             "gear|timer:1788888900": 1
           }
         },
         "magic_mail": {
+          "legendary": 1,
           "rare": 2
         },
         "magic_mail_pieces": {
+          "legendary": 1,
           "rare": 2
         },
         "magic_seen_cycles": {
+          "legendary": [
+            "gear|timer:1788897900"
+          ],
           "rare": [
             "gear|timer:1788888600",
             "gear|timer:1788888900"
@@ -715,46 +723,6 @@
   },
   "round_ledger": {
     "entries": [
-      {
-        "cycle_id": 6635,
-        "cycle_key": "timer:1788177300",
-        "cycle_source": "gag2-timer",
-        "entry_id": "ALERT-6554c15bab3ea39e",
-        "evidence": {
-          "cycle_confidence": "MID_CYCLE_STABLE",
-          "snapshot_samples": 2,
-          "snapshot_stable": true,
-          "timer_wait_seconds": 18
-        },
-        "items": [
-          {
-            "name": "Super Syrup Watering Can",
-            "qty": 1,
-            "rarity": "COMMON",
-            "type": "gear"
-          }
-        ],
-        "kind": "stock",
-        "label": "Super Syrup Watering Can",
-        "multi": null,
-        "reason": "กลับเข้า Stock",
-        "recorded_at": "2026-08-31T11:50:42.721230+00:00",
-        "recorded_epoch": 1788177042.7212298,
-        "round_id": "STOCK-GEAR-C6635",
-        "shop": "gear",
-        "status": "alert_sent",
-        "target_key": "super syrup watering can",
-        "timeline": {
-          "alert_sent_epoch": 1788177040.3442235,
-          "cycle_reset_epoch": 1788177000.0,
-          "cycle_to_send_seconds": 40,
-          "detected_epoch": 1788177033.3073566,
-          "detected_to_send_ms": 7037,
-          "discord_completed_epoch": 1788177042.7212298,
-          "discord_delivery_ms": 2377
-        },
-        "ui_mode": "compact-embed"
-      },
       {
         "cycle_id": 6647,
         "cycle_key": "timer:1788180900",
@@ -11573,6 +11541,46 @@
           "discord_delivery_ms": 820
         },
         "ui_mode": "compact-embed"
+      },
+      {
+        "cycle_id": 8855,
+        "cycle_key": "timer:1788897900",
+        "cycle_source": "gag2-timer",
+        "entry_id": "ALERT-e92f54231dfae8b3",
+        "evidence": {
+          "cycle_confidence": "MID_CYCLE_STABLE",
+          "snapshot_samples": 2,
+          "snapshot_stable": true,
+          "timer_wait_seconds": 6
+        },
+        "items": [
+          {
+            "name": "Legendary Magic Mail",
+            "qty": 1,
+            "rarity": "LEGENDARY",
+            "type": "gear"
+          }
+        ],
+        "kind": "stock",
+        "label": "Legendary Magic Mail",
+        "multi": null,
+        "reason": "Magic Mail ที่ต้องการอยู่ใน Stock",
+        "recorded_at": "2026-09-08T20:01:20.132419+00:00",
+        "recorded_epoch": 1788897680.1324193,
+        "round_id": "STOCK-GEAR-C8855",
+        "shop": "gear",
+        "status": "alert_sent",
+        "target_key": "legendary magic mail|legendary",
+        "timeline": {
+          "alert_sent_epoch": 1788897679.7311661,
+          "cycle_reset_epoch": 1788897600.0,
+          "cycle_to_send_seconds": 80,
+          "detected_epoch": 1788897672.6936476,
+          "detected_to_send_ms": 7038,
+          "discord_completed_epoch": 1788897680.1324193,
+          "discord_delivery_ms": 401
+        },
+        "ui_mode": "compact-embed"
       }
     ],
     "max_entries": 300,
@@ -11581,41 +11589,50 @@
   },
   "shop_cycles": {
     "crate": {
-      "id": 8854,
-      "key": "timer:1788897600",
+      "id": 8855,
+      "key": "timer:1788897900",
       "source": "gag2-timer"
     },
     "gear": {
-      "id": 8854,
-      "key": "timer:1788897600",
+      "id": 8855,
+      "key": "timer:1788897900",
       "source": "gag2-timer"
     },
     "seed": {
-      "id": 8854,
-      "key": "timer:1788897600",
+      "id": 8855,
+      "key": "timer:1788897900",
       "source": "gag2-timer"
     }
   },
   "shop_fingerprints": {
-    "crate": "6471d8255454ac7c354c085e6464544819b04e444fb262ac457e051ce4abd209",
-    "gear": "5d4937c1893f07ba553a211e057c6d16aeb28764f4098b50e1a80bffb48f594e",
-    "seed": "87b83ce666fb61f7bf43794bdb2762cd8ff173224ee55abf998cf95780406bac",
-    "sell": "a4a6dacf8b25071e5a384e0933b23a26866abcc1941038d83cf9fb3c850fd61e",
+    "crate": "de82723fa25a101479b304dcf31512c9ba428333a906813f11f8b8a563ecd4fc",
+    "gear": "fe3111770612e2c19bb61d6b86b335c9683413ee214436acbd7cbc09846e9256",
+    "seed": "df056a8970968fcd06117cf23265951da3b13aeb2bd8c0e81e39286815a0c74d",
+    "sell": "4bed25e042776a96d17e1223e72fb54fccec07376b181b92d05df269ec5852d9",
     "unknown": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
   },
   "targets": {
-    "magic_mail": {},
+    "magic_mail": {
+      "legendary magic mail|legendary": {
+        "image_url": "https://cdn.gag2.gg/items/legendary_magic_mail.webp",
+        "name": "Legendary Magic Mail",
+        "present": true,
+        "qty": 1,
+        "rarity": "LEGENDARY",
+        "type": "gear"
+      }
+    },
     "sell": {
       "atlantic giant pumpkin": {
         "image_url": "https://cdn.gag2.gg/items/atlantic_giant_pumpkin.webp",
         "label": "Atlantic Giant Pumpkin",
-        "multi": 1.17,
+        "multi": 0.87,
         "present": true
       },
       "maple mushroom": {
         "image_url": "https://cdn.gag2.gg/items/maple_mushroom.webp",
         "label": "Maple Mushroom",
-        "multi": 0.92,
+        "multi": 1.09,
         "present": true
       }
     },
@@ -11646,6 +11663,6 @@
       }
     }
   },
-  "updated_at": "2026-09-08T19:55:51.147420+00:00",
+  "updated_at": "2026-09-08T20:01:20.144870+00:00",
   "version": "6.5.12"
 }
