@@ -1,7 +1,7 @@
 {
   "_integrity": {
     "schema": "gag2-stock-state-sha256-v1",
-    "sha256": "7543e8a51cd6e36e530c6822a8f117864018f417845df24ebb44d46f579e4b91"
+    "sha256": "4b1315fa2a8df66a9e0ddf07d29e40e2e2a445397b2b6ae97dd6062c1b87b38a"
   },
   "alert_logic_version": "6.4.4-image-alert-v1",
   "daily_stats": {
@@ -651,7 +651,7 @@
         }
       },
       "2026-09-09": {
-        "alerts_sent": 6,
+        "alerts_sent": 7,
         "magic_cycle_quantities": {
           "legendary": {
             "gear|timer:1788897900": 1
@@ -713,15 +713,20 @@
           "atlantic giant pumpkin": {
             "seed|timer:1788896100": 1,
             "seed|timer:1788900600": 1
+          },
+          "super syrup sprinkler": {
+            "gear|timer:1788901200": 1
           }
         },
         "stock_occurrences": {
           "amber cranberry": 1,
-          "atlantic giant pumpkin": 2
+          "atlantic giant pumpkin": 2,
+          "super syrup sprinkler": 1
         },
         "stock_pieces": {
           "amber cranberry": 1,
-          "atlantic giant pumpkin": 2
+          "atlantic giant pumpkin": 2,
+          "super syrup sprinkler": 1
         },
         "stock_seen_cycles": {
           "amber cranberry": [
@@ -730,6 +735,9 @@
           "atlantic giant pumpkin": [
             "seed|timer:1788896100",
             "seed|timer:1788900600"
+          ],
+          "super syrup sprinkler": [
+            "gear|timer:1788901200"
           ]
         }
       }
@@ -747,39 +755,6 @@
   },
   "round_ledger": {
     "entries": [
-      {
-        "cycle_id": null,
-        "cycle_key": null,
-        "cycle_source": null,
-        "entry_id": "ALERT-ecbbd1e91bb7eb5d",
-        "evidence": {
-          "cycle_confidence": "CHANGED_THEN_STABLE",
-          "snapshot_samples": 3,
-          "snapshot_stable": true,
-          "timer_wait_seconds": 22
-        },
-        "items": [],
-        "kind": "sell",
-        "label": "Atlantic Giant Pumpkin",
-        "multi": 2.0,
-        "reason": "Sell เปลี่ยนเป็น ×2",
-        "recorded_at": "2026-08-31T14:30:40.763843+00:00",
-        "recorded_epoch": 1788186640.763843,
-        "round_id": "SELL-780889dd-X2",
-        "shop": "sell",
-        "status": "alert_sent",
-        "target_key": "atlantic giant pumpkin",
-        "timeline": {
-          "alert_sent_epoch": 1788186640.5196052,
-          "cycle_reset_epoch": null,
-          "cycle_to_send_seconds": null,
-          "detected_epoch": 1788186633.4311001,
-          "detected_to_send_ms": 7089,
-          "discord_completed_epoch": 1788186640.763843,
-          "discord_delivery_ms": 244
-        },
-        "ui_mode": "compact-embed"
-      },
       {
         "cycle_id": 6678,
         "cycle_key": "timer:1788190200",
@@ -11605,6 +11580,46 @@
           "discord_delivery_ms": 398
         },
         "ui_mode": "compact-embed"
+      },
+      {
+        "cycle_id": 8866,
+        "cycle_key": "timer:1788901200",
+        "cycle_source": "gag2-timer",
+        "entry_id": "ALERT-fba474708e0aad6a",
+        "evidence": {
+          "cycle_confidence": "CHANGED_THEN_STABLE",
+          "snapshot_samples": 3,
+          "snapshot_stable": true,
+          "timer_wait_seconds": 24
+        },
+        "items": [
+          {
+            "name": "Super Syrup Sprinkler",
+            "qty": 1,
+            "rarity": "COMMON",
+            "type": "gear"
+          }
+        ],
+        "kind": "stock",
+        "label": "Super Syrup Sprinkler",
+        "multi": null,
+        "reason": "กลับเข้า Stock",
+        "recorded_at": "2026-09-08T20:55:41.256077+00:00",
+        "recorded_epoch": 1788900941.2560773,
+        "round_id": "STOCK-GEAR-C8866",
+        "shop": "gear",
+        "status": "alert_sent",
+        "target_key": "super syrup sprinkler",
+        "timeline": {
+          "alert_sent_epoch": 1788900940.8067153,
+          "cycle_reset_epoch": 1788900900.0,
+          "cycle_to_send_seconds": 41,
+          "detected_epoch": 1788900933.746778,
+          "detected_to_send_ms": 7060,
+          "discord_completed_epoch": 1788900941.2560773,
+          "discord_delivery_ms": 449
+        },
+        "ui_mode": "compact-embed"
       }
     ],
     "max_entries": 300,
@@ -11613,25 +11628,25 @@
   },
   "shop_cycles": {
     "crate": {
-      "id": 8865,
-      "key": "timer:1788900900",
+      "id": 8866,
+      "key": "timer:1788901200",
       "source": "gag2-timer"
     },
     "gear": {
-      "id": 8865,
-      "key": "timer:1788900900",
+      "id": 8866,
+      "key": "timer:1788901200",
       "source": "gag2-timer"
     },
     "seed": {
-      "id": 8865,
-      "key": "timer:1788900900",
+      "id": 8866,
+      "key": "timer:1788901200",
       "source": "gag2-timer"
     }
   },
   "shop_fingerprints": {
-    "crate": "54e6331b648b735bb0cf9063ab3c42c8cca918048ba70d7ea057f4237461623f",
-    "gear": "523149dff1e497dbc1305083148dc5a45838135942007124309990c2fbfb9bbf",
-    "seed": "b13ae64090272071e4a2bc9c11cbba7eac7c9d250398c4be8d86985f957fa6b5",
+    "crate": "ba604345b481269e160c5a80bfe55ac653da5b88d26573346fe93bfe9fc1fa27",
+    "gear": "60a749d5a64c7ee3c44f8f7f95c928b9229d73f8b248e59d7d73702cf507f1cd",
+    "seed": "8bbfe7d9cb2bb17784a5fb4b86e9a13821a1a8aebcd17d6ac19fa69bd19cf8bf",
     "sell": "9c4feb91ba789ca094403759a9e17931c067f63f8ae2f1e0799b7f8ad542b87b",
     "unknown": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
   },
@@ -11666,9 +11681,16 @@
       },
       "super syrup sprinkler": {
         "image_url": "https://cdn.gag2.gg/items/super_syrup_sprinkler.webp",
-        "items": [],
+        "items": [
+          {
+            "name": "Super Syrup Sprinkler",
+            "qty": 1,
+            "rarity": "COMMON",
+            "type": "gear"
+          }
+        ],
         "label": "Super Syrup Sprinkler",
-        "present": false
+        "present": true
       },
       "super syrup watering can": {
         "image_url": "https://cdn.gag2.gg/items/super_syrup_watering_can.webp",
@@ -11678,6 +11700,6 @@
       }
     }
   },
-  "updated_at": "2026-09-08T20:51:10.916291+00:00",
+  "updated_at": "2026-09-08T20:55:41.268890+00:00",
   "version": "6.5.12"
 }
